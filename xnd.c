@@ -162,7 +162,6 @@ int
 nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
 {
     char *item;
-    int64_t i;
     int ret;
 
     if (ndt_is_abstract(t)) {
@@ -205,7 +204,9 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
         return nd_init(ptr, dtype, alloc_pointers, ctx);
     }
 
-    case Tuple:
+    case Tuple: {
+        int64_t i;
+
         for (i = 0; i < t->Tuple.shape; i++) {
             item = ptr + t->Concrete.Tuple.offset[i];
             if (nd_init(item, t->Tuple.types[i], alloc_pointers, ctx) < 0) {
@@ -213,9 +214,13 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
                 return -1;
             }
         }
-        return 0;
 
-    case Record:
+        return 0;
+    }
+
+    case Record: {
+        int64_t i;
+
         for (i = 0; i < t->Record.shape; i++) {
             item = ptr + t->Concrete.Record.offset[i];
             if (nd_init(item, t->Record.types[i], alloc_pointers, ctx) < 0) {
@@ -223,7 +228,9 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
                 return -1;
             }
         }
+
         return 0;
+    }
 
     /*
      * Pointer represents a pointer to an explicit type. If 'alloc_pointers'
