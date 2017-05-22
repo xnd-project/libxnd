@@ -1,9 +1,10 @@
 
 # ==============================================================================
-#                          Unix Makefile for libndtypes
+#                            Unix Makefile for libxnd
 # ==============================================================================
 
 LIBSTATIC = libxnd.a
+LIBNDTYPESDIR = libndtypes
 
 CC ?= gcc
 LD ?= gcc
@@ -37,19 +38,18 @@ Makefile $(OBJS)
 	$(RANLIB) $(LIBSTATIC)
 
 xnd.o:\
-Makefile xnd.h
-	$(CC) $(CFLAGS) -c xnd.c
+Makefile xnd.c xnd.h
+	$(CC) -I $(LIBNDTYPESDIR) $(CFLAGS) -c xnd.c
 
 
 # Tests
 runtest:\
-Makefile tests/runtest.c tests/test_vararray.c
-	$(CC) -I. $(CFLAGS) -DTEST_ALLOC -o tests/runtest \
-	tests/runtest.c tests/test_vararray.c \
-	$(LIBSTATIC) libndtypes.a
+Makefile tests/runtest.c tests/test_vararray.c $(LIBSTATIC)
+	$(CC) -I. -I $(LIBNDTYPESDIR) -L $(LIBNDTYPESDIR) $(CFLAGS) -DTEST_ALLOC \
+	-o tests/runtest tests/runtest.c tests/test_vararray.c $(LIBSTATIC) -lndtypes
 
 check:\
-Makefile $(LIBSTATIC) libndtypes.a ndtypes.h runtest
+Makefile runtest
 	./tests/runtest
 
 memcheck:\
@@ -66,6 +66,10 @@ Makefile clean runtest
 
 clean: FORCE
 	rm -f *.o *.gcov *.gcda *.gcno tests/runtest $(LIBSTATIC)
+
+distclean: clean
+	rm -rf libndtypes
+
 
 FORCE:
 

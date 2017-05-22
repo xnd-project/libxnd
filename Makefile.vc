@@ -1,0 +1,52 @@
+
+# ======================================================================
+#                  Visual C (nmake) Makefile for libxnd
+# ======================================================================
+
+LIBSTATIC = libxnd.lib
+LIBNDTYPESDIR = libndtypes
+
+!if "$(DEBUG)" == "1"
+OPT = /MDd /Od /Zi
+!else
+OPT = /MD /Ox /GS /EHsc
+!endif
+
+CFLAGS = /W4 /wd4200 /wd4201 /wd4204 /nologo $(OPT)
+CFLAGS_FOR_GENERATED = /W4 /wd4200 /wd4201 /wd4244 /wd4267 /wd4702 /wd4127 /nologo /DYY_NO_UNISTD_H=1 /D__STDC_VERSION__=199901L $(OPT)
+CFLAGS_FOR_PARSER = /W4 /wd4200 /wd4201 /wd4090 /nologo /DYY_NO_UNISTD_H=1 $(OPT)
+
+
+default: $(LIBSTATIC)
+
+
+OBJS = xnd.obj
+
+
+$(LIBSTATIC):\
+Makefile $(OBJS)
+	-@if exist $@ del $(LIBSTATIC)
+	lib $(LFLAGS) /out:$(LIBSTATIC) $(OBJS)
+
+xnd.obj:\
+Makefile xnd.c xnd.h
+	$(CC) -I $(LIBNDTYPESDIR) $(CFLAGS) -c alloc.c
+
+# Tests
+runtest:\
+Makefile tests\runtest.c tests\test_vararray.c $(LIBSTATIC)
+	$(CC) -I. -I $(LIBNDTYPESDIR) -L $(LIBNDTYPESDIR) $(CFLAGS) -DTEST_ALLOC \
+	/Fetests\runtest.exe tests\runtest.c tests\test_vararray.c $(LIBSTATIC) -lndtypes
+
+check:\
+Makefile runtest
+	.\tests\runtest.exe
+
+
+clean: FORCE
+	del /Q /F *.obj tests\runtest.exe $(LIBSTATIC)
+
+
+FORCE:
+
+

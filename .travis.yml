@@ -1,0 +1,51 @@
+sudo: required
+dist: trusty
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gcc-4.9
+    - valgrind
+
+language: C
+
+matrix:
+  include:
+    - compiler: gcc
+      before_script:
+        - export CC=gcc-4.9
+      script:
+        - make check
+
+    - compiler: gcc
+      before_script:
+        - export CC=gcc-4.9
+      script:
+        - make memcheck
+
+    - compiler: clang
+      before_script:
+        - export CC=clang
+      script:
+        - make check
+
+    - language: objective-c
+      os: osx
+      compiler: clang
+      before_script:
+        - export CC=clang
+      script:
+        - make check
+
+before_script:
+  - git clone https://github.com/plures/libndtypes.git
+  - cd libndtypes
+  - make
+  - cd ..
+
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install bison; brew link bison --force; fi
+
