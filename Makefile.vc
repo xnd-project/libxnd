@@ -30,7 +30,7 @@ Makefile $(OBJS)
 
 xnd.obj:\
 Makefile xnd.c xnd.h
-	$(CC) -I $(LIBNDTYPESDIR) $(CFLAGS) -c alloc.c
+	$(CC) -I $(LIBNDTYPESDIR) $(CFLAGS) -c xnd.c
 
 # Tests
 runtest:\
