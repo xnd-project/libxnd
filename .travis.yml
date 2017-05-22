@@ -15,19 +15,25 @@ matrix:
   include:
     - compiler: gcc
       before_script:
+        - git clone https://github.com/plures/libndtypes.git
         - export CC=gcc-4.9
+        - cd libndtypes && make && cd ..
       script:
         - make check
 
     - compiler: gcc
       before_script:
+        - git clone https://github.com/plures/libndtypes.git
         - export CC=gcc-4.9
+        - cd libndtypes && make && cd ..
       script:
         - make memcheck
 
     - compiler: clang
       before_script:
+        - git clone https://github.com/plures/libndtypes.git
         - export CC=clang
+        - cd libndtypes && make && cd ..
       script:
         - make check
 
@@ -35,15 +41,11 @@ matrix:
       os: osx
       compiler: clang
       before_script:
+        - git clone https://github.com/plures/libndtypes.git
         - export CC=clang
+        - cd libndtypes && make && cd ..
       script:
         - make check
-
-before_script:
-  - git clone https://github.com/plures/libndtypes.git
-  - cd libndtypes
-  - make
-  - cd ..
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
