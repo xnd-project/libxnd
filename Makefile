@@ -65,7 +65,7 @@ Makefile clean runtest
 
 
 clean: FORCE
-	rm -f *.o *.gcov *.gcda *.gcno tests/runtest $(LIBSTATIC)
+	rm -f *.o *.gch *.gcov *.gcda *.gcno tests/runtest $(LIBSTATIC)
 
 distclean: clean
 	rm -rf libndtypes
