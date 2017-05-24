@@ -61,7 +61,8 @@ init_tests(void)
 }
 
 static int (*tests[])(void) = {
-  test_vararray,
+  test_fixed,
+  test_var,
   NULL
 };
 

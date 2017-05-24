@@ -39,13 +39,13 @@
 
 
 int
-test_vararray(void)
+test_var(void)
 {
     ndt_context_t *ctx;
     nd_array_t a, b;
     uint16_t *p;
     int ret = 0;
-    unsigned i;
+    int i;
 
     /* a1 = [[[0, 1], [2, 3]], [[4, 5, 6], [7], [8]], [[9, 10]]] */
     const char *type1 = "3 * var(2,3,1) * var(2,2,3,1,1,2) * uint16";
@@ -87,8 +87,25 @@ test_vararray(void)
        {1,2,0},
        {2,0,0},{2,0,1}};
     // int64_t undefined_indices3[2][3] = {{0,1,1}, {1,0,2}};
-    // int64_t undefined_dimension3[2] = {1,1}; // NA
+    int64_t undefined_dimension3[2] = {1,1}; // NA
     int64_t invalid_element_access3[3] = {1,1,0}; // ValueError
+
+    /* a2 = [None, [[0, 1], [2, 3]], [None, [None, 4]]] */
+    const char *type4 = "3 * ?var(0,2,2) * ?var(2,2,0,2) * ?uint16";
+    uint16_t data4[6] = {0, 1, 2, 3, 28712, 4};
+    int64_t access4[12][3] =
+      {{1,0,0},{1,0,1},
+       {1,1,0},{1,1,1},
+       {2,1,0}, // NA
+       {2,1,1}};
+    int64_t def4[5] = {0, 1, 2, 3, 5};
+
+    int64_t undef4a[1] = {0};     // NA
+    int64_t undef4b[2] = {2,0};   // NA
+    int64_t undef4c[3] = {2,1,0}; // NA
+
+    int64_t invalid4a[2] = {0,0};   // ValueError
+    int64_t invalid4b[3] = {2,0,0}; // ValueError
 
 
     ctx = ndt_context_new();
@@ -231,13 +248,7 @@ test_vararray(void)
         goto error;
     }
 
-    /*** Invalid element access in a missing dimension ***/
-    b = nd_subarray(a, invalid_element_access3, 3, ctx);
-    if (ctx->err == NDT_Success || b.ptr != NULL) {
-        goto error;
-    }
 
-#if 0
     /*** NA dimension ***/
     b = nd_subarray(a, undefined_dimension3, 2, ctx);
     if (b.ptr == NULL) {
@@ -249,7 +260,117 @@ test_vararray(void)
         ndt_err_format(ctx, NDT_RuntimeError, "expected missing dimension");
         goto error;
     }
-#endif
+
+    /*** Invalid element access in a missing dimension ***/
+    b = nd_subarray(a, invalid_element_access3, 3, ctx);
+    if (b.ptr != NULL || ctx->err != NDT_ValueError) {
+        goto error;
+    }
+    ndt_err_clear(ctx);
+
+    nd_del(a);
+
+
+    /***** Type with fixed (optional) dimensions and optional values *****/
+    a = nd_empty(type4, ctx);
+    if (a.type == NULL) {
+        goto error;
+    }
+
+    p = (uint16_t *)a.ptr;
+    for (i = 0; i < ARRAY_SIZE(data4); i++) {
+        p[i] = data4[i];
+    }
+
+    /*** Set validity bits ***/
+    for (i = 0; i < ARRAY_SIZE(def4); i++) {
+        if (nd_subarray_set_valid(a, access4[def4[i]], 3, ctx) < 0) {
+            goto error;
+        }
+    }
+
+    /*** Defined values ***/
+    for (i = 0; i < ARRAY_SIZE(def4); i++) {
+        b = nd_subarray(a, access4[def4[i]], 3, ctx);
+        if (b.ptr == NULL) {
+            goto error;
+        }
+        assert(b.type->tag == OptionItem);
+        assert(b.type->OptionItem.type->tag == Uint16);
+        if (*(uint16_t *)b.ptr != data4[def4[i]]) {
+            ndt_err_format(ctx, NDT_RuntimeError, "unexpected value %u %u",
+                           *(uint16_t *)b.ptr, data4[def4[i]]);
+            goto error;
+        }
+    }
+
+
+    /*** NA values ***/
+    b = nd_subarray(a, access4[4], 3, ctx);
+    if (b.ptr == NULL) {
+        goto error;
+    }
+    assert(b.type->tag == OptionItem);
+    assert(b.type->OptionItem.type->tag == Uint16);
+
+    if (b.ptr != ND_MISSING) {
+        ndt_err_format(ctx, NDT_RuntimeError, "expected missing value");
+        goto error;
+    }
+
+
+    b = nd_subarray(a, undef4a, ARRAY_SIZE(undef4a), ctx);
+    if (b.ptr == NULL) {
+        goto error;
+    }
+    assert(b.type->tag == VarDim);
+
+    if (b.ptr != ND_MISSING) {
+        ndt_err_format(ctx, NDT_RuntimeError, "expected missing value");
+        goto error;
+    }
+
+
+
+    b = nd_subarray(a, undef4b, ARRAY_SIZE(undef4b), ctx);
+    if (b.ptr == NULL) {
+        goto error;
+    }
+    assert(b.type->tag == VarDim);
+
+    if (b.ptr != ND_MISSING) {
+        ndt_err_format(ctx, NDT_RuntimeError, "expected missing value");
+        goto error;
+    }
+
+
+    b = nd_subarray(a, undef4c, ARRAY_SIZE(undef4c), ctx);
+    if (b.ptr == NULL) {
+        goto error;
+    }
+    assert(b.type->tag == OptionItem);
+
+    if (b.ptr != ND_MISSING) {
+        ndt_err_format(ctx, NDT_RuntimeError, "expected missing value");
+        goto error;
+    }
+
+
+    /*** Invalid element access in a missing dimension ***/
+    b = nd_subarray(a, invalid4a, ARRAY_SIZE(invalid4a), ctx);
+    if (b.ptr != NULL || ctx->err != NDT_ValueError) {
+        goto error;
+    }
+    ndt_err_clear(ctx);
+
+    b = nd_subarray(a, invalid4b, ARRAY_SIZE(invalid4b), ctx);
+    if (b.ptr != NULL || ctx->err != NDT_ValueError) {
+        goto error;
+    }
+    ndt_err_clear(ctx);
+
+
+    fprintf(stderr, "test_var (4 test cases)\n");
 
 
 out:
@@ -258,7 +379,7 @@ out:
     return ret;
 
 error:
-    ret = 1;
+    ret = -1;
     ndt_err_fprint(stderr, ctx);
     goto out;
 }

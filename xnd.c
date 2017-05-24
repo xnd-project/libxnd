@@ -381,10 +381,14 @@ nd_subarray_set_valid(nd_array_t a, const int64_t *indices, int len,
     }
 
     if (len == 0) {
-        if (a.type->tag == OptionItem) {
+        switch (t->tag) {
+        case OptionItem:
+            assert(ndt_is_optional(t));
             ND_DATA_SET_VALID(&a);
+            return 0;
+        default:
+            return 0;
         }
-        return 0;
     }
 
     i = indices[0];
@@ -395,21 +399,16 @@ nd_subarray_set_valid(nd_array_t a, const int64_t *indices, int len,
         next.type = t->Array.type;
         next.ptr = a.ptr + t->Concrete.Array.data[t->Concrete.Array.data_start];
         return nd_subarray_set_valid(next, indices, len, ctx);
-    // XXX case FixedDimOpt:
-    //     ND_FIXED_DIM_SET_VALID(&a, i);
-    //     /* fall through */
     case FixedDim:
-        ND_FIXED_DIM_SET_VALID(&a, i);
         shape = t->FixedDim.shape;
         next.base = a.base;
         next.type = t->FixedDim.type;
         next.ptr = a.ptr + t->Concrete.FixedDim.offset + i * t->Concrete.FixedDim.stride;
         break;
-    // XXX case VarDimOpt:
-    //     ND_DATA_SET_VALID(&a);
-    //     /* fall through */
     case VarDim:
-        ND_DATA_SET_VALID(&a);
+        if (ndt_is_optional(t)) {
+            ND_DATA_SET_VALID(&a);
+        }
         shape = ND_VAR_SHAPE(&a);
         next.base = a.base;
         next.type = t->VarDim.type;
@@ -456,14 +455,21 @@ nd_subarray(const nd_array_t a, const int64_t *indices, int len, ndt_context_t *
     }
 
     if (len == 0) {
-        if (a.type->tag == OptionItem) {
-            if (!ND_DATA_IS_VALID(&a)) {
-                next = a;
-                next.ptr = ND_MISSING;
-                return next;
+        if (ndt_is_optional(t)) {
+            switch (t->tag) {
+            case VarDim: case OptionItem:
+                if (!ND_DATA_IS_VALID(&a)) {
+                    next = a;
+                    next.ptr = ND_MISSING;
+                    return next;
+                }
+            default:
+                return a;
             }
         }
-        return a;
+        else {
+            return a;
+        }
     }
 
     i = indices[0];
@@ -475,16 +481,13 @@ nd_subarray(const nd_array_t a, const int64_t *indices, int len, ndt_context_t *
         next.ptr = a.ptr + t->Concrete.Array.data[t->Concrete.Array.data_start];
         return nd_subarray(next, indices, len, ctx);
     case FixedDim:
-        if (!ND_FIXED_DIM_IS_VALID(&a, i)) {
-            goto missing_dimension_error;
-        }
         shape = t->FixedDim.shape;
         next.base = a.base;
         next.type = t->FixedDim.type;
         next.ptr = a.ptr + t->Concrete.FixedDim.offset + i * t->Concrete.FixedDim.stride;
         break;
     case VarDim:
-        if (!ND_DATA_IS_VALID(&a)) {
+        if (ndt_is_optional(t) && !ND_DATA_IS_VALID(&a)) {
             goto missing_dimension_error;
         }
         shape = ND_VAR_SHAPE(&a);

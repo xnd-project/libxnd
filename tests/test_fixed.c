@@ -31,19 +31,74 @@
  */
 
 
-#ifndef TEST_H
-#define TEST_H
-
-
+#include <stdlib.h>
+#include <stdint.h>
+#include <assert.h>
 #include "ndtypes.h"
-#include "xnd.h"
+#include "test.h"
 
 
-#define ARRAY_SIZE(a) ((int)(sizeof(a)/sizeof(a[0])))
+int
+test_fixed(void)
+{
+    ndt_context_t *ctx;
+    nd_array_t a, b;
+    uint16_t *p;
+    int ret = 0;
+    int i, j, k, l;
+    int64_t indices[3];
+
+    /* a1 = [[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]] */
+    const char *type1 = "3 * 2 * 2 * uint16";
+    uint16_t data1[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
 
 
-int test_fixed(void);
-int test_var(void);
+    ctx = ndt_context_new();
+    if (ctx == NULL) {
+        fprintf(stderr, "out of memory\n");
+        return 1;
+    }
 
 
-#endif /* TEST_H */
+    /***** Type with fixed dimensions *****/
+    a = nd_empty(type1, ctx);
+    if (a.type == NULL) {
+        goto error;
+    }
+
+    p = (uint16_t *)a.ptr;
+    for (i = 0; i < ARRAY_SIZE(data1); i++) {
+        p[i] = data1[i];
+    }
+
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 2; j++) {
+            for (k = 0; k < 2; k++) {
+                indices[0] = i; indices[1] = j; indices[2] = k;
+                l = i * 4 + j * 2 + k;
+                b = nd_subarray(a, indices, 3, ctx);
+                if (b.ptr == NULL) {
+                    goto error;
+                }
+                assert(b.type->tag == Uint16);
+                if (*(uint16_t *)b.ptr != data1[l]) {
+                    ndt_err_format(ctx, NDT_RuntimeError, "unexpected value");
+                    goto error;
+                }
+            }
+        }
+    }
+
+
+out:
+    nd_del(a);
+    ndt_context_del(ctx);
+    return ret;
+
+error:
+    ret = -1;
+    ndt_err_fprint(stderr, ctx);
+    goto out;
+}
+
+
