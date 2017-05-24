@@ -34,9 +34,9 @@ Makefile xnd.c xnd.h
 
 # Tests
 runtest:\
-Makefile tests\runtest.c tests\test_vararray.c $(LIBSTATIC)
+Makefile tests\runtest.c tests\test_fixed.c tests\test_var.c tests\test.h $(LIBSTATIC)
 	$(CC) -I. -I $(LIBNDTYPESDIR) $(CFLAGS) -DTEST_ALLOC /Fetests\runtest.exe \
-	tests\runtest.c tests\test_vararray.c $(LIBSTATIC) libndtypes\libndtypes.lib
+	tests\runtest.c tests\test_fixed.c tests\test_var.c $(LIBSTATIC) libndtypes\libndtypes.lib
 
 check:\
 Makefile runtest
