@@ -90,6 +90,9 @@ test_fixed(void)
     }
 
 
+    fprintf(stderr, "test_fixed (1 test case)\n");
+
+
 out:
     nd_del(a);
     ndt_context_del(ctx);
