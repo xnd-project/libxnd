@@ -73,7 +73,7 @@ ND_DIM_DATA(const nd_array_t *mem)
     assert(a->tag == Array);
     assert(ndt_is_concrete(a));
 
-    assert(t->ndim == 0 || t->tag == FixedDim || t->tag == VarDim);
+    assert(t->ndim == 0 || t->tag == VarDim);
     assert(ndt_is_concrete(t));
 
     return mem->base->ptr + a->Concrete.Array.data[t->ndim];
@@ -115,7 +115,7 @@ ND_LINEAR_INDEX(const nd_array_t *mem)
     ptrdiff_t d;
     int64_t i;
 
-    assert(t->ndim == 0 || t->tag == FixedDim || t->tag == VarDim);
+    assert(t->ndim == 0 || t->tag == VarDim);
     assert(ndt_is_concrete(t));
 
     d = mem->ptr - ND_DIM_DATA(mem);
@@ -234,26 +234,6 @@ ND_BITMAP(const nd_array_t *mem, int ndim)
     return (uint8_t *)bitmap;
 }
 
-/*
-static inline bool
-ND_FIXED_DIM_IS_VALID(const nd_array_t *mem, int64_t i)
-{
-    const ndt_t *a = mem->base->type;
-    const ndt_t *t = mem->type;
-    uint8_t *bitmap;
-
-    assert(a->tag == Array);
-    assert(ndt_is_concrete(a));
-
-    assert(t->tag == FixedDim);
-    assert(ndt_is_concrete(t));
-    assert(ndt_is_optional(t));
-
-    bitmap = (uint8_t *)(mem->base->ptr + a->Concrete.Array.bitmaps[t->ndim]);
-    return bitmap[i / 8] & ((uint8_t)1 << (i % 8));
-}
-*/
-
 static inline bool
 ND_DATA_IS_VALID(const nd_array_t *mem)
 {
@@ -265,31 +245,13 @@ ND_DATA_IS_VALID(const nd_array_t *mem)
     assert(ndt_is_concrete(a));
     assert(a->tag == Array);
 
-    assert(t->ndim == 0 || t->tag == FixedDim || t->tag == VarDim);
+    assert(t->ndim == 0 || t->tag == VarDim);
     assert(ndt_is_concrete(t));
     assert(ndt_is_optional(t));
 
     i = ND_LINEAR_INDEX(mem);
     bitmap = (uint8_t *)(mem->base->ptr + a->Concrete.Array.bitmaps[t->ndim]);
     return bitmap[i / 8] & ((uint8_t)1 << (i % 8));
-}
-
-static inline void
-ND_FIXED_DIM_SET_VALID(nd_array_t *mem, int64_t i)
-{
-    const ndt_t *a = mem->base->type;
-    const ndt_t *t = mem->type;
-    uint8_t *bitmap;
-
-    assert(a->tag == Array);
-    assert(ndt_is_concrete(a));
-
-    assert(t->tag == FixedDim);
-    assert(ndt_is_concrete(t));
-    assert(ndt_is_optional(t));
-
-    bitmap = (uint8_t *)(mem->base->ptr + a->Concrete.Array.bitmaps[t->ndim]);
-    bitmap[i / 8] |= ((uint8_t)1 << (i % 8));
 }
 
 static inline void
@@ -303,7 +265,7 @@ ND_DATA_SET_VALID(nd_array_t *mem)
     assert(a->tag == Array);
     assert(ndt_is_concrete(a));
 
-    assert(t->ndim == 0 || t->tag == FixedDim || t->tag == VarDim);
+    assert(t->ndim == 0 || t->tag == VarDim);
     assert(ndt_is_concrete(t));
     assert(ndt_is_optional(t));
 
