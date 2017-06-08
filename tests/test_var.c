@@ -107,13 +107,26 @@ test_var(void)
     int64_t invalid4a[2] = {0,0};   // ValueError
     int64_t invalid4b[3] = {2,0,0}; // ValueError
 
+    //
+    // a = [[[0, 1], [2, 3]], [[4, 5, 6], [7], [8]], [[9, 10]]]
+    // const char *type5_full = "3 * var(2,3,1) * var(2,2,3,1,1,2) * uint16";
+    //
+    // a[:, :, 1:3] = [[[1], [3]], [[5, 6], [], []], [[10]]]
+    //
+    const char *type5 = "3 * var(2,3,1) * var(1:1, 3:1, 5:2, 7:0, 8:0, 10:1, 11:0) * uint16";
+    uint16_t data5[11] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    int64_t indices5[5][3] =
+      {{0,0,0},{0,1,0},
+       {1,0,0},{1,0,1},
+       {2,0,0}};
+    int64_t def5[5] = {1, 3, 5, 6, 10};
+
 
     ctx = ndt_context_new();
     if (ctx == NULL) {
         fprintf(stderr, "out of memory\n");
         return 1;
     }
-
 
     /***** Type with var dimensions *****/
     a = nd_empty(type1, ctx);
@@ -369,8 +382,35 @@ test_var(void)
     }
     ndt_err_clear(ctx);
 
+    nd_del(a);
 
-    fprintf(stderr, "test_var (4 test cases)\n");
+    /***** Type with multidimensional slice *****/
+    a = nd_empty(type5, ctx);
+    if (a.type == NULL) {
+        goto error;
+    }
+
+    p = (uint16_t *)a.ptr;
+    for (i = 0; i < ARRAY_SIZE(data5); i++) {
+        p[i] = data5[i];
+    }
+
+    /*** Defined values ***/
+    for (i = 0; i < ARRAY_SIZE(indices5); i++) {
+        b = nd_subarray(a, indices5[i], 3, ctx);
+        if (b.ptr == NULL) {
+            goto error;
+        }
+        assert(b.type->tag == Uint16);
+        if (*(uint16_t *)b.ptr != data5[def5[i]]) {
+            ndt_err_format(ctx, NDT_RuntimeError, "unexpected value %u %u",
+                           *(uint16_t *)b.ptr, data5[def5[i]]);
+            goto error;
+        }
+    }
+
+
+    fprintf(stderr, "test_var (5 test cases)\n");
 
 
 out:

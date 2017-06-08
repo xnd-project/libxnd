@@ -74,7 +74,7 @@ nd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
 /* Initialize the var dimensions represented by indey arrays. The index
    arrays use the smallest possible integer type. */
 static int
-init_var_data(char *ptr, enum ndt_dim dim_type, const int64_t *shapes,
+init_var_data(char *ptr, enum ndt_dim dim_type, const int64_t *offsets,
               int nshapes, ndt_context_t *ctx)
 {
     int i;
@@ -83,71 +83,47 @@ init_var_data(char *ptr, enum ndt_dim dim_type, const int64_t *shapes,
     switch (dim_type) {
     case DimUint8: {
         uint8_t *p = (uint8_t *)ptr;
-        uint8_t tmp, sum;
 
-        p[0] = sum = 0;
-        for (i = 0; i < nshapes; i++) {
-            tmp = sum + shapes[i];
-            if (tmp < sum) goto value_error;
-            p[i+1] = sum = tmp;
+        for (i = 0; i < nshapes+1; i++) {
+            p[i] = offsets[i];
         }
         return 0;
     }
     case DimUint16: {
         uint16_t *p = (uint16_t *)ptr;
-        uint16_t tmp, sum;
 
-        p[0] = sum = 0;
-        for (i = 0; i < nshapes; i++) {
-            tmp = sum + shapes[i];
-            if (tmp < sum) goto value_error;
-            p[i+1] = sum = tmp;
+        for (i = 0; i < nshapes+1; i++) {
+            p[i] = offsets[i];
         }
         return 0;
     }
     case DimUint32: {
         uint32_t *p = (uint32_t *)ptr;
-        uint32_t tmp, sum;
 
-        p[0] = sum = 0;
-        for (i = 0; i < nshapes; i++) {
-            tmp = sum + shapes[i];
-            if (tmp < sum) goto value_error;
-            p[i+1] = sum = tmp;
+        for (i = 0; i < nshapes+1; i++) {
+            p[i] = offsets[i];
         }
         return 0;
     }
     case DimInt32: {
         int32_t *p = (int32_t *)ptr;
-        int32_t sum;
 
-        p[0] = sum = 0;
-        for (i = 0; i < nshapes; i++) {
-            if (sum > INT32_MAX - shapes[i]) goto value_error;
-            sum += shapes[i];
-            p[i+1] = sum;
+        for (i = 0; i < nshapes+1; i++) {
+            p[i] = offsets[i];
         }
         return 0;
     }
     case DimInt64: {
         int64_t *p = (int64_t *)ptr;
-        int64_t sum;
 
-        p[0] = sum = 0;
-        for (i = 0; i < nshapes; i++) {
-            if (sum > INT32_MAX - shapes[i]) goto value_error;
-            sum += shapes[i];
-            p[i+1] = sum;
+        for (i = 0; i < nshapes+1; i++) {
+            p[i] = offsets[i];
         }
-        return 0;
     }
     case DimNone:
         goto unknown_dimension_type;
     }
 
-value_error:
-    ndt_err_format(ctx, NDT_ValueError, "dimension type too small for shapes");
-    return -1;
 unknown_dimension_type:
     ndt_err_format(ctx, NDT_RuntimeError, "dimension type is not set");
     return -1;
@@ -188,7 +164,7 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
             case VarDim:
                 ret = init_var_data(ptr + t->Concrete.Array.data[dims[i]->ndim],
                                     t->Concrete.Array.dim_type,
-                                    dims[i]->Concrete.VarDim.shapes,
+                                    dims[i]->Concrete.VarDim.offsets,
                                     dims[i]->Concrete.VarDim.nshapes,
                                     ctx);
                 if (ret < 0) {
