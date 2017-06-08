@@ -397,13 +397,13 @@ nd_subarray_set_valid(nd_array_t a, const int64_t *indices, int len,
     case Array:
         next.base = &a;
         next.type = t->Array.type;
-        next.ptr = a.ptr + t->Concrete.Array.data[t->Concrete.Array.data_start];
+        next.ptr = a.ptr + t->Concrete.Array.data[t->Concrete.Array.ndim_start];
         return nd_subarray_set_valid(next, indices, len, ctx);
     case FixedDim:
         shape = t->FixedDim.shape;
         next.base = a.base;
         next.type = t->FixedDim.type;
-        next.ptr = a.ptr + t->Concrete.FixedDim.offset + i * t->Concrete.FixedDim.stride;
+        next.ptr = a.ptr + i * t->Concrete.FixedDim.stride;
         break;
     case VarDim:
         if (ndt_is_optional(t)) {
@@ -412,7 +412,7 @@ nd_subarray_set_valid(nd_array_t a, const int64_t *indices, int len,
         shape = ND_VAR_SHAPE(&a);
         next.base = a.base;
         next.type = t->VarDim.type;
-        next.ptr = ND_NEXT_DIM(&a) + t->Concrete.VarDim.offset + i * t->Concrete.VarDim.stride;
+        next.ptr = ND_NEXT_DIM(&a) + t->Concrete.VarDim.suboffset + i * t->Concrete.VarDim.stride;
         break;
     case Tuple:
         shape = t->Tuple.shape;
@@ -478,13 +478,13 @@ nd_subarray(const nd_array_t a, const int64_t *indices, int len, ndt_context_t *
     case Array:
         next.base = &a;
         next.type = t->Array.type;
-        next.ptr = a.ptr + t->Concrete.Array.data[t->Concrete.Array.data_start];
+        next.ptr = a.ptr + t->Concrete.Array.data[t->Concrete.Array.ndim_start];
         return nd_subarray(next, indices, len, ctx);
     case FixedDim:
         shape = t->FixedDim.shape;
         next.base = a.base;
         next.type = t->FixedDim.type;
-        next.ptr = a.ptr + t->Concrete.FixedDim.offset + i * t->Concrete.FixedDim.stride;
+        next.ptr = a.ptr + i * t->Concrete.FixedDim.stride;
         break;
     case VarDim:
         if (ndt_is_optional(t) && !ND_DATA_IS_VALID(&a)) {
@@ -493,7 +493,7 @@ nd_subarray(const nd_array_t a, const int64_t *indices, int len, ndt_context_t *
         shape = ND_VAR_SHAPE(&a);
         next.base = a.base;
         next.type = t->VarDim.type;
-        next.ptr = ND_NEXT_DIM(&a) + t->Concrete.VarDim.offset + i * t->Concrete.VarDim.stride;
+        next.ptr = ND_NEXT_DIM(&a) + t->Concrete.VarDim.suboffset + i * t->Concrete.VarDim.stride;
         break;
     case Tuple:
         shape = t->Tuple.shape;
