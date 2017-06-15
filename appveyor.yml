@@ -17,7 +17,7 @@ before_build:
 
 build_script:
   - git clone https://github.com/plures/ndtypes.git
-  - cd libndtypes
+  - cd ndtypes
   - move /y Makefile.vc Makefile
   - nmake
   - cd ..

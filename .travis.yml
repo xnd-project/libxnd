@@ -17,7 +17,7 @@ matrix:
       before_script:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=gcc-4.9
-        - cd libndtypes && make && cd ..
+        - cd ndtypes && make && cd ..
       script:
         - make check
 
@@ -25,7 +25,7 @@ matrix:
       before_script:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=gcc-4.9
-        - cd libndtypes && make && cd ..
+        - cd ndtypes && make && cd ..
       script:
         - make memcheck
 
@@ -33,7 +33,7 @@ matrix:
       before_script:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
-        - cd libndtypes && make && cd ..
+        - cd ndtypes && make && cd ..
       script:
         - make check
 
@@ -43,7 +43,7 @@ matrix:
       before_script:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
-        - cd libndtypes && make && cd ..
+        - cd ndtypes && make && cd ..
       script:
         - make check
 
