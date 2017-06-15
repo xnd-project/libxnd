@@ -15,7 +15,7 @@ matrix:
   include:
     - compiler: gcc
       before_script:
-        - git clone https://github.com/plures/libndtypes.git
+        - git clone https://github.com/plures/ndtypes.git
         - export CC=gcc-4.9
         - cd libndtypes && make && cd ..
       script:
@@ -23,7 +23,7 @@ matrix:
 
     - compiler: gcc
       before_script:
-        - git clone https://github.com/plures/libndtypes.git
+        - git clone https://github.com/plures/ndtypes.git
         - export CC=gcc-4.9
         - cd libndtypes && make && cd ..
       script:
@@ -31,7 +31,7 @@ matrix:
 
     - compiler: clang
       before_script:
-        - git clone https://github.com/plures/libndtypes.git
+        - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
         - cd libndtypes && make && cd ..
       script:
@@ -41,7 +41,7 @@ matrix:
       os: osx
       compiler: clang
       before_script:
-        - git clone https://github.com/plures/libndtypes.git
+        - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
         - cd libndtypes && make && cd ..
       script:

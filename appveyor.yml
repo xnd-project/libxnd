@@ -16,7 +16,7 @@ before_build:
   "\"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat\" %platform%"
 
 build_script:
-  - git clone https://github.com/plures/libndtypes.git
+  - git clone https://github.com/plures/ndtypes.git
   - cd libndtypes
   - move /y Makefile.vc Makefile
   - nmake
