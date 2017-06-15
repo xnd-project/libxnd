@@ -274,7 +274,7 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
     case Int8: case Int16: case Int32: case Int64:
     case Uint8: case Uint16: case Uint32: case Uint64:
     case Float16: case Float32: case Float64:
-    case Complex64: case Complex128:
+    case Complex32: case Complex64: case Complex128:
     case FixedString: case FixedBytes:
     case Char: case String: case Bytes:
         return 0;
