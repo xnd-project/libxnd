@@ -1,14 +1,16 @@
 from itertools import accumulate, product
-from random import randrange
-from copy import copy
-from _testbuffer import slice_indices
-from test.test_buffer import genslices_ndim, rslices_ndim
+from random import randrange, seed
+from copy import copy, deepcopy
 
 
 ########################################################################
 #                   Python model of the xnd array type                 #
 ########################################################################
 
+def slice_indices(s, shape):
+    indices = s.indices(shape)
+    length = len(range(*indices))
+    return indices + (length,)
 
 def is_value_list(lst):
     return all(not isinstance(v, list) for v in lst)
@@ -29,79 +31,79 @@ class Datashape(object):
 
 class Int64(Datashape):
     """Example dtype"""
-    def __init__(self, opt=False):
-        self.ndim = 0
+    def __init__(self, *, opt=False):
         self.opt = opt
-        self.size = 1
+        self.target = 0
+        self.ndim = 0
+        self.size = 1 # 8 in ndtypes (steps vs. strides issue)
 
     def __repr__(self):
         return "%sint64" % opt_repr(self.opt)
 
-    def __copy__(self):
-        return Int64(self.opt)
+    def copy(self):
+        return Int64(opt=self.opt)
 
-    shape_repr = __repr__
-    offset_shape_repr = __repr__
+    concrete_repr = __repr__
 
 class FixedDim(Datashape):
-    def __init__(self, shape, start=0, step=None, opt=False, typ=None):
-        self.ndim = typ.ndim + 1
-        self.start = start
-        self.shape = shape
-        if step is None:
-            step = 1 if isinstance(typ, VarDim) else typ.size
-        self.step = step
-        self.size = shape * typ.size
-        self.typ = typ
+    def __init__(self, *, opt=False, shape=None, step=None, typ=None):
+        # abstract
         self.opt = opt
+        self.ndim = typ.ndim + 1
+        self.shape = shape
+        self.target = typ.ndim if isinstance(typ, VarDim) else typ.target
+        self.typ = typ
+        # concrete
+        if step is None:
+            self.step = 1 if isinstance(typ, VarDim) else typ.size
+        else:
+            self.step = step
+        self.size = shape * self.step
+
+    def copy(self):
+        typ = self.typ.copy()
+        return FixedDim(opt=self.opt, shape=self.shape, step=self.step, typ=typ)
 
     def __repr__(self):
         return "%s%d * %r" % (opt_repr(self.opt), self.shape, self.typ)
 
-    def __copy__(self):
-        typ = self.typ.__copy__()
-        return FixedDim(self.shape, self.start, self.step, self.opt, typ)
-
-    def shape_repr(self):
-        return "%s%d * %s" % (opt_repr(self.opt), self.shape, self.typ.shape_repr())
-
-    def offset_shape_repr(self):
-        return "%s%d * %s" % (opt_repr(self.opt), self.shape, self.typ.offset_shape_repr())
+    def concrete_repr(self):
+        return "%sfixed(shape=%d, step=%d, ndim=%d, target=%d) * %s" % \
+            (opt_repr(self.opt), self.shape, self.step, self.ndim, self.target,
+             self.typ.concrete_repr())
 
 
 class VarDim(Datashape):
-    def __init__(self, shapes, start=0, step=1, opt=False, typ=None):
-        self.ndim = typ.ndim + 1
-        self.nshapes = len(shapes)
-        self.shapes = shapes
-        self.offsets = [0] + list(accumulate(shapes))
-        self.typ = typ
-        self.start = start
-        self.step = step
-        self.size = 1
+    def __init__(self, *, opt=False, step=None, typ=None):
+        # abstract
         self.opt = opt
+        self.ndim = typ.ndim + 1
+        self.target = typ.ndim if isinstance(typ, VarDim) else typ.target
+        self.typ = typ
+        # concrete
+        if step is None:
+            self.step = 1 if isinstance(typ, VarDim) else typ.size
+        else:
+            self.step = step
+        self.size = 1
+
+    def copy(self):
+        typ = self.typ.copy()
+        return VarDim(opt=self.opt, step=self.step, typ=typ)
 
     def __repr__(self):
         return "%svar * %r" % (opt_repr(self.opt), self.typ)
 
-    def __copy__(self):
-        typ = self.typ.__copy__()
-        return VarDim(self.shapes, self.start, self.step, self.opt, typ)
+    def concrete_repr(self):
+        return "%svar(ndim=%d, target=%d, step=%d, size=%d) * %s" % \
+            (opt_repr(self.opt), self.ndim, self.target, self.step, self.size, self.typ.concrete_repr())
 
-    def shape_repr(self):
-        """shape arguments: var(1,2,3,...) * t"""
-        def shapes():
-            return ",".join(str(v) for v in self.shapes)
-
-        return "%svar(%s) * %s" % (opt_repr(self.opt), shapes(), self.typ.shape_repr())
-
-    def offset_shape_repr(self):
-        """offset:shape arguments: var(1:3, 7:4, ...) * t"""
-        def offsets_shapes():
-            return ",".join("%d:%d" % (v[0], v[1]) for v in zip(self.offsets, self.shapes+[0]))
-
-        return "%svar(%s) * %s" % (opt_repr(self.opt), offsets_shapes(), self.typ.offset_shape_repr())
-
+def dims_as_list(t):
+    dimensions = []
+    while (t.ndim > 0): 
+        dimensions.append(t)
+        t = t.typ
+    return dimensions
 
 # ======================================================================
 #                       Arrow compatible bitmap
@@ -134,15 +136,15 @@ class Bitmap(object):
 #                      Model of the xnd array type
 # ======================================================================
 
-def choose_dim_type(typ, shapes, opt=False):
+def choose_dim_type(*, opt=False, typ=None, shapes=None):
     """Choose a dimension type based on the list of 'shapes' that are present
        in a dimension. If all 'shapes' are equal, the more efficient FixedDim
        type suffices.
     """
     n = len(set(shapes))
     if n <= 1:
-        return FixedDim(0 if n == 0 else shapes[0], opt=opt, typ=typ)
-    return VarDim(shapes, opt=opt, typ=typ)
+        return FixedDim(opt=opt, typ=typ, shape=0 if n == 0 else shapes[0])
+    return VarDim(opt=opt, typ=typ)
 
 def data_shapes(lst):
     """Extract array data and dimension shapes from a nested list. The
@@ -185,7 +187,7 @@ def array_info(array_data, dim_shapes):
        information.
     """
     opt = None in array_data
-    t = Int64(opt)
+    t = Int64(opt=opt)
 
     bitmaps = [Bitmap(array_data)] if opt else [Bitmap([])]
     offsets = [[]]
@@ -199,12 +201,12 @@ def array_info(array_data, dim_shapes):
             bitmaps.append(Bitmap([]))
 
         lst = replace_none(lst)
-        t = choose_dim_type(t, lst, opt)
+        t = choose_dim_type(opt=opt, typ=t, shapes=lst)
         if isinstance(t, FixedDim):
             offsets.append([])
             shapes.append([])
         else: # VarDim
-            offsets.append([0] + list(accumulate(lst)))
+            offsets.append([0] + list(accumulate([x * t.step for x in lst])))
             shapes.append(lst)
 
     return t, offsets, shapes, bitmaps
@@ -257,8 +259,8 @@ class Array(object):
 
     """
 
-    def __init__(self, lst=None, typ=None, data=None, offsets=None,
-                 shapes=None, bitmaps=None):
+    def __init__(self, lst=None, *, typ=None, data=None, offsets=None,
+                 suboffsets=None, shapes=None, bitmaps=None):
         """
         Initialize the array either
 
@@ -286,22 +288,26 @@ class Array(object):
         """
 
         if lst:
-            if not (typ is data is offsets is shapes is bitmaps is None):
+            if not (typ is data is offsets is suboffsets is shapes is
+                    bitmaps is None):
                 raise TypeError("the 'lst' argument precludes other arguments")
 
             data, shapes = data_shapes(lst)
             self.data = data
             self.typ, self.offsets, self.shapes, self.bitmaps = array_info(data, shapes)
-
             assert len(self.offsets) == len(self.shapes) == len(self.bitmaps) == self.typ.ndim + 1
 
+            self.suboffsets = [0] * (self.typ.ndim + 1)
+
         else:
-            if lst is not None or None in (typ, data, offsets, shapes, bitmaps):
+            if lst is not None or None in (typ, data, offsets, suboffsets,
+                                           shapes, bitmaps):
                 raise TypeError("invalid argument combination")
 
             self.typ = typ
             self.data = data
             self.offsets = offsets
+            self.suboffsets = suboffsets
             self.shapes = shapes
             self.bitmaps = bitmaps
 
@@ -309,22 +315,30 @@ class Array(object):
         """Return the xnd array as an untyped list."""
 
         def f(t, linear_index):
-            if t.opt and not self.bitmaps[t.ndim].is_valid(linear_index):
-                return None
-
             if isinstance(t, FixedDim):
-                linear_index += t.start
+                if t.opt and not self.bitmaps[t.ndim].is_valid(linear_index):
+                    return None
                 shape = t.shape
-                return [f(t.typ, linear_index + k*t.step) for k in range(shape)]
+                ret = []
+                for k in range(shape):
+                    x = f(t.typ, linear_index + k*t.step)
+                    ret.append(x)
+                return ret
 
             elif isinstance(t, VarDim):
+                linear_index += self.suboffsets[t.ndim]
+                if t.opt and not self.bitmaps[t.ndim].is_valid(linear_index):
+                    return None
                 shape = self.shapes[t.ndim][linear_index]
                 linear_index = self.offsets[t.ndim][linear_index]
-                linear_index += t.start
-                return [f(t.typ, linear_index + k*t.step) for k in range(shape)]
+                ret = []
+                for k in range(shape):
+                    x = f(t.typ, linear_index + k*t.step)
+                    ret.append(x)
+                return ret
 
             elif isinstance(t, Int64):
-                assert t.ndim == 0
+                linear_index += self.suboffsets[t.ndim]
                 return self.data[linear_index]
 
             else:
@@ -332,47 +346,43 @@ class Array(object):
 
         return f(self.typ, 0)
 
-    def _getitem(self, indices):
+    def getslice(self, indices):
         """Return a multi-dimensional slice of the xnd array. Multi-dimensional
            indices are not yet supported."""
 
-        t = typ = copy(self.typ)
+        data = self.data[:]
+        offsets = deepcopy(self.offsets)
+        suboffsets = deepcopy(self.suboffsets)
+        shapes = deepcopy(self.shapes)
+        bitmaps = deepcopy(self.bitmaps)
 
-        data = self.data
-        offsets = copy(self.offsets)
-        shapes = copy(self.shapes)
-        bitmaps = self.bitmaps
+        def f(t, indices):
+            if not indices:
+                return t.copy()
 
-        dimensions = []
-        while (t.ndim > 0): 
-            dimensions.append(t)
-            t = t.typ
+            i, indices = indices[0], indices[1:]
 
-        linear_index = 0
-        for i, s in enumerate(indices):
-            t = dimensions[i]
             if isinstance(t, FixedDim):
-                start, stop, step, shape = slice_indices(s, t.shape)
-                linear_index += start
-                t.start = linear_index
-                t.shape = shape
-                t.step *= step
+                start, stop, step, shape = slice_indices(i, t.shape)
+                suboffsets[t.target] += t.step * start
+                typ = f(t.typ, indices)
+                return FixedDim(opt=t.opt, shape=shape, step=t.step*step, typ=typ)
+
             elif isinstance(t, VarDim):
-                _offsets = copy(t.offsets)
-                _shapes = [0] * t.nshapes
-                for k, shape in enumerate(t.shapes):
-                    start, stop, step, shape = slice_indices(s, shape)
-                    _offsets[k] = _offsets[k] + start
-                    _shapes[k] = shape
-                offsets[t.ndim] = _offsets
-                shapes[t.ndim] = _shapes
-                t.offsets = _offsets
-                t.shapes = _shapes
-                t.step = step
+                for k, shape in enumerate(self.shapes[t.ndim]):
+                    start, stop, step, shape = slice_indices(i, shape)
+                    offsets[t.ndim][k] += start * t.step
+                    shapes[t.ndim][k] = shape
+                typ = f(t.typ, indices)
+                return VarDim(opt=t.opt, step=t.step*step, typ=typ)
             else:
                 raise RuntimeError("unexpected type")
 
-        return Array(typ=typ, data=data, offsets=offsets, shapes=shapes, bitmaps=bitmaps)
+        typ = f(self.typ, indices)
+
+        return Array(typ=typ, data=data, offsets=offsets,
+                     suboffsets=suboffsets, shapes=shapes,
+                     bitmaps=bitmaps)
 
     def __getitem__(self, indices):
         if not isinstance(indices, tuple):
@@ -380,20 +390,20 @@ class Array(object):
         if not all(isinstance(x, slice) for x in indices):
             raise TypeError("index must be a slice or a tuple of slices")
 
-        return self._getitem(indices)
+        return self.getslice(indices)
 
     def __repr__(self):
         return """\
 Array(
   type="%s",
-  type_with_shapes="%s",
-  type_with_offsets_shapes="%s",
+  type_with_meta="%s",
   data=%s,
   offsets=%s,
+  suboffsets=%s,
   shapes=%s,
   bitmaps=%s,
-)""" % (self.typ, self.typ.shape_repr(), self.typ.offset_shape_repr(),
-        self.data, self.offsets, self.shapes, self.bitmaps)
+)""" % (self.typ, self.typ.concrete_repr(), self.data, self.offsets,
+        self.suboffsets, self.shapes, self.bitmaps)
 
 
 # ======================================================================
@@ -446,27 +456,132 @@ class SimpleArray(list):
 class TestError(Exception):
     pass
 
+def rslice(ndim):
+    start = randrange(0, ndim+1)
+    stop = randrange(0, ndim+1)
+    step = 0
+    while step == 0:
+        step = randrange(-ndim-1, ndim+1)
+    return slice(start, stop, step)
+
+def multislice(ndim):
+    return tuple(rslice(ndim) for _ in range(randrange(1, ndim+1)))
+
+def randslices(ndim):
+    for i in range(20):
+        yield multislice(ndim)
+
+def genslices(n):
+    """Generate all possible slices for a single dimension."""
+    ret = []
+    for t in product(range(-n, n+1), range(-n, n+1), range(-n, n+1)):
+        s = slice(*t)
+        if s.step != 0:
+            ret.append(s)
+    return ret
+
+def genslices_ndim(ndim, shape):
+    """Generate all possible slice tuples for 'shape'."""
+    iterables = [genslices(shape[n]) for n in range(ndim)]
+    return product(*iterables)
+
+
 def test():
-    lst = [[[0, 1], [2, 3]], [[4, 5, None], None, [7]], None, [[8, 9]]]
-    x = SimpleArray(lst)
-    y = Array(lst)
-    for slices in rslices_ndim(3, [3,3,3], 100000):
-        xerr = None
-        try:
-            xres = x[slices]
-        except Exception as e:
-            xerr = e.__class__
+    slice_stack = [0] * 4
 
-        yerr = None
-        try:
-            yres = y[slices].tolist()
-        except Exception as e:
-            yerr = e.__class__
+    def f(x, y, d):
+        if d > 3:
+            return
 
-        if (xerr or yerr) and yerr is not xerr:
-            raise TestError("\nslice: %s\nxerr: %s\nyerr: %s\n%d  %d\n" % (slices, xerr, yerr, id(xerr), id(yerr)))
-        if yres != xres:
-            raise TestError("%s\n%s\n%s\n" % (slices,  y[slices].tolist(), x[slices]))
+        for slices in randslices(3):
+            slice_stack[d] = slices
+
+            xerr = None
+            try:
+                xx = x[slices]
+            except Exception as e:
+                xerr = e.__class__
+
+            yerr = None
+            try:
+                yy = y[slices]
+            except Exception as e:
+                yerr = e.__class__
+
+            if xerr or yerr:
+                if yerr is not xerr:
+                    raise TestError("\nslices: %s\nxerr: %s\nyerr: %s\n" % (slices, xerr, yerr))
+                else:
+                    continue
+
+            if yy.tolist() != xx:
+                raise TestError("depth: %d\n slices: %s\nexpected: %s\ngot: %s\n" % (d, slice_stack, xx, yy.tolist()))
+
+            f(SimpleArray(xx), yy, d+1)
+
+    lists = [[[[0, 1], [2, 3]], [[4, 5, 0], [7]], [[8, 9]]],
+             [[[0, 1], [2, 3]], [[4, 5, None], None, [7]], None, [[8, 9]]],
+             [[[0, 1, 2], [3, 4, 5, 6], [7, 8, 9, 10]], [[11, 12, 13, 14], [15, 16, 17], [18, 19]]],
+             [[[0, 1], [2, 3], [4, 5]], [[6, 7], [8, 9]], [[10, 11]]]]
+
+    for lst in lists:
+        x = SimpleArray(lst)
+        y = Array(lst)
+        f(x, y, 0)
+
+def test_all():
+
+    count = success = exc = 0
+
+    def f(x, y, d):
+        nonlocal count, success, exc
+
+        if d > 3:
+            return
+
+        for slices in genslices_ndim(3, [3,3,3]):
+
+            xerr = None
+            try:
+                xx = x[slices]
+            except Exception as e:
+                xerr = e.__class__
+
+            yerr = None
+            try:
+                yy = y[slices]
+            except Exception as e:
+                yerr = e.__class__
+
+            count += 1
+            if count % 1000000 == 0:
+                print(count)
+
+            if xerr or yerr:
+                exc += 1
+                if yerr is not xerr:
+                    raise TestError(
+                        "\nslices: %s\nxerr: %s\nyerr: %s\n" % (slices, xerr, yerr))
+                else:
+                    continue
+
+            if yy.tolist() != xx:
+                raise TestError(
+                    "depth: %d\n slices: %s\nexpected: %s\ngot: %s\n" % (d, slices, xx, yy.tolist()))
+
+            success += 1
+
+    lists = [[[[0, 1], [2, 3]], [[4, 5, 0], [7]], [[8, 9]]],
+             [[[0, 1], [2, 3]], [[4, 5, None], None, [7]], None, [[8, 9]]],
+             [[[0, 1, 2], [3, 4, 5, 6], [7, 8, 9, 10]], [[11, 12, 13, 14], [15, 16, 17], [18, 19]]],
+             [[[0, 1], [2, 3], [4, 5]], [[6, 7], [8, 9]], [[10, 11]]]]
+
+    for lst in lists:
+        x = SimpleArray(lst)
+        y = Array(lst)
+        f(x, y, 0)
+
+    print("count: %d, success: %d, err: %d\n", (count, success, err))
 
 
 if __name__ == '__main__':
@@ -480,3 +595,4 @@ if __name__ == '__main__':
     b = a[1:2, ::2, ::-1]
     print("%s\n" % b)
     print("slice: %s\n" % b.tolist())
+    print("simple: %s\n" % SimpleArray(lst)[1:2, ::2, ::-1])
