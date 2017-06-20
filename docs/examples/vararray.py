@@ -240,7 +240,23 @@ class Array(object):
           variable dimensions can be forced by ommitting fixed dimensions
           in the type, so there is effectively always a way to force Arrow.
 
-      2) shapes[[], [ndim1_shapes], [ndim2_shapes], ...]
+      2) suboffsets[ndim0_suboffset, ndim1_suboffset, ...]
+
+          Suboffsets are used here to store a linear index component that
+          is always present as a result of slicing.  ndim0_suboffset is the
+          suboffset of the array data. For fixed dimensions the suboffset
+          is always 0.  For variable dimensions the suboffset targets the
+          offset arrays.
+
+          In NumPy there is only one data array (the actual array data), so
+          suboffsets can be replaced by moving around the start pointer
+          on the array data.
+
+          Variable dimensions introduce additional data (index/offset)
+          arrays, so some form of suboffsets needs to be stored in the
+          C-xnd array as well.
+
+      3) shapes[[], [ndim1_shapes], [ndim2_shapes], ...]
 
          "shapes" contain all shapes in a variable dimension. This
          is redundant for unsliced Arrow arrays, since the shapes
@@ -249,7 +265,7 @@ class Array(object):
          For sliced arrays, however, separate shapes are needed for
          full generality.
 
-      3) bitmaps[[ndim0_bitmap], [ndim1_bitmap], [ndim2_bitmap], ...]
+      4) bitmaps[[ndim0_bitmap], [ndim1_bitmap], [ndim2_bitmap], ...]
 
          Bitmaps are Arrow compatible. 'ndim0_bitmap' tracks which values
          in the array data are missing.  'ndimX_bitmap' (X > 0) tracks
