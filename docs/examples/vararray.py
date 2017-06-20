@@ -366,11 +366,12 @@ class Array(object):
         """Return a multi-dimensional slice of the xnd array. Multi-dimensional
            indices are not yet supported."""
 
-        data = self.data[:]
+        data = self.data
+        bitmaps = self.bitmaps
+
         offsets = deepcopy(self.offsets)
         suboffsets = deepcopy(self.suboffsets)
         shapes = deepcopy(self.shapes)
-        bitmaps = deepcopy(self.bitmaps)
 
         def f(t, indices):
             if not indices:
