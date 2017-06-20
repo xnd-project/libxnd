@@ -287,11 +287,11 @@ class Array(object):
 
                 >>> Array(lst=[[1, None], None, [3, 4, 5]])
                 Array(
-                  type="(fixed(start=0, step=1, shape=3) * ?var(start=0, step=1) * ?int64",
-                  type_with_shapes="3 * ?var(2,0,3) * ?int64",
-                  type_with_offsets_shapes="3 * ?var(0:2,2:0,2:3,5:0) * ?int64",
+                  type="3 * ?var * ?int64",
+                  type_with_meta="fixed(shape=3, step=1, ndim=2, target=1) * ?var(ndim=1, target=0, step=1, size=1) * ?int64",
                   data=[1, None, 3, 4, 5],
                   offsets=[[], [0, 2, 2, 5], []],
+                  suboffsets=[0, 0, 0],
                   shapes=[[], [2, 0, 3], []],
                   bitmaps=[Bitmap([1, 0, 1, 1, 1]), Bitmap([1, 0, 1]), Bitmap([])],
                 )
