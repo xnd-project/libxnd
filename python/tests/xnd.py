@@ -160,6 +160,9 @@ def data_shapes(lst):
     # These two are just function-internal tags used to classify data
     # extracted from the untyped list, so an error can be raised for
     # unbalanced trees.
+    if not lst:
+        return [[], [[0]]]
+
     class Shape(list): pass
     class Data(list): pass
 
@@ -303,7 +306,7 @@ class Array(object):
 
         """
 
-        if lst:
+        if lst is not None:
             if not (typ is data is offsets is suboffsets is shapes is
                     bitmaps is None):
                 raise TypeError("the 'lst' argument precludes other arguments")
@@ -362,9 +365,52 @@ class Array(object):
 
         return f(self.typ, 0)
 
+    def subarray(self, indices):
+        """Return a subarray of the xnd array. Actual values at ndim=0 are a
+           special case of subarrays."""
+
+        data = self.data
+        bitmaps = self.bitmaps
+
+        offsets = self.offsets
+        suboffsets = self.suboffsets[:]
+        shapes = self.shapes
+
+        def f(indices):
+            if not indices:
+                return self
+
+            i, indices = indices[0], indices[1:]
+            t = self.typ
+
+            if t.opt and not self.bitmaps[t.ndim].is_valid(suboffsets[t.ndim]):
+                raise TypeError("missing value or dimension is not indexable")
+
+            if isinstance(t, FixedDim):
+                suboffsets[t.target] += i * t.step
+                shape = t.shape
+
+            elif isinstance(t, VarDim):
+                linear_index = suboffsets[t.ndim]
+                offset = self.offsets[t.ndim][linear_index]
+                shape = self.shapes[t.ndim][linear_index]
+                suboffsets[t.target] = offset + i * t.step
+
+            else:
+                raise TypeError("type not indexable")
+
+            if i < 0 or i >= shape:
+                raise IndexError("index out of range")
+
+            a = Array(typ=t.typ, data=data, offsets=offsets, suboffsets=suboffsets,
+                      shapes=shapes, bitmaps=bitmaps)
+
+            return a.subarray(indices)
+
+        return f(indices)
+
     def getslice(self, indices):
-        """Return a multi-dimensional slice of the xnd array. Multi-dimensional
-           indices are not yet supported."""
+        """Return a multi-dimensional slice of the xnd array."""
 
         data = self.data
         bitmaps = self.bitmaps
@@ -378,6 +424,9 @@ class Array(object):
                 return t.copy()
 
             i, indices = indices[0], indices[1:]
+
+            if t.opt and not self.bitmaps[t.ndim].is_valid(suboffsets[t.ndim]):
+                raise TypeError("missing value or dimension is not sliceable")
 
             if isinstance(t, FixedDim):
                 start, stop, step, shape = slice_indices(i, t.shape)
@@ -393,7 +442,7 @@ class Array(object):
                 typ = f(t.typ, indices)
                 return VarDim(opt=t.opt, step=t.step*step, typ=typ)
             else:
-                raise RuntimeError("unexpected type")
+                raise TypeError("unexpected type")
 
         typ = f(self.typ, indices)
 
@@ -404,10 +453,12 @@ class Array(object):
     def __getitem__(self, indices):
         if not isinstance(indices, tuple):
             indices = (indices,)
-        if not all(isinstance(x, slice) for x in indices):
-            raise TypeError("index must be a slice or a tuple of slices")
-
-        return self.getslice(indices)
+        if all(isinstance(x, slice) for x in indices):
+            return self.getslice(indices)
+        elif all(isinstance(x, int) for x in indices):
+            return self.subarray(indices)
+        else:
+            raise NotImplemented("mixed slices and indices not yet implemented")
 
     def __repr__(self):
         return """\
@@ -434,4 +485,3 @@ if __name__ == '__main__':
     b = a[1:2, ::2, ::-1]
     print("%s\n" % b)
     print("slice: %s\n" % b.tolist())
-    print("simple: %s\n" % SimpleArray(lst)[1:2, ::2, ::-1])

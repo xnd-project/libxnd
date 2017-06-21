@@ -23,8 +23,6 @@ def getitem(lst, indices):
     """
     if not indices:
         return lst
-    if lst is None:
-        return lst
     i, indices = indices[0], indices[1:]
     item = list.__getitem__(lst, i)
     if isinstance(i, int):
@@ -60,6 +58,17 @@ def typeof(lst):
 
     return t
 
+def genindices():
+    for i in range(4):
+        yield (i,)
+    for i in range(4):
+        for j in range(4):
+            yield (i, j)
+    for i in range(4):
+        for j in range(4):
+            for k in range(4):
+                yield (i, j, k)
+
 def rslice(ndim):
     start = randrange(0, ndim+1)
     stop = randrange(0, ndim+1)
@@ -92,6 +101,43 @@ def genslices_ndim(ndim, shape):
 
 class SliceTest(unittest.TestCase):
 
+    def test_subarray(self):
+        # Test multidimensional indexing (also chained).
+
+        indices_stack = [0] * 4
+        test_stack = [0] * 4
+
+        def f(lst, nd, depth):
+            if depth > 3:
+                return
+
+            test_stack[depth] = lst
+
+            for indices in genindices():
+                indices_stack[depth] = indices
+
+                err_lst = None
+                try:
+                    subarray_lst = lst[indices]
+                except Exception as e:
+                    err_lst = e.__class__
+
+                err_nd = None
+                try:
+                    subarray_nd = nd[indices]
+                except Exception as e:
+                    err_nd = e.__class__
+
+                if err_lst or err_nd:
+                    self.assertIs(err_nd, err_lst)
+                else:
+                    self.assertEqual(subarray_nd.tolist(), subarray_lst)
+                    if isinstance(subarray_lst, list): # can also be a scalar
+                        f(SimpleArray(subarray_lst), subarray_nd, depth+1)
+
+        for t in TEST_CASES:
+            f(SimpleArray(t), Array(t), 0)
+
     def test_rand_slices(self):
         # Test random slices and chained slicing.
 
@@ -117,6 +163,8 @@ class SliceTest(unittest.TestCase):
                     err_nd = e.__class__
 
                 if err_lst or err_nd:
+                    if err_nd is not err_lst:
+                        print("%s   %s" % (lst, slices))
                     self.assertIs(err_nd, err_lst)
                 else:
                     self.assertEqual(sliced_nd.tolist(), sliced_lst)
