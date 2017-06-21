@@ -217,10 +217,19 @@ def array_info(array_data, dim_shapes):
 class Array(object):
     """Python model of the XND array.
 
-    An xnd array consists of the actual data array and three metadata
-    arrays that are indexed by ndim. 
+    An xnd array consists of the actual data array and four metadata
+    arrays that are indexed by ndim. The data array and bitmaps are
+    shared.  Offsets, suboffsets and shapes are per-view copies.
 
-       1) offsets[[], [ndim1_data], [ndim2_data], ...]
+       1) bitmaps[[ndim0_bitmap], [ndim1_bitmap], [ndim2_bitmap], ...]
+
+          Bitmaps are Arrow compatible. 'ndim0_bitmap' tracks which values
+          in the array data are missing.  'ndimX_bitmap' (X > 0) tracks
+          which dimensions are missing.
+
+          If ndimX does not contain missing values, the bitmaps are empty.
+
+       2) offsets[[], [ndim1_data], [ndim2_data], ...]
 
           "offsets" are indices into the next dimension data. In the
           above example, ndim2_data is a list of indices into ndim1_data,
@@ -243,7 +252,7 @@ class Array(object):
           variable dimensions can be forced by ommitting fixed dimensions
           in the type, so there is effectively always a way to force Arrow.
 
-      2) suboffsets[ndim0_suboffset, ndim1_suboffset, ...]
+       3) suboffsets[ndim0_suboffset, ndim1_suboffset, ...]
 
           Suboffsets are used here to store a linear index component that
           is always present as a result of slicing.  ndim0_suboffset is the
@@ -259,27 +268,20 @@ class Array(object):
           arrays, so some form of suboffsets needs to be stored in the
           C-xnd array as well.
 
-      3) shapes[[], [ndim1_shapes], [ndim2_shapes], ...]
+       4) shapes[[], [ndim1_shapes], [ndim2_shapes], ...]
 
-         "shapes" contain all shapes in a variable dimension. This
-         is redundant for unsliced Arrow arrays, since the shapes
-         are also encoded as the difference between two offsets.
+          "shapes" contain all shapes in a variable dimension. This
+          is redundant for unsliced Arrow arrays, since the shapes
+          are also encoded as the difference between two offsets.
 
-         For sliced arrays, however, separate shapes are needed for
-         full generality.
+          For sliced arrays, however, separate shapes are needed for
+          full generality.
 
-      4) bitmaps[[ndim0_bitmap], [ndim1_bitmap], [ndim2_bitmap], ...]
-
-         Bitmaps are Arrow compatible. 'ndim0_bitmap' tracks which values
-         in the array data are missing.  'ndimX_bitmap' (X > 0) tracks
-         which dimensions are missing.
-
-         If ndimX does not contain missing values, the bitmaps are empty.
 
     """
 
-    def __init__(self, lst=None, *, typ=None, data=None, offsets=None,
-                 suboffsets=None, shapes=None, bitmaps=None):
+    def __init__(self, lst=None, *, typ=None, data=None, bitmaps=None,
+                 offsets=None, suboffsets=None, shapes=None):
         """
         Initialize the array either
 
@@ -293,10 +295,10 @@ class Array(object):
                   type="3 * ?var * ?int64",
                   type_with_meta="fixed(shape=3, step=1, ndim=2, target=1) * ?var(ndim=1, target=0, step=1, size=1) * ?int64",
                   data=[1, None, 3, 4, 5],
+                  bitmaps=[Bitmap([1, 0, 1, 1, 1]), Bitmap([1, 0, 1]), Bitmap([])],
                   offsets=[[], [0, 2, 2, 5], []],
                   suboffsets=[0, 0, 0],
                   shapes=[[], [2, 0, 3], []],
-                  bitmaps=[Bitmap([1, 0, 1, 1, 1]), Bitmap([1, 0, 1]), Bitmap([])],
                 )
 
 
@@ -323,12 +325,17 @@ class Array(object):
                                            shapes, bitmaps):
                 raise TypeError("invalid argument combination")
 
+            # view-specific
             self.typ = typ
+
+            # shared
             self.data = data
+            self.bitmaps = bitmaps
+
+            # view-specific
             self.offsets = offsets
             self.suboffsets = suboffsets
             self.shapes = shapes
-            self.bitmaps = bitmaps
 
     def tolist(self):
         """Return the xnd array as an untyped list."""
@@ -402,8 +409,8 @@ class Array(object):
             if i < 0 or i >= shape:
                 raise IndexError("index out of range")
 
-            a = Array(typ=t.typ, data=data, offsets=offsets, suboffsets=suboffsets,
-                      shapes=shapes, bitmaps=bitmaps)
+            a = Array(typ=t.typ, data=data, bitmaps=bitmaps, offsets=offsets,
+                      suboffsets=suboffsets, shapes=shapes)
 
             return a.subarray(indices)
 
@@ -446,9 +453,8 @@ class Array(object):
 
         typ = f(self.typ, indices)
 
-        return Array(typ=typ, data=data, offsets=offsets,
-                     suboffsets=suboffsets, shapes=shapes,
-                     bitmaps=bitmaps)
+        return Array(typ=typ, data=data, bitmaps=bitmaps, offsets=offsets,
+                     suboffsets=suboffsets, shapes=shapes)
 
     def __getitem__(self, indices):
         if not isinstance(indices, tuple):
@@ -466,12 +472,12 @@ Array(
   type="%s",
   type_with_meta="%s",
   data=%s,
+  bitmaps=%s,
   offsets=%s,
   suboffsets=%s,
   shapes=%s,
-  bitmaps=%s,
-)""" % (self.typ, self.typ.concrete_repr(), self.data, self.offsets,
-        self.suboffsets, self.shapes, self.bitmaps)
+)""" % (self.typ, self.typ.concrete_repr(), self.data, self.bitmaps,
+        self.offsets, self.suboffsets, self.shapes)
 
 
 if __name__ == '__main__':
