@@ -7,6 +7,8 @@ from copy import copy, deepcopy
 #                   Python model of the xnd array type                 #
 ########################################################################
 
+MAX_DIM = 128
+
 def slice_indices(s, shape):
     indices = s.indices(shape)
     length = len(range(*indices))
@@ -146,7 +148,7 @@ def choose_dim_type(*, opt=False, typ=None, shapes=None):
         return FixedDim(opt=opt, typ=typ, shape=0 if n == 0 else shapes[0])
     return VarDim(opt=opt, typ=typ)
 
-def data_shapes(lst):
+def data_shapes(tree):
     """Extract array data and dimension shapes from a nested list. The
        list may contain None for missing data or dimensions.
 
@@ -157,32 +159,85 @@ def data_shapes(lst):
                      |                    `-- ndim=1: shapes 2, 3, 4
                      `--- ndim=0: extracted array data
     """
-    # These two are just function-internal tags used to classify data
-    # extracted from the untyped list, so an error can be raised for
-    # unbalanced trees.
-    if not lst:
-        return [[], [[0]]]
-
-    class Shape(list): pass
+    # Classify data and shapes extracted from the untyped list, so an error
+    # can be raised for unbalanced trees.
+    class Unknown(list): pass
     class Data(list): pass
+    class Shape(list): pass
 
-    acc = []
-    def f(cls, depth, array):
-        if depth == len(acc): # new dimension or data
-            acc.append(cls([]))
-        if not isinstance(acc[depth], cls):
-            raise ValueError("unbalanced tree")
-        if isinstance(array, list):
-            acc[depth].append(len(array))
-            cls = Data if is_value_list(array) else Shape
-            for item in array:
-                f(cls, depth+1, item)
-        else: # None or int
-            assert array is None or isinstance(array, int)
-            acc[depth].append(array)
-    f(Shape, 0, lst)
+    acc = [Unknown() for _ in range(MAX_DIM+1)]
+    max_level = 0
+
+    def search(level, a):
+        nonlocal max_level
+
+        if level >= MAX_DIM:
+            raise ValueError("too many dimensions")
+
+        current = acc[level]
+        if isinstance(current, Unknown):
+            if a is None:
+                current.append(a)
+            elif isinstance(a, int):
+                current.append(a)
+                acc[level] = Data(current)
+            elif isinstance(a, list):
+                current.append(len(a))
+                acc[level] = Shape(current)
+                max_level = level + 1
+                for item in a:
+                    search(level+1, item)
+            else:
+                raise TypeError("unsupported type '%s'", type(a))
+
+        elif isinstance(current, Data):
+            if a is None:
+                current.append(a)
+            elif isinstance(a, int):
+                current.append(a)
+            else:
+                raise TypeError(
+                    "unbalanced tree, expected int or None, got '%s'" % type(a))
+
+        elif isinstance(current, Shape):
+            if a is None:
+                current.append(a)
+            elif isinstance(current, list):
+                current.append(len(a))
+                max_level = level + 1
+                for item in a:
+                    search(level+1, item)
+            else:
+                raise TypeError(
+                    "unbalanced tree, expected list or None, got '%s'" % type(a))
+        else:
+            raise TypeError(
+                "expected Unknown, Data or Shape, got '%s'" % type(a))
+
+    search(0, tree)
+
+    lst = acc[max_level]
+    if isinstance(lst, Unknown): # No data found
+        acc[max_level] = Data(lst)
+
     acc.reverse()
-    return acc[0], acc[1:]
+    data_shapes = [v for v in acc if not isinstance(v, Unknown)]
+
+    return data_shapes[0], data_shapes[1:]
+
+def typeof(lst):
+    """Infer the type of a nested list."""
+    data, shapes = data_shapes(lst)
+
+    opt = None in data
+    t = Int64(opt=opt)
+
+    for l in shapes:
+        opt = None in l
+        lst = replace_none(l)
+        t = choose_dim_type(opt=opt, typ=t, shapes=l)
+
+    return t
 
 def array_info(array_data, dim_shapes):
     """Construct the xnd array info from the actual array data and the
@@ -459,6 +514,8 @@ class Array(object):
     def __getitem__(self, indices):
         if not isinstance(indices, tuple):
             indices = (indices,)
+        if len(indices) > self.typ.ndim:
+            raise IndexError("too many indices")
         if all(isinstance(x, slice) for x in indices):
             return self.getslice(indices)
         elif all(isinstance(x, int) for x in indices):

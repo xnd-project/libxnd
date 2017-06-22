@@ -1,4 +1,4 @@
-from xnd import Array
+from xnd import Array, FixedDim, typeof
 from random import randrange
 from itertools import product
 import unittest
@@ -31,9 +31,15 @@ def getitem(lst, indices):
 
 class SimpleArray(list):
     """A simple wrapper for using slicing/indexing syntax on a nested list."""
+    def __init__(self, value):
+        list.__init__(self, value)
+        self.typ = typeof(self)
+
     def __getitem__(self, indices):
         if not isinstance(indices, tuple):
             indices = (indices,)
+        if len(indices) > self.typ.ndim:
+            raise IndexError("too many indices")
         if not all(isinstance(x, int) or isinstance(x, slice) for x in indices):
             raise TypeError(
                 "index must be int or slice or a tuple of integers and slices")
@@ -43,20 +49,6 @@ class SimpleArray(list):
 # ======================================================================
 #                           Helper functions
 # ======================================================================
-
-def typeof(lst):
-    """Infer the type of a nested list."""
-    _, dim_shapes = data_shapes(lst)
-
-    opt = None in lst
-    t = Int64(opt)
-
-    for lst in dim_shapes:
-        opt = None in lst
-        lst = replace_none(lst)
-        t = choose_dim_type(t, lst, opt)
-
-    return t
 
 def genindices():
     for i in range(4):
@@ -150,6 +142,10 @@ class SliceTest(unittest.TestCase):
             for slices in randslices(3):
                 slice_stack[depth] = slices
 
+                if isinstance(nd.typ, FixedDim) and nd.typ.shape <= 1 and \
+                   len(slices) > 1: # slicing may work on nd but not on lst
+                    continue
+
                 err_lst = None
                 try:
                     sliced_lst = lst[slices]
@@ -164,7 +160,7 @@ class SliceTest(unittest.TestCase):
 
                 if err_lst or err_nd:
                     if err_nd is not err_lst:
-                        print("%s   %s" % (lst, slices))
+                        print("%s  %s  %s" % (lst, slices, nd))
                     self.assertIs(err_nd, err_lst)
                 else:
                     self.assertEqual(sliced_nd.tolist(), sliced_lst)
