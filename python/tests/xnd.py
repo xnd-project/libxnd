@@ -9,7 +9,7 @@ from copy import copy, deepcopy
 
 MAX_DIM = 128
 
-def slice_indices(s, shape):
+def slice_spec(s, shape):
     indices = s.indices(shape)
     length = len(range(*indices))
     return indices + (length,)
@@ -37,7 +37,9 @@ class Int64(Datashape):
         self.opt = opt
         self.target = 0
         self.ndim = 0
+        # concrete
         self.size = 1 # 8 in ndtypes (steps vs. strides issue)
+        self.index = 0
 
     def __repr__(self):
         return "%sint64" % opt_repr(self.opt)
@@ -48,7 +50,8 @@ class Int64(Datashape):
     concrete_repr = __repr__
 
 class FixedDim(Datashape):
-    def __init__(self, *, opt=False, shape=None, step=None, typ=None):
+    def __init__(self, *, opt=False, shape=None, step=None, typ=None,
+                 index=None):
         # abstract
         self.opt = opt
         self.ndim = typ.ndim + 1
@@ -61,6 +64,7 @@ class FixedDim(Datashape):
         else:
             self.step = step
         self.size = shape * self.step
+        self.index = self.ndim if index is None else index
 
     def copy(self):
         typ = self.typ.copy()
@@ -70,13 +74,13 @@ class FixedDim(Datashape):
         return "%s%d * %r" % (opt_repr(self.opt), self.shape, self.typ)
 
     def concrete_repr(self):
-        return "%sfixed(shape=%d, step=%d, ndim=%d, target=%d) * %s" % \
+        return "%sfixed(shape=%d, step=%d, ndim=%d, index=%d, target=%d) * %s" % \
             (opt_repr(self.opt), self.shape, self.step, self.ndim, self.target,
-             self.typ.concrete_repr())
+             self.index, self.typ.concrete_repr())
 
 
 class VarDim(Datashape):
-    def __init__(self, *, opt=False, step=None, typ=None):
+    def __init__(self, *, opt=False, step=None, typ=None, index=None):
         # abstract
         self.opt = opt
         self.ndim = typ.ndim + 1
@@ -88,6 +92,7 @@ class VarDim(Datashape):
         else:
             self.step = step
         self.size = 1
+        self.index = self.ndim if index is None else index
 
     def copy(self):
         typ = self.typ.copy()
@@ -97,8 +102,9 @@ class VarDim(Datashape):
         return "%svar * %r" % (opt_repr(self.opt), self.typ)
 
     def concrete_repr(self):
-        return "%svar(ndim=%d, target=%d, step=%d, size=%d) * %s" % \
-            (opt_repr(self.opt), self.ndim, self.target, self.step, self.size, self.typ.concrete_repr())
+        return "%svar(ndim=%d, index=%s, target=%d, step=%d, size=%d) * %s" % \
+            (opt_repr(self.opt), self.ndim, self.index, self.target, self.step,
+             self.size, self.typ.concrete_repr())
 
 def dims_as_list(t):
     dimensions = []
@@ -397,7 +403,7 @@ class Array(object):
 
         def f(t, linear_index):
             if isinstance(t, FixedDim):
-                if t.opt and not self.bitmaps[t.ndim].is_valid(linear_index):
+                if t.opt and not self.bitmaps[t.index].is_valid(linear_index):
                     return None
                 shape = t.shape
                 ret = []
@@ -407,11 +413,11 @@ class Array(object):
                 return ret
 
             elif isinstance(t, VarDim):
-                linear_index += self.suboffsets[t.ndim]
-                if t.opt and not self.bitmaps[t.ndim].is_valid(linear_index):
+                linear_index += self.suboffsets[t.index]
+                if t.opt and not self.bitmaps[t.index].is_valid(linear_index):
                     return None
-                shape = self.shapes[t.ndim][linear_index]
-                linear_index = self.offsets[t.ndim][linear_index]
+                shape = self.shapes[t.index][linear_index]
+                linear_index = self.offsets[t.index][linear_index]
                 ret = []
                 for k in range(shape):
                     x = f(t.typ, linear_index + k*t.step)
@@ -419,7 +425,7 @@ class Array(object):
                 return ret
 
             elif isinstance(t, Int64):
-                linear_index += self.suboffsets[t.ndim]
+                linear_index += self.suboffsets[t.index]
                 return self.data[linear_index]
 
             else:
@@ -427,52 +433,8 @@ class Array(object):
 
         return f(self.typ, 0)
 
-    def subarray(self, indices):
-        """Return a subarray of the xnd array. Actual values at ndim=0 are a
-           special case of subarrays."""
-
-        data = self.data
-        bitmaps = self.bitmaps
-
-        offsets = self.offsets
-        suboffsets = self.suboffsets[:]
-        shapes = self.shapes
-
-        def f(indices):
-            if not indices:
-                return self
-
-            i, indices = indices[0], indices[1:]
-            t = self.typ
-
-            if t.opt and not self.bitmaps[t.ndim].is_valid(suboffsets[t.ndim]):
-                raise TypeError("missing value or dimension is not indexable")
-
-            if isinstance(t, FixedDim):
-                suboffsets[t.target] += i * t.step
-                shape = t.shape
-
-            elif isinstance(t, VarDim):
-                linear_index = suboffsets[t.ndim]
-                offset = self.offsets[t.ndim][linear_index]
-                shape = self.shapes[t.ndim][linear_index]
-                suboffsets[t.target] = offset + i * t.step
-
-            else:
-                raise TypeError("type not indexable")
-
-            if i < 0 or i >= shape:
-                raise IndexError("index out of range")
-
-            a = Array(typ=t.typ, data=data, bitmaps=bitmaps, offsets=offsets,
-                      suboffsets=suboffsets, shapes=shapes)
-
-            return a.subarray(indices)
-
-        return f(indices)
-
-    def getslice(self, indices):
-        """Return a multi-dimensional slice of the xnd array."""
+    def getitem(self, indices):
+        """Return multi-dimensional subarrays or slices of an xnd array."""
 
         data = self.data
         bitmaps = self.bitmaps
@@ -481,32 +443,61 @@ class Array(object):
         suboffsets = deepcopy(self.suboffsets)
         shapes = deepcopy(self.shapes)
 
-        def f(t, indices):
+        def dispatch(t, indices):
             if not indices:
                 return t.copy()
 
-            i, indices = indices[0], indices[1:]
+            i, rest = indices[0], indices[1:]
+            if isinstance(i, int):
+                return subarray(t, i, rest)
+            elif isinstance(i, slice):
+                return subslice(t, i, rest)
+            else:
+                raise TypeError("indices must be int or slice, got '%s'" % i)
 
-            if t.opt and not self.bitmaps[t.ndim].is_valid(suboffsets[t.ndim]):
+        def subarray(t, i, rest):
+            if t.opt and not bitmaps[t.index].is_valid(suboffsets[t.index]):
+                raise TypeError("missing value or dimension is not indexable")
+
+            if isinstance(t, FixedDim):
+                suboffsets[t.target] += i * t.step
+                shape = t.shape
+
+            elif isinstance(t, VarDim):
+                linear_index = suboffsets[t.index]
+                offset = offsets[t.index][linear_index]
+                shape = shapes[t.index][linear_index]
+                suboffsets[t.target] = offset + i * t.step
+
+            else:
+                raise TypeError("type not indexable")
+
+            if i < 0 or i >= shape:
+                raise IndexError("index out of range")
+
+            return dispatch(t.typ, rest)
+
+        def subslice(t, s, rest):
+            if t.opt and not bitmaps[t.index].is_valid(suboffsets[t.index]):
                 raise TypeError("missing value or dimension is not sliceable")
 
             if isinstance(t, FixedDim):
-                start, stop, step, shape = slice_indices(i, t.shape)
+                start, stop, step, shape = slice_spec(s, t.shape)
                 suboffsets[t.target] += t.step * start
-                typ = f(t.typ, indices)
+                typ = dispatch(t.typ, rest)
                 return FixedDim(opt=t.opt, shape=shape, step=t.step*step, typ=typ)
 
             elif isinstance(t, VarDim):
-                for k, shape in enumerate(self.shapes[t.ndim]):
-                    start, stop, step, shape = slice_indices(i, shape)
-                    offsets[t.ndim][k] += start * t.step
-                    shapes[t.ndim][k] = shape
-                typ = f(t.typ, indices)
-                return VarDim(opt=t.opt, step=t.step*step, typ=typ)
+                for k, shape in enumerate(self.shapes[t.index]):
+                    start, stop, step, shape = slice_spec(s, shape)
+                    offsets[t.index][k] += start * t.step
+                    shapes[t.index][k] = shape
+                typ = dispatch(t.typ, rest)
+                return VarDim(opt=t.opt, step=t.step*step, index=t.index, typ=typ)
             else:
                 raise TypeError("unexpected type")
 
-        typ = f(self.typ, indices)
+        typ = dispatch(self.typ, indices)
 
         return Array(typ=typ, data=data, bitmaps=bitmaps, offsets=offsets,
                      suboffsets=suboffsets, shapes=shapes)
@@ -516,10 +507,8 @@ class Array(object):
             indices = (indices,)
         if len(indices) > self.typ.ndim:
             raise IndexError("too many indices")
-        if all(isinstance(x, slice) for x in indices):
-            return self.getslice(indices)
-        elif all(isinstance(x, int) for x in indices):
-            return self.subarray(indices)
+        if all(isinstance(x, (int, slice)) for x in indices):
+            return self.getitem(indices)
         else:
             raise NotImplemented("mixed slices and indices not yet implemented")
 
