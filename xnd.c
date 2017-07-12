@@ -285,7 +285,7 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
         return -1;
 
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
-    case ScalarKind: case SignedKind: case UnsignedKind: case RealKind:
+    case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
     case ComplexKind: case FixedStringKind: case FixedBytesKind: case Field:
     case Void: case Function:
         /* NOT REACHED: intercepted by ndt_is_abstract(). */
