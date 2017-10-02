@@ -39,7 +39,7 @@
 
 
 /* error return value */
-static nd_array_t err = {NULL, NULL, NULL};
+static nd_array_t err = {NULL, NULL};
 
 
 /*****************************************************************************/
@@ -58,7 +58,7 @@ nd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
         return NULL;
     }
 
-    ptr = ndt_calloc(1, t->Concrete.size);
+    ptr = ndt_calloc(1, t->data_size);
     if (ptr == NULL) {
         return ndt_memory_error(ctx);
     }
@@ -71,64 +71,6 @@ nd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
     return ptr;
 }
 
-/* Initialize the var dimensions represented by indey arrays. The index
-   arrays use the smallest possible integer type. */
-static int
-init_var_data(char *ptr, enum ndt_dim dim_type, const int64_t *offsets,
-              int nshapes, ndt_context_t *ctx)
-{
-    int i;
-
-    /* Indices into the next dimension: cumulative sum of shapes */
-    switch (dim_type) {
-    case DimUint8: {
-        uint8_t *p = (uint8_t *)ptr;
-
-        for (i = 0; i < nshapes+1; i++) {
-            p[i] = offsets[i];
-        }
-        return 0;
-    }
-    case DimUint16: {
-        uint16_t *p = (uint16_t *)ptr;
-
-        for (i = 0; i < nshapes+1; i++) {
-            p[i] = offsets[i];
-        }
-        return 0;
-    }
-    case DimUint32: {
-        uint32_t *p = (uint32_t *)ptr;
-
-        for (i = 0; i < nshapes+1; i++) {
-            p[i] = offsets[i];
-        }
-        return 0;
-    }
-    case DimInt32: {
-        int32_t *p = (int32_t *)ptr;
-
-        for (i = 0; i < nshapes+1; i++) {
-            p[i] = offsets[i];
-        }
-        return 0;
-    }
-    case DimInt64: {
-        int64_t *p = (int64_t *)ptr;
-
-        for (i = 0; i < nshapes+1; i++) {
-            p[i] = offsets[i];
-        }
-    }
-    case DimNone:
-        goto unknown_dimension_type;
-    }
-
-unknown_dimension_type:
-    ndt_err_format(ctx, NDT_RuntimeError, "dimension type is not set");
-    return -1;
-}
-
 /*
  * Initialize typed memory. If 'alloc_pointers' is true, allocate memory
  * for all pointer subtypes and initialize that memory. Otherwise, set
@@ -138,7 +80,6 @@ int
 nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
 {
     char *item;
-    int ret;
 
     if (ndt_is_abstract(t)) {
         ndt_err_format(ctx, NDT_ValueError,
@@ -147,36 +88,11 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
     }
 
     switch (t->tag) {
-    case Array: {
+    case FixedDim: case VarDim: {
         const ndt_t *dims[NDT_MAX_DIM];
         const ndt_t *dtype;
-        int i;
 
-        ndt_const_dims_dtype(dims, &dtype, t->Array.type);
-
-        for (i = 0; i < t->ndim; i++) {
-            assert(ndt_is_concrete(dims[i]));
-
-            /* possible bitmaps initialized by calloc() */
-            switch (dims[i]->tag) {
-            case FixedDim:
-                break;
-            case VarDim:
-                ret = init_var_data(ptr + t->Concrete.Array.data[dims[i]->ndim],
-                                    t->Concrete.Array.dim_type,
-                                    dims[i]->Concrete.VarDim.offsets,
-                                    dims[i]->Concrete.VarDim.nshapes,
-                                    ctx);
-                if (ret < 0) {
-                    // nd_clear(ptr, t);
-                    return -1;
-                }
-                break;
-            default:
-                abort(); /* NOT REACHED */
-            }
-        }
-
+        ndt_const_dims_dtype(dims, &dtype, t);
         return nd_init(ptr, dtype, alloc_pointers, ctx);
     }
 
@@ -219,7 +135,7 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
      */
     case Pointer:
         if (alloc_pointers) {
-            ND_POINTER_DATA(ptr) = ndt_calloc(1, t->Concrete.size);
+            ND_POINTER_DATA(ptr) = ndt_calloc(1, t->data_size);
             if (ND_POINTER_DATA(ptr) == NULL) {
                 ndt_err_format(ctx, NDT_MemoryError, "out of memory");
                 return -1;
@@ -279,11 +195,6 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
     case Char: case String: case Bytes:
         return 0;
 
-    case FixedDim: case VarDim:
-        /* NOT REACHED: intercepted by Array. */
-        ndt_err_format(ctx, NDT_RuntimeError, "unexpected fixed or var dim");
-        return -1;
-
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
     case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
     case ComplexKind: case FixedStringKind: case FixedBytesKind: case Field:
@@ -315,8 +226,6 @@ nd_empty(const char *datashape, ndt_context_t *ctx)
         return err;
     }
 
-    a.base = NULL;
-
     return a;
 }
 
@@ -337,6 +246,7 @@ nd_del(nd_array_t a)
 /*                Subarrays (single elements are a special case)             */
 /*****************************************************************************/
 
+#if 0
 /*
  * Set the validity bit of a subarray and of all dimensions that need to
  * be accessed to reach that subarray to 1.  Only useful for types that
@@ -415,6 +325,7 @@ nd_subarray_set_valid(nd_array_t a, const int64_t *indices, int len,
 
     return nd_subarray_set_valid(next, indices+1, len-1, ctx);
 }
+#endif
 
 /* Return a typed subarray */
 nd_array_t
@@ -431,6 +342,7 @@ nd_subarray(const nd_array_t a, const int64_t *indices, int len, ndt_context_t *
     }
 
     if (len == 0) {
+#if 0 // XXX
         if (ndt_is_optional(t)) {
             switch (t->tag) {
             case VarDim: case OptionItem:
@@ -444,42 +356,35 @@ nd_subarray(const nd_array_t a, const int64_t *indices, int len, ndt_context_t *
             }
         }
         else {
+#endif
             return a;
-        }
     }
 
     i = indices[0];
 
     switch (t->tag) {
-    case Array:
-        next.base = &a;
-        next.type = t->Array.type;
-        next.ptr = a.ptr + t->Concrete.Array.data[t->Concrete.Array.ndim_start];
-        return nd_subarray(next, indices, len, ctx);
     case FixedDim:
         shape = t->FixedDim.shape;
-        next.base = a.base;
         next.type = t->FixedDim.type;
         next.ptr = a.ptr + i * t->Concrete.FixedDim.stride;
         break;
+#if 0 // XXX
     case VarDim:
         if (ndt_is_optional(t) && !ND_DATA_IS_VALID(&a)) {
             goto missing_dimension_error;
         }
         shape = ND_VAR_SHAPE(&a);
-        next.base = a.base;
         next.type = t->VarDim.type;
         next.ptr = ND_NEXT_DIM(&a) + t->Concrete.VarDim.suboffset + i * t->Concrete.VarDim.stride;
         break;
+#endif
     case Tuple:
         shape = t->Tuple.shape;
-        next.base = a.base;
         next.type = t->Tuple.types[i];
         next.ptr += t->Concrete.Tuple.offset[i];
         break;
     case Record:
         shape = t->Record.shape;
-        next.base = a.base;
         next.type = t->Record.types[i];
         next.ptr += t->Concrete.Record.offset[i];
         break;
@@ -496,7 +401,9 @@ nd_subarray(const nd_array_t a, const int64_t *indices, int len, ndt_context_t *
     return nd_subarray(next, indices+1, len-1, ctx);
 
 
+#if 0 // XXX
 missing_dimension_error:
     ndt_err_format(ctx, NDT_ValueError, "cannot index missing dimension");
     return err;
+#endif
 }

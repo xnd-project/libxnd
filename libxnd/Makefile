@@ -4,7 +4,7 @@
 # ==============================================================================
 
 LIBSTATIC = libxnd.a
-LIBNDTYPESDIR = ndtypes
+LIBNDTYPESDIR = ndtypes/libndtypes
 
 CC ?= gcc
 LD ?= gcc
@@ -44,9 +44,10 @@ Makefile xnd.c xnd.h
 
 # Tests
 runtest:\
-Makefile tests/runtest.c tests/test_fixed.c tests/test_var.c tests/test.h $(LIBSTATIC)
+Makefile tests/runtest.c tests/test_fixed.c tests/test.h $(LIBSTATIC)
 	$(CC) -I. -I $(LIBNDTYPESDIR) -L $(LIBNDTYPESDIR) $(CFLAGS) -DTEST_ALLOC \
-	-o tests/runtest tests/runtest.c tests/test_fixed.c tests/test_var.c $(LIBSTATIC) ndtypes/libndtypes.a
+	-o tests/runtest tests/runtest.c tests/test_fixed.c $(LIBSTATIC) \
+	 $(LIBNDTYPESDIR)/libndtypes.a
 
 check:\
 Makefile runtest

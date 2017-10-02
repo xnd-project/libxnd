@@ -47,38 +47,18 @@
 /* convenience macro to extract a pointer value */
 #define ND_POINTER_DATA(ptr) (((ndt_pointer_t *)ptr)->data)
 
-
-typedef struct _nd_array_t nd_array_t;
-
 /* typed memory */
-struct _nd_array_t {
-    const nd_array_t *base; /* changes if a new array is discovered */
-    const ndt_t *type;      /* type of the data */
-    char *ptr;              /* data */
-};
-
+typedef struct _nd_array_t {
+    const ndt_t *type;  /* type of the data */
+    char *ptr;          /* data */
+} nd_array_t;
 
 
 /*****************************************************************************/
 /*              Inline functions to access array data and metadata           */
 /*****************************************************************************/
 
-/* Return the data of the current dimension. */
-static inline char *
-ND_DIM_DATA(const nd_array_t *mem)
-{
-    const ndt_t *a = mem->base->type;
-    const ndt_t *t = mem->type;
-
-    assert(a->tag == Array);
-    assert(ndt_is_concrete(a));
-
-    assert(t->ndim == 0 || t->tag == VarDim);
-    assert(ndt_is_concrete(t));
-
-    return mem->base->ptr + a->Concrete.Array.data[t->ndim];
-}
-
+#if 0
 static inline int64_t
 ND_DIM_ITEMSIZE(const nd_array_t *mem)
 {
@@ -273,6 +253,7 @@ ND_DATA_SET_VALID(nd_array_t *mem)
     bitmap = (uint8_t *)(mem->base->ptr + a->Concrete.Array.bitmaps[t->ndim]);
     bitmap[i / 8] |= ((uint8_t )1 << (i % 8));
 }
+#endif
 
 
 /*****************************************************************************/

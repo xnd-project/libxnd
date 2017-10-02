@@ -62,7 +62,7 @@ init_tests(void)
 
 static int (*tests[])(void) = {
   test_fixed,
-  test_var,
+  /* XXX test_var, */
   NULL
 };
 
