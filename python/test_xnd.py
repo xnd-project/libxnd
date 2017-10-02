@@ -1,4 +1,4 @@
-from xnd import Array, data_shapes
+from _pyxnd import Array, data_shapes
 from itertools import accumulate, count, product
 from functools import partial
 from random import randrange
