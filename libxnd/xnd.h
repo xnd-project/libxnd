@@ -42,16 +42,16 @@
 
 
 /* mem.ptr special value to indicate NA */
-#define ND_MISSING ((void *)0x1)
+#define XND_MISSING ((void *)0x1)
 
 /* convenience macro to extract a pointer value */
-#define ND_POINTER_DATA(ptr) (((ndt_pointer_t *)ptr)->data)
+#define XND_POINTER_DATA(ptr) (((ndt_pointer_t *)ptr)->data)
 
 /* typed memory */
-typedef struct _nd_array_t {
+typedef struct _xnd_t {
     const ndt_t *type;  /* type of the data */
     char *ptr;          /* data */
-} nd_array_t;
+} xnd_t;
 
 
 /*****************************************************************************/
@@ -60,7 +60,7 @@ typedef struct _nd_array_t {
 
 #if 0
 static inline int64_t
-ND_DIM_ITEMSIZE(const nd_array_t *mem)
+XND_DIM_ITEMSIZE(const xnd_t *mem)
 {
     const ndt_t *t = mem->type;
 
@@ -89,7 +89,7 @@ ND_DIM_ITEMSIZE(const nd_array_t *mem)
  * Otherwise the behavior of the function is undefined.
  */
 static inline int64_t
-ND_LINEAR_INDEX(const nd_array_t *mem)
+XND_LINEAR_INDEX(const xnd_t *mem)
 {
     const ndt_t *t = mem->type;
     ptrdiff_t d;
@@ -98,13 +98,13 @@ ND_LINEAR_INDEX(const nd_array_t *mem)
     assert(t->ndim == 0 || t->tag == VarDim);
     assert(ndt_is_concrete(t));
 
-    d = mem->ptr - ND_DIM_DATA(mem);
+    d = mem->ptr - XND_DIM_DATA(mem);
     i = d / t->Concrete.size;
     return i;
 }
 
 static inline int64_t
-ND_VAR_SHAPE(const nd_array_t *mem)
+XND_VAR_SHAPE(const xnd_t *mem)
 {
     const ndt_t *a = mem->base->type;
     const ndt_t *t = mem->type;
@@ -140,7 +140,7 @@ ND_VAR_SHAPE(const nd_array_t *mem)
 }
 
 static inline char *
-ND_NEXT_DIM(const nd_array_t *mem)
+XND_NEXT_DIM(const xnd_t *mem)
 {
     const ndt_t *a = mem->base->type;
     const ndt_t *t = mem->type;
@@ -185,7 +185,7 @@ ND_NEXT_DIM(const nd_array_t *mem)
 }
 
 static inline uint8_t *
-ND_DIM_BITMAP(const nd_array_t *mem)
+XND_DIM_BITMAP(const xnd_t *mem)
 {
     const ndt_t *a = mem->base->type;
     const ndt_t *t = mem->type;
@@ -202,7 +202,7 @@ ND_DIM_BITMAP(const nd_array_t *mem)
 }
 
 static inline uint8_t *
-ND_BITMAP(const nd_array_t *mem, int ndim)
+XND_BITMAP(const xnd_t *mem, int ndim)
 {
     const ndt_t *a = mem->base == NULL ? mem->type : mem->base->type;
     char *bitmap;
@@ -215,7 +215,7 @@ ND_BITMAP(const nd_array_t *mem, int ndim)
 }
 
 static inline bool
-ND_DATA_IS_VALID(const nd_array_t *mem)
+XND_DATA_IS_VALID(const xnd_t *mem)
 {
     const ndt_t *a = mem->base->type;
     const ndt_t *t = mem->type;
@@ -229,13 +229,13 @@ ND_DATA_IS_VALID(const nd_array_t *mem)
     assert(ndt_is_concrete(t));
     assert(ndt_is_optional(t));
 
-    i = ND_LINEAR_INDEX(mem);
+    i = XND_LINEAR_INDEX(mem);
     bitmap = (uint8_t *)(mem->base->ptr + a->Concrete.Array.bitmaps[t->ndim]);
     return bitmap[i / 8] & ((uint8_t)1 << (i % 8));
 }
 
 static inline void
-ND_DATA_SET_VALID(nd_array_t *mem)
+XND_DATA_SET_VALID(xnd_t *mem)
 {
     const ndt_t *a = mem->base->type;
     const ndt_t *t = mem->type;
@@ -249,7 +249,7 @@ ND_DATA_SET_VALID(nd_array_t *mem)
     assert(ndt_is_concrete(t));
     assert(ndt_is_optional(t));
 
-    i = ND_LINEAR_INDEX(mem);
+    i = XND_LINEAR_INDEX(mem);
     bitmap = (uint8_t *)(mem->base->ptr + a->Concrete.Array.bitmaps[t->ndim]);
     bitmap[i / 8] |= ((uint8_t )1 << (i % 8));
 }
@@ -260,12 +260,12 @@ ND_DATA_SET_VALID(nd_array_t *mem)
 /*                               API functions                               */
 /*****************************************************************************/
 
-char *nd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx);
-int nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx);
-void nd_del(nd_array_t a);
-nd_array_t nd_empty(const char *datashape, ndt_context_t *ctx);
-int nd_subarray_set_valid(nd_array_t a, const int64_t *indices, int len, ndt_context_t *ctx);
-nd_array_t nd_subarray(const nd_array_t a, const int64_t *indices, int len, ndt_context_t *ctx);
+char *xnd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx);
+int xnd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx);
+void xnd_del(xnd_t a);
+xnd_t xnd_empty(const char *datashape, ndt_context_t *ctx);
+int xnd_subarray_set_valid(xnd_t a, const int64_t *indices, int len, ndt_context_t *ctx);
+xnd_t xnd_subarray(const xnd_t a, const int64_t *indices, int len, ndt_context_t *ctx);
 
 
 #endif /* XND_H */

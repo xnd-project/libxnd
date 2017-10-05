@@ -39,7 +39,7 @@
 
 
 /* error return value */
-static nd_array_t err = {NULL, NULL};
+static xnd_t err = {NULL, NULL};
 
 
 /*****************************************************************************/
@@ -48,7 +48,7 @@ static nd_array_t err = {NULL, NULL};
 
 /* Allocate typed memory */
 char *
-nd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
+xnd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
 {
     char *ptr;
 
@@ -63,7 +63,7 @@ nd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
         return ndt_memory_error(ctx);
     }
 
-    if (nd_init(ptr, t, alloc_pointers, ctx) < 0) {
+    if (xnd_init(ptr, t, alloc_pointers, ctx) < 0) {
         ndt_free(ptr);
         return NULL;
     }
@@ -77,7 +77,7 @@ nd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
  * pointers to NULL.
  */
 int
-nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
+xnd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
 {
     char *item;
 
@@ -93,7 +93,7 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
         const ndt_t *dtype;
 
         ndt_const_dims_dtype(dims, &dtype, t);
-        return nd_init(ptr, dtype, alloc_pointers, ctx);
+        return xnd_init(ptr, dtype, alloc_pointers, ctx);
     }
 
     case Tuple: {
@@ -101,8 +101,8 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
 
         for (i = 0; i < t->Tuple.shape; i++) {
             item = ptr + t->Concrete.Tuple.offset[i];
-            if (nd_init(item, t->Tuple.types[i], alloc_pointers, ctx) < 0) {
-                // nd_clear(ptr, t);
+            if (xnd_init(item, t->Tuple.types[i], alloc_pointers, ctx) < 0) {
+                // xnd_clear(ptr, t);
                 return -1;
             }
         }
@@ -115,8 +115,8 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
 
         for (i = 0; i < t->Record.shape; i++) {
             item = ptr + t->Concrete.Record.offset[i];
-            if (nd_init(item, t->Record.types[i], alloc_pointers, ctx) < 0) {
-                // nd_clear(ptr, t);
+            if (xnd_init(item, t->Record.types[i], alloc_pointers, ctx) < 0) {
+                // xnd_clear(ptr, t);
                 return -1;
             }
         }
@@ -135,28 +135,28 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
      */
     case Pointer:
         if (alloc_pointers) {
-            ND_POINTER_DATA(ptr) = ndt_calloc(1, t->data_size);
-            if (ND_POINTER_DATA(ptr) == NULL) {
+            XND_POINTER_DATA(ptr) = ndt_calloc(1, t->data_size);
+            if (XND_POINTER_DATA(ptr) == NULL) {
                 ndt_err_format(ctx, NDT_MemoryError, "out of memory");
                 return -1;
             }
 
-            if (nd_init(ND_POINTER_DATA(ptr), t->Pointer.type, alloc_pointers,
+            if (xnd_init(XND_POINTER_DATA(ptr), t->Pointer.type, alloc_pointers,
                 ctx) < 0) {
-                // nd_clear(ptr, t);
+                // xnd_clear(ptr, t);
                 return -1;
             }
         }
         else {
-            ND_POINTER_DATA(ptr) = NULL;
+            XND_POINTER_DATA(ptr) = NULL;
         }
 
         return 0;
 
     /* Constr is a named explicit type */
     case Constr:
-        if (nd_init(ptr, t->Constr.type, alloc_pointers, ctx) < 0) {
-            // nd_clear(ptr, t);
+        if (xnd_init(ptr, t->Constr.type, alloc_pointers, ctx) < 0) {
+            // xnd_clear(ptr, t);
             return -1;
         }
         return 0;
@@ -198,6 +198,9 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
     case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
     case ComplexKind: case FixedStringKind: case FixedBytesKind: case Field:
+    case Module:
+        ndt_err_format(ctx, NDT_NotImplementedError, "modules not implemented");
+        return -1;
     case Void: case Function:
         /* NOT REACHED: intercepted by ndt_is_abstract(). */
         ndt_err_format(ctx, NDT_RuntimeError, "unexpected abstract type");
@@ -210,17 +213,17 @@ nd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
 }
 
 /* Return the space required for a type.  Pointer types are allocated. */
-nd_array_t
-nd_empty(const char *datashape, ndt_context_t *ctx)
+xnd_t
+xnd_empty(const char *datashape, ndt_context_t *ctx)
 {
-    nd_array_t a;
+    xnd_t a;
 
     a.type = ndt_from_string(datashape, ctx);
     if (a.type == NULL) {
         return err;
     }
 
-    a.ptr = nd_new(a.type, 1, ctx);
+    a.ptr = xnd_new(a.type, 1, ctx);
     if (a.ptr == NULL) {
         ndt_del((ndt_t *)a.type);
         return err;
@@ -231,15 +234,15 @@ nd_empty(const char *datashape, ndt_context_t *ctx)
 
 /* Delete the space required for a type. Pointer types are deallocated. */
 void
-nd_del(nd_array_t a)
+xnd_del(xnd_t a)
 {
-    // nd_clear(a);
+    // xnd_clear(a);
     ndt_del((ndt_t *)a.type);
     ndt_free(a.ptr);
 }
 
 /* Clear pointer types */
-/* XXX void nd_clear(char *ptr, const ndt_t *t) {} */
+/* XXX void xnd_clear(char *ptr, const ndt_t *t) {} */
 
 
 /*****************************************************************************/
@@ -253,11 +256,11 @@ nd_del(nd_array_t a)
  * contain optional dimensions or values.
  */
 int
-nd_subarray_set_valid(nd_array_t a, const int64_t *indices, int len,
+xnd_subarray_set_valid(xnd_t a, const int64_t *indices, int len,
                       ndt_context_t *ctx)
 {
     const ndt_t *t = a.type;
-    nd_array_t next;
+    xnd_t next;
     int64_t shape;
     int i;
 
@@ -270,7 +273,7 @@ nd_subarray_set_valid(nd_array_t a, const int64_t *indices, int len,
         switch (t->tag) {
         case OptionItem:
             assert(ndt_is_optional(t));
-            ND_DATA_SET_VALID(&a);
+            XND_DATA_SET_VALID(&a);
             return 0;
         default:
             return 0;
@@ -284,7 +287,7 @@ nd_subarray_set_valid(nd_array_t a, const int64_t *indices, int len,
         next.base = &a;
         next.type = t->Array.type;
         next.ptr = a.ptr + t->Concrete.Array.data[t->Concrete.Array.ndim_start];
-        return nd_subarray_set_valid(next, indices, len, ctx);
+        return xnd_subarray_set_valid(next, indices, len, ctx);
     case FixedDim:
         shape = t->FixedDim.shape;
         next.base = a.base;
@@ -293,12 +296,12 @@ nd_subarray_set_valid(nd_array_t a, const int64_t *indices, int len,
         break;
     case VarDim:
         if (ndt_is_optional(t)) {
-            ND_DATA_SET_VALID(&a);
+            XND_DATA_SET_VALID(&a);
         }
-        shape = ND_VAR_SHAPE(&a);
+        shape = XND_VAR_SHAPE(&a);
         next.base = a.base;
         next.type = t->VarDim.type;
-        next.ptr = ND_NEXT_DIM(&a) + t->Concrete.VarDim.suboffset + i * t->Concrete.VarDim.stride;
+        next.ptr = XND_NEXT_DIM(&a) + t->Concrete.VarDim.suboffset + i * t->Concrete.VarDim.stride;
         break;
     case Tuple:
         shape = t->Tuple.shape;
@@ -323,16 +326,16 @@ nd_subarray_set_valid(nd_array_t a, const int64_t *indices, int len,
         return -1;
     }
 
-    return nd_subarray_set_valid(next, indices+1, len-1, ctx);
+    return xnd_subarray_set_valid(next, indices+1, len-1, ctx);
 }
 #endif
 
 /* Return a typed subarray */
-nd_array_t
-nd_subarray(const nd_array_t a, const int64_t *indices, int len, ndt_context_t *ctx)
+xnd_t
+xnd_subarray(const xnd_t a, const int64_t *indices, int len, ndt_context_t *ctx)
 {
     const ndt_t *t = a.type;
-    nd_array_t next;
+    xnd_t next;
     int64_t shape;
     int i;
 
@@ -346,9 +349,9 @@ nd_subarray(const nd_array_t a, const int64_t *indices, int len, ndt_context_t *
         if (ndt_is_optional(t)) {
             switch (t->tag) {
             case VarDim: case OptionItem:
-                if (!ND_DATA_IS_VALID(&a)) {
+                if (!XND_DATA_IS_VALID(&a)) {
                     next = a;
-                    next.ptr = ND_MISSING;
+                    next.ptr = XND_MISSING;
                     return next;
                 }
             default:
@@ -370,12 +373,12 @@ nd_subarray(const nd_array_t a, const int64_t *indices, int len, ndt_context_t *
         break;
 #if 0 // XXX
     case VarDim:
-        if (ndt_is_optional(t) && !ND_DATA_IS_VALID(&a)) {
+        if (ndt_is_optional(t) && !XND_DATA_IS_VALID(&a)) {
             goto missing_dimension_error;
         }
-        shape = ND_VAR_SHAPE(&a);
+        shape = XND_VAR_SHAPE(&a);
         next.type = t->VarDim.type;
-        next.ptr = ND_NEXT_DIM(&a) + t->Concrete.VarDim.suboffset + i * t->Concrete.VarDim.stride;
+        next.ptr = XND_NEXT_DIM(&a) + t->Concrete.VarDim.suboffset + i * t->Concrete.VarDim.stride;
         break;
 #endif
     case Tuple:
@@ -398,7 +401,7 @@ nd_subarray(const nd_array_t a, const int64_t *indices, int len, ndt_context_t *
         return err;
     }
 
-    return nd_subarray(next, indices+1, len-1, ctx);
+    return xnd_subarray(next, indices+1, len-1, ctx);
 
 
 #if 0 // XXX

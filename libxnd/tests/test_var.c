@@ -42,7 +42,7 @@ int
 test_var(void)
 {
     ndt_context_t *ctx;
-    nd_array_t a, b;
+    xnd_t a, b;
     uint16_t *p;
     int ret = 0;
     int i;
@@ -129,7 +129,7 @@ test_var(void)
     }
 
     /***** Type with var dimensions *****/
-    a = nd_empty(type1, ctx);
+    a = xnd_empty(type1, ctx);
     if (a.type == NULL) {
         goto error;
     }
@@ -140,7 +140,7 @@ test_var(void)
     }
 
     for (i = 0; i < 11; i++) {
-        b = nd_subarray(a, indices1[i], 3, ctx);
+        b = xnd_subarray(a, indices1[i], 3, ctx);
         if (b.ptr == NULL) {
             goto error;
         }
@@ -150,11 +150,11 @@ test_var(void)
             goto error;
         }
     }
-    nd_del(a);
+    xnd_del(a);
 
 
     /***** Type with mixed fixed and var dimensions *****/
-    a = nd_empty(type2, ctx);
+    a = xnd_empty(type2, ctx);
     if (a.type == NULL) {
         goto error;
     }
@@ -165,7 +165,7 @@ test_var(void)
     }
 
     for (i = 0; i < 22; i++) {
-        b = nd_subarray(a, indices2[i], 4, ctx);
+        b = xnd_subarray(a, indices2[i], 4, ctx);
         if (b.ptr == NULL) {
             goto error;
         }
@@ -175,11 +175,11 @@ test_var(void)
             goto error;
         }
     }
-    nd_del(a);
+    xnd_del(a);
 
 
     /***** Type with optional values and dimensions *****/
-    a = nd_empty(type3, ctx);
+    a = xnd_empty(type3, ctx);
     if (a.type == NULL) {
         goto error;
     }
@@ -191,14 +191,14 @@ test_var(void)
 
     /*** Set validity bits ***/
     for (i = 0; i < 8; i++) {
-        if (nd_subarray_set_valid(a, defined_indices3[i], 3, ctx) < 0) {
+        if (xnd_subarray_set_valid(a, defined_indices3[i], 3, ctx) < 0) {
             goto error;
         }
     }
 
     /*** Defined values ***/
     for (i = 0; i < 3; i++) {
-        b = nd_subarray(a, accessible_indices3[i], 3, ctx);
+        b = xnd_subarray(a, accessible_indices3[i], 3, ctx);
         if (b.ptr == NULL) {
             goto error;
         }
@@ -211,7 +211,7 @@ test_var(void)
     }
 
     for (i = 4; i < 6; i++) {
-        b = nd_subarray(a, accessible_indices3[i], 3, ctx);
+        b = xnd_subarray(a, accessible_indices3[i], 3, ctx);
         if (b.ptr == NULL) {
             goto error;
         }
@@ -224,7 +224,7 @@ test_var(void)
     }
 
     for (i = 7; i < 10; i++) {
-        b = nd_subarray(a, accessible_indices3[i], 3, ctx);
+        b = xnd_subarray(a, accessible_indices3[i], 3, ctx);
         if (b.ptr == NULL) {
             goto error;
         }
@@ -237,55 +237,55 @@ test_var(void)
     }
 
     /*** NA values ***/
-    b = nd_subarray(a, accessible_indices3[3], 3, ctx);
+    b = xnd_subarray(a, accessible_indices3[3], 3, ctx);
     if (b.ptr == NULL) {
         goto error;
     }
     assert(b.type->tag == OptionItem);
     assert(b.type->OptionItem.type->tag == Uint16);
 
-    if (b.ptr != ND_MISSING) {
+    if (b.ptr != XND_MISSING) {
         ndt_err_format(ctx, NDT_RuntimeError, "expected missing value");
         goto error;
     }
 
-    b = nd_subarray(a, accessible_indices3[6], 3, ctx);
+    b = xnd_subarray(a, accessible_indices3[6], 3, ctx);
     if (b.ptr == NULL) {
         goto error;
     }
     assert(b.type->tag == OptionItem);
     assert(b.type->OptionItem.type->tag == Uint16);
 
-    if (b.ptr != ND_MISSING) {
+    if (b.ptr != XND_MISSING) {
         ndt_err_format(ctx, NDT_RuntimeError, "expected missing value");
         goto error;
     }
 
 
     /*** NA dimension ***/
-    b = nd_subarray(a, undefined_dimension3, 2, ctx);
+    b = xnd_subarray(a, undefined_dimension3, 2, ctx);
     if (b.ptr == NULL) {
         goto error;
     }
 
     assert(b.type->tag == VarDim);
-    if (b.ptr != ND_MISSING) {
+    if (b.ptr != XND_MISSING) {
         ndt_err_format(ctx, NDT_RuntimeError, "expected missing dimension");
         goto error;
     }
 
     /*** Invalid element access in a missing dimension ***/
-    b = nd_subarray(a, invalid_element_access3, 3, ctx);
+    b = xnd_subarray(a, invalid_element_access3, 3, ctx);
     if (b.ptr != NULL || ctx->err != NDT_ValueError) {
         goto error;
     }
     ndt_err_clear(ctx);
 
-    nd_del(a);
+    xnd_del(a);
 
 
     /***** Type with fixed (optional) dimensions and optional values *****/
-    a = nd_empty(type4, ctx);
+    a = xnd_empty(type4, ctx);
     if (a.type == NULL) {
         goto error;
     }
@@ -297,14 +297,14 @@ test_var(void)
 
     /*** Set validity bits ***/
     for (i = 0; i < ARRAY_SIZE(def4); i++) {
-        if (nd_subarray_set_valid(a, access4[def4[i]], 3, ctx) < 0) {
+        if (xnd_subarray_set_valid(a, access4[def4[i]], 3, ctx) < 0) {
             goto error;
         }
     }
 
     /*** Defined values ***/
     for (i = 0; i < ARRAY_SIZE(def4); i++) {
-        b = nd_subarray(a, access4[def4[i]], 3, ctx);
+        b = xnd_subarray(a, access4[def4[i]], 3, ctx);
         if (b.ptr == NULL) {
             goto error;
         }
@@ -319,73 +319,73 @@ test_var(void)
 
 
     /*** NA values ***/
-    b = nd_subarray(a, access4[4], 3, ctx);
+    b = xnd_subarray(a, access4[4], 3, ctx);
     if (b.ptr == NULL) {
         goto error;
     }
     assert(b.type->tag == OptionItem);
     assert(b.type->OptionItem.type->tag == Uint16);
 
-    if (b.ptr != ND_MISSING) {
+    if (b.ptr != XND_MISSING) {
         ndt_err_format(ctx, NDT_RuntimeError, "expected missing value");
         goto error;
     }
 
 
-    b = nd_subarray(a, undef4a, ARRAY_SIZE(undef4a), ctx);
+    b = xnd_subarray(a, undef4a, ARRAY_SIZE(undef4a), ctx);
     if (b.ptr == NULL) {
         goto error;
     }
     assert(b.type->tag == VarDim);
 
-    if (b.ptr != ND_MISSING) {
+    if (b.ptr != XND_MISSING) {
         ndt_err_format(ctx, NDT_RuntimeError, "expected missing value");
         goto error;
     }
 
 
 
-    b = nd_subarray(a, undef4b, ARRAY_SIZE(undef4b), ctx);
+    b = xnd_subarray(a, undef4b, ARRAY_SIZE(undef4b), ctx);
     if (b.ptr == NULL) {
         goto error;
     }
     assert(b.type->tag == VarDim);
 
-    if (b.ptr != ND_MISSING) {
+    if (b.ptr != XND_MISSING) {
         ndt_err_format(ctx, NDT_RuntimeError, "expected missing value");
         goto error;
     }
 
 
-    b = nd_subarray(a, undef4c, ARRAY_SIZE(undef4c), ctx);
+    b = xnd_subarray(a, undef4c, ARRAY_SIZE(undef4c), ctx);
     if (b.ptr == NULL) {
         goto error;
     }
     assert(b.type->tag == OptionItem);
 
-    if (b.ptr != ND_MISSING) {
+    if (b.ptr != XND_MISSING) {
         ndt_err_format(ctx, NDT_RuntimeError, "expected missing value");
         goto error;
     }
 
 
     /*** Invalid element access in a missing dimension ***/
-    b = nd_subarray(a, invalid4a, ARRAY_SIZE(invalid4a), ctx);
+    b = xnd_subarray(a, invalid4a, ARRAY_SIZE(invalid4a), ctx);
     if (b.ptr != NULL || ctx->err != NDT_ValueError) {
         goto error;
     }
     ndt_err_clear(ctx);
 
-    b = nd_subarray(a, invalid4b, ARRAY_SIZE(invalid4b), ctx);
+    b = xnd_subarray(a, invalid4b, ARRAY_SIZE(invalid4b), ctx);
     if (b.ptr != NULL || ctx->err != NDT_ValueError) {
         goto error;
     }
     ndt_err_clear(ctx);
 
-    nd_del(a);
+    xnd_del(a);
 
     /***** Type with multidimensional slice *****/
-    a = nd_empty(type5, ctx);
+    a = xnd_empty(type5, ctx);
     if (a.type == NULL) {
         goto error;
     }
@@ -397,7 +397,7 @@ test_var(void)
 
     /*** Defined values ***/
     for (i = 0; i < ARRAY_SIZE(indices5); i++) {
-        b = nd_subarray(a, indices5[i], 3, ctx);
+        b = xnd_subarray(a, indices5[i], 3, ctx);
         if (b.ptr == NULL) {
             goto error;
         }
@@ -414,7 +414,7 @@ test_var(void)
 
 
 out:
-    nd_del(a);
+    xnd_del(a);
     ndt_context_del(ctx);
     return ret;
 

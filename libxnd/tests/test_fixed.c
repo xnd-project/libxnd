@@ -42,7 +42,7 @@ int
 test_fixed(void)
 {
     ndt_context_t *ctx;
-    nd_array_t a, b;
+    xnd_t a, b;
     uint16_t *p;
     int ret = 0;
     int i, j, k, l;
@@ -61,7 +61,7 @@ test_fixed(void)
 
 
     /***** Type with fixed dimensions *****/
-    a = nd_empty(type1, ctx);
+    a = xnd_empty(type1, ctx);
     if (a.type == NULL) {
         goto error;
     }
@@ -76,7 +76,7 @@ test_fixed(void)
             for (k = 0; k < 2; k++) {
                 indices[0] = i; indices[1] = j; indices[2] = k;
                 l = i * 4 + j * 2 + k;
-                b = nd_subarray(a, indices, 3, ctx);
+                b = xnd_subarray(a, indices, 3, ctx);
                 if (b.ptr == NULL) {
                     goto error;
                 }
@@ -94,7 +94,7 @@ test_fixed(void)
 
 
 out:
-    nd_del(a);
+    xnd_del(a);
     ndt_context_del(ctx);
     return ret;
 
