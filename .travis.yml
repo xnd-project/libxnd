@@ -15,28 +15,25 @@ matrix:
   include:
     - compiler: gcc
       before_script:
-        - cd libxnd
         - git clone https://github.com/plures/ndtypes.git
         - export CC=gcc-4.9
-        - cd ndtypes/libndtypes && make && cd ../../
+        - cd ndtypes/libndtypes && make && cd ../../libxnd
       script:
         - make check
 
     - compiler: gcc
       before_script:
-        - cd libxnd
         - git clone https://github.com/plures/ndtypes.git
         - export CC=gcc-4.9
-        - cd ndtypes/libndtypes && make && cd ../../
+        - cd ndtypes/libndtypes && make && cd ../../libxnd
       script:
         - make memcheck
 
     - compiler: clang
       before_script:
-        - cd libxnd
         - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
-        - cd ndtypes/libndtypes && make && cd ../../
+        - cd ndtypes/libndtypes && make && cd ../../libxnd
       script:
         - make check
 
@@ -44,10 +41,9 @@ matrix:
       os: osx
       compiler: clang
       before_script:
-        - cd libxnd
         - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
-        - cd ndtypes/libndtypes && make && cd ../../
+        - cd ndtypes/libndtypes && make && cd ../../libxnd
       script:
         - make check
 

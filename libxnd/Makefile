@@ -4,7 +4,7 @@
 # ==============================================================================
 
 LIBSTATIC = libxnd.a
-LIBNDTYPESDIR = ndtypes/libndtypes
+LIBNDTYPESDIR = ../ndtypes/libndtypes
 
 CC ?= gcc
 LD ?= gcc

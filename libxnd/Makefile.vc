@@ -4,7 +4,7 @@
 # ======================================================================
 
 LIBSTATIC = libxnd.lib
-LIBNDTYPESDIR = ndtypes\libndtypes
+LIBNDTYPESDIR = ..\ndtypes\libndtypes
 
 !if "$(DEBUG)" == "1"
 OPT = /MDd /Od /Zi
