@@ -32,6 +32,7 @@
 
 
 #include <Python.h>
+#include "complexobject.h"
 #include <stdlib.h>
 #include "xnd.h"
 
@@ -68,9 +69,16 @@ static PyTypeObject Xnd_Type;
 #define Xnd_CheckExact(v) (Py_TYPE(v) == &Xnd_Type)
 #define Xnd_Check(v) PyObject_TypeCheck(v, &Xnd_Type)
 #define NDT_REF(v) (((XndObject *)v)->ndt)
+#define XND(v) (((XndObject *)v)->xnd)
 #define TYP(v) (((XndObject *)v)->xnd.type)
 #define PTR(v) (((XndObject *)v)->xnd.ptr)
 
+
+#if PY_LITTLE_ENDIAN
+static const int litte_endian = 1;
+#else
+static const int litte_endian = 0;
+#endif
 
 static PyObject *
 seterr(ndt_context_t *ctx)
@@ -145,20 +153,359 @@ pyxnd_dealloc(PyObject *x)
     Py_TYPE(x)->tp_free(x);
 }
 
+
+#define PACK_SINGLE(ptr, src, type) \
+    do {                                     \
+        type _x;                             \
+        _x = (type)src;                      \
+        memcpy(ptr, (char *)&_x, sizeof _x); \
+    } while (0)
+
+PyObject *
+dict_get_item(PyObject *v, const char *key)
+{
+    PyObject *k, *r;
+
+    k = PyUnicode_FromString(key);
+    if (k == NULL) {
+        return NULL;
+    }
+
+    r =  PyDict_GetItemWithError(v, k);
+    Py_DECREF(k);
+    return r;
+}
+
+static int64_t
+get_int(PyObject *v, int64_t min, int64_t max)
+{
+    PyObject *tmp;
+    int64_t x;
+
+    tmp = PyNumber_Index(v);
+    if (tmp == NULL) {
+        return -1;
+    }
+
+    x = PyLong_AsLongLong(tmp);
+    Py_DECREF(tmp);
+
+    if (x == -1 && PyErr_Occurred()) {
+        return -1;
+    }
+
+    if (x < min || x > max) {
+        PyErr_Format(PyExc_ValueError,
+            "out of range: %" PRIi64, x);
+        return -1;
+    }
+
+    return x;
+}
+
+static uint64_t
+get_uint(PyObject *v, uint64_t max)
+{
+    PyObject *tmp;
+    unsigned long long x;
+
+    tmp = PyNumber_Index(v);
+    if (tmp == NULL) {
+        return max;
+    }
+
+    x = PyLong_AsUnsignedLongLong(tmp);
+    Py_DECREF(tmp);
+
+    if (x == (unsigned long long)-1 && PyErr_Occurred()) {
+        return max;
+    }
+
+    if (x > max) {
+        PyErr_Format(PyExc_ValueError,
+            "out of range: %" PRIu64, x);
+        return max;
+    }
+
+    return x;
+}
+
+static int
+pyxnd_init(const xnd_t x, PyObject *v)
+{
+    const ndt_t *t = x.type;
+    int64_t shape, i;
+    xnd_t next;
+
+    if (ndt_is_abstract(t)) {
+        PyErr_SetString(PyExc_TypeError, "xnd has abstract type");
+        return -1;
+    }
+
+    switch (t->tag) {
+    case FixedDim: {
+        if (!PyList_Check(v)) {
+            PyErr_Format(PyExc_TypeError,
+                "xnd: expected list, not '%.200s'", Py_TYPE(v)->tp_name);
+            return -1;
+        }
+
+        shape = t->FixedDim.shape;
+        if (PyList_GET_SIZE(v) != shape) {
+            PyErr_Format(PyExc_ValueError,
+                "xnd: expected list with size %" PRIi64, shape);
+            return -1;
+        }
+
+        next.type = t->FixedDim.type;
+        for (i = 0; i < shape; i++) {
+            next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
+            if (pyxnd_init(next, PyList_GET_ITEM(v, i)) < 0) {
+                return -1;
+            }
+        }
+
+        return 0;
+    }
+
+    case VarDim: 
+        PyErr_Format(PyExc_NotImplementedError,
+            "xnd: initialization from var dim not implemented");
+        return -1;
+
+    case Tuple: {
+        if (!PyTuple_Check(v)) {
+            PyErr_Format(PyExc_TypeError,
+                "xnd: expected tuple, not '%.200s'", Py_TYPE(v)->tp_name);
+            return -1;
+        }
+
+        shape = t->Tuple.shape;
+        if (PyTuple_GET_SIZE(v) != shape) {
+            PyErr_Format(PyExc_ValueError,
+                "xnd: expected tuple with size %" PRIi64, shape);
+            return -1;
+        }
+
+        for (i = 0; i < shape; i++) {
+            next.type = t->Tuple.types[i];
+            next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
+
+            if (pyxnd_init(next, PyTuple_GET_ITEM(v, i)) < 0) {
+                return -1;
+            }
+        }
+
+        return 0;
+    }
+
+    case Record: {
+        PyObject *tmp;
+
+        if (!PyDict_Check(v)) {
+            PyErr_Format(PyExc_TypeError,
+                "xnd: expected dict, not '%.200s'", Py_TYPE(v)->tp_name);
+            return -1;
+        }
+
+        shape = t->Record.shape;
+        if (PyDict_GET_SIZE(v) != shape) {
+            PyErr_Format(PyExc_ValueError,
+                "xnd: expected dict with size %" PRIi64, shape);
+            return -1;
+        }
+
+        for (i = 0; i < shape; i++) {
+            next.type = t->Record.types[i];
+            next.ptr = x.ptr + t->Concrete.Record.offset[i];
+
+            tmp = dict_get_item(v, t->Record.names[i]);
+            if (tmp == NULL) {
+                if (!PyErr_Occurred()) {
+                    PyErr_Format(PyExc_ValueError,
+                        "xnd: key not found %s", t->Record.names[i]);
+                }
+                return -1;
+            }
+
+            if (pyxnd_init(next, tmp) < 0) {
+                return -1;
+            }
+        }
+
+        return 0;
+    }
+
+    case Bool: {
+        int tmp = PyObject_IsTrue(v);
+        bool b;
+
+        tmp = PyObject_IsTrue(v);
+        if (tmp < 0) {
+            return -1;
+        }
+        b = (bool)tmp;
+
+        PACK_SINGLE(x.ptr, b, bool);
+        return 0;
+    }
+
+    case Int8: {
+        int8_t tmp = (int8_t)get_int(v, INT8_MIN, INT8_MAX);
+        if (tmp == -1 && PyErr_Occurred()) {
+            return -1;
+        }
+        PACK_SINGLE(x.ptr, tmp, int8_t);
+        return 0;
+    }
+
+    case Int16: {
+        int16_t tmp = (int16_t)get_int(v, INT16_MIN, INT16_MAX);
+        if (tmp == -1 && PyErr_Occurred()) {
+            return -1;
+        }
+        PACK_SINGLE(x.ptr, tmp, int16_t);
+        return 0;
+    }
+
+    case Int32: {
+        int32_t tmp = (int32_t)get_int(v, INT32_MIN, INT32_MAX);
+        if (tmp == -1 && PyErr_Occurred()) {
+            return -1;
+        }
+        PACK_SINGLE(x.ptr, tmp, int32_t);
+        return 0;
+    }
+
+    case Int64: {
+        int64_t tmp = get_int(v, INT64_MIN, INT64_MAX);
+        if (tmp == -1 && PyErr_Occurred()) {
+            return -1;
+        }
+        PACK_SINGLE(x.ptr, tmp, int64_t);
+        return 0;
+    }
+
+    case Uint8: {
+        uint8_t tmp = (uint8_t)get_uint(v, UINT8_MAX);
+        if (tmp == UINT8_MAX && PyErr_Occurred()) {
+            return -1;
+        }
+        PACK_SINGLE(x.ptr, tmp, uint8_t);
+        return 0;
+    }
+
+    case Uint16: {
+        uint16_t tmp = (uint16_t)get_uint(v, UINT16_MAX);
+        if (tmp == UINT16_MAX && PyErr_Occurred()) {
+            return -1;
+        }
+        PACK_SINGLE(x.ptr, tmp, uint16_t);
+        return 0;
+    }
+
+    case Uint32: {
+        uint32_t tmp = (uint32_t)get_uint(v, UINT32_MAX);
+        if (tmp == UINT32_MAX && PyErr_Occurred()) {
+            return -1;
+        }
+        PACK_SINGLE(x.ptr, tmp, uint32_t);
+        return 0;
+    }
+
+    case Uint64: {
+        uint64_t tmp = get_uint(v, UINT64_MAX);
+        if (tmp == UINT64_MAX && PyErr_Occurred()) {
+            return -1;
+        }
+        PACK_SINGLE(x.ptr, tmp, uint64_t);
+        return 0;
+    }
+
+    case Float16: {
+        double tmp = PyFloat_AsDouble(v);
+        if (tmp == -1 && PyErr_Occurred()) {
+            return -1;
+        }
+        return _PyFloat_Pack2(tmp, (unsigned char *)x.ptr, litte_endian);
+    }
+
+    case Float32: {
+        double tmp = PyFloat_AsDouble(v);
+        if (tmp == -1 && PyErr_Occurred()) {
+            return -1;
+        }
+        return _PyFloat_Pack4(tmp, (unsigned char *)x.ptr, litte_endian);
+    }
+
+    case Float64: {
+        double tmp = PyFloat_AsDouble(v);
+        if (tmp == -1 && PyErr_Occurred()) {
+            return -1;
+        }
+        return _PyFloat_Pack8(tmp, (unsigned char *)x.ptr, litte_endian);
+    }
+
+    case Complex32: {
+        Py_complex c = PyComplex_AsCComplex(v);
+        if (c.real == -1.0 && PyErr_Occurred()) {
+            return -1;
+        }
+        if (_PyFloat_Pack2(c.real, (unsigned char *)x.ptr, litte_endian) < 0) {
+            return -1;
+        }
+        return _PyFloat_Pack2(c.imag, (unsigned char *)(x.ptr+2), litte_endian);
+    }
+
+    case Complex64: {
+        Py_complex c = PyComplex_AsCComplex(v);
+        if (c.real == -1.0 && PyErr_Occurred()) {
+            return -1;
+        }
+        if (_PyFloat_Pack4(c.real, (unsigned char *)x.ptr, litte_endian) < 0) {
+            return -1;
+        }
+        return _PyFloat_Pack4(c.imag, (unsigned char *)(x.ptr+4), litte_endian);
+    }
+
+    case Complex128: {
+        Py_complex c = PyComplex_AsCComplex(v);
+        if (c.real == -1.0 && PyErr_Occurred()) {
+            return -1;
+        }
+        if (_PyFloat_Pack8(c.real, (unsigned char *)x.ptr, litte_endian) < 0) {
+            return -1;
+        }
+        return _PyFloat_Pack8(c.imag, (unsigned char *)(x.ptr+8), litte_endian);
+    }
+
+#if 0
+    case FixedString: case FixedBytes:
+    case Char: case String: case Bytes:
+        return 0;
+#endif
+
+    default:
+        PyErr_Format(PyExc_NotImplementedError,
+            "packing type '%s' not implemented", ndt_tag_as_string(t->tag));
+        return -1;
+    }
+}
+
 static PyObject *Ndt;
 static PyObject *
 pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds UNUSED)
 {
     NDT_STATIC_CONTEXT(ctx);
-    PyObject *x;
-    PyObject *v;
+    PyObject *v = NULL;
+    PyObject *x, *t;
     int is_ndt;
 
-    if (!PyArg_ParseTuple(args, "O", &v)) {
+    if (!PyArg_ParseTuple(args, "O|O", &t, &v)) {
         return NULL;
     }
 
-    is_ndt = PyObject_IsInstance(v, Ndt);
+    is_ndt = PyObject_IsInstance(t, Ndt);
     if (is_ndt <= 0) {
         if (is_ndt == 0) {
             PyErr_SetString(PyExc_TypeError, "expected ndt");
@@ -171,15 +518,20 @@ pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds UNUSED)
         return NULL;
     }
 
-    PTR(x) = xnd_new(NDT(v), false, &ctx);
+    PTR(x) = xnd_new(NDT(t), false, &ctx);
     if (PTR(x) == NULL) {
         return seterr(&ctx);
     }
 
-    Py_INCREF(v);
+    Py_INCREF(t);
 
-    NDT_REF(x) = v;
-    TYP(x) = NDT(v);
+    NDT_REF(x) = t;
+    TYP(x) = NDT(t);
+
+    if (v && pyxnd_init(XND(x), v) < 0) {
+        Py_DECREF(x);
+        return NULL;
+    }
 
     return x;
 }
