@@ -20,6 +20,7 @@ matrix:
         - cd ndtypes
         - ./configure && make
         - python3 setup.py install --local=../python
+        - cd ..
       script:
         - ./configure --with-ndtypes-path=.
         - make check
@@ -33,6 +34,7 @@ matrix:
         - cd ndtypes
         - ./configure && make
         - python3 setup.py install --local=../python
+        - cd ..
       script:
         - ./configure --with-ndtypes-path=.
         - make memcheck
@@ -46,6 +48,7 @@ matrix:
         - cd ndtypes
         - ./configure && make
         - python3 setup.py install --local=../python
+        - cd ..
       script:
         - ./configure --with-ndtypes-path=.
         - make check
@@ -61,6 +64,7 @@ matrix:
         - cd ndtypes
         - ./configure && make
         - python3 setup.py install --local=../python
+        - cd ..
       script:
         - ./configure --with-ndtypes-path=.
         - make check
