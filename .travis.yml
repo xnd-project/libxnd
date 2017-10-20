@@ -18,30 +18,39 @@ matrix:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=gcc-4.9
         - cd ndtypes
-        - ./configure && make && cd ..
+        - ./configure && make
+        - python3 setup.py install --local=../python
       script:
         - ./configure --with-ndtypes-path=.
         - make check
+        - python3 setup.py build
+        - python3 setup.py test
 
     - compiler: gcc
       before_script:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=gcc-4.9
         - cd ndtypes
-        - ./configure && make && cd ..
+        - ./configure && make
+        - python3 setup.py install --local=../python
       script:
         - ./configure --with-ndtypes-path=.
         - make memcheck
+        - python3 setup.py build
+        - python3 setup.py test
 
     - compiler: clang
       before_script:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
         - cd ndtypes
-        - ./configure && make && cd ..
+        - ./configure && make
+        - python3 setup.py install --local=../python
       script:
         - ./configure --with-ndtypes-path=.
         - make check
+        - python3 setup.py build
+        - python3 setup.py test
 
     - language: objective-c
       os: osx
@@ -50,10 +59,13 @@ matrix:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
         - cd ndtypes
-        - ./configure && make && cd ..
+        - ./configure && make
+        - python3 setup.py install --local=../python
       script:
         - ./configure --with-ndtypes-path=.
         - make check
+        - python3 setup.py build
+        - python3 setup.py test
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
