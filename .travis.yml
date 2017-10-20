@@ -17,7 +17,8 @@ matrix:
       before_script:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=gcc-4.9
-        - cd ndtypes/libndtypes && make && cd ../../libxnd
+        - cd ndtypes
+        - ./configure && make && cd ..
       script:
         - ./configure --with-ndtypes-path=.
         - make check
@@ -26,7 +27,8 @@ matrix:
       before_script:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=gcc-4.9
-        - cd ndtypes/libndtypes && make && cd ../../libxnd
+        - cd ndtypes
+        - ./configure && make && cd ..
       script:
         - ./configure --with-ndtypes-path=.
         - make memcheck
@@ -35,7 +37,8 @@ matrix:
       before_script:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
-        - cd ndtypes/libndtypes && make && cd ../../libxnd
+        - cd ndtypes
+        - ./configure && make && cd ..
       script:
         - ./configure --with-ndtypes-path=.
         - make check
@@ -46,7 +49,8 @@ matrix:
       before_script:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
-        - cd ndtypes/libndtypes && make && cd ../../libxnd
+        - cd ndtypes
+        - ./configure && make && cd ..
       script:
         - ./configure --with-ndtypes-path=.
         - make check

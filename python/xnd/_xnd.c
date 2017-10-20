@@ -34,6 +34,7 @@
 #include <Python.h>
 #include "complexobject.h"
 #include <stdlib.h>
+#include "ndtypes.h"
 #include "xnd.h"
 
 
@@ -479,8 +480,122 @@ pyxnd_init(const xnd_t x, PyObject *v)
         return _PyFloat_Pack8(c.imag, (unsigned char *)(x.ptr+8), litte_endian);
     }
 
+    case FixedString: {
+        int64_t len;
+
+        if (!PyUnicode_Check(v)) {
+            PyErr_SetString(PyExc_TypeError, "expected unicode object");
+            return -1;
+        }
+
+        if (PyUnicode_READY(v) < 0) {
+            return -1;
+        }
+
+        len = PyUnicode_GET_LENGTH(v);
+
+        switch (t->FixedString.encoding) {
+        case Ascii: {
+            if (!PyUnicode_IS_ASCII(v)) {
+                PyErr_SetString(PyExc_ValueError,
+                    "expected ascii string");
+                return -1;
+            }
+
+            if (len >= (int64_t)t->FixedString.size) {
+                PyErr_Format(PyExc_ValueError,
+                    "maximum string size is %" PRIi64, t->FixedString.size);
+                return -1;
+            }
+
+            memcpy(x.ptr, PyUnicode_1BYTE_DATA(v), len);
+            return 0;
+        }
+
+        case Utf8: {
+            if (PyUnicode_KIND(v) != PyUnicode_1BYTE_KIND) {
+                PyErr_SetString(PyExc_ValueError,
+                    "expected utf8 string");
+                return -1;
+            }
+
+            // XXX
+            if (len >= (int64_t)t->FixedString.size) {
+                PyErr_Format(PyExc_ValueError,
+                    "maximum string size is %" PRIi64, t->FixedString.size);
+                return -1;
+            }
+
+            memcpy(x.ptr, PyUnicode_1BYTE_DATA(v), len);
+            return 0;
+        }
+
+        case Utf16: {
+            if (PyUnicode_KIND(v) != PyUnicode_2BYTE_KIND) {
+                PyErr_SetString(PyExc_ValueError,
+                    "expected utf16 string");
+                return -1;
+            }
+
+            if (len >= (int64_t)t->FixedString.size) {
+                PyErr_Format(PyExc_ValueError,
+                    "maximum string size is %" PRIi64, t->FixedString.size);
+                return -1;
+            }
+
+            memcpy(x.ptr, PyUnicode_2BYTE_DATA(v), len * sizeof(uint16_t));
+            return 0;
+        }
+
+        case Utf32: {
+            if (PyUnicode_KIND(v) != PyUnicode_4BYTE_KIND) {
+                PyErr_SetString(PyExc_ValueError,
+                    "expected utf32 string");
+                return -1;
+            }
+
+            if (len >= (int64_t)t->FixedString.size) {
+                PyErr_Format(PyExc_ValueError,
+                    "maximum string size is %" PRIi64, t->FixedString.size);
+                return -1;
+            }
+
+            memcpy(x.ptr, PyUnicode_4BYTE_DATA(v), len * sizeof(uint64_t));
+            return 0;
+        }
+
+        case Ucs2:
+            PyErr_SetString(PyExc_NotImplementedError,
+                "ucs2 encoding not implemented");
+            return -1;
+
+        default:
+            PyErr_SetString(PyExc_RuntimeError, "invalid encoding");
+            return -1;
+        }
+    }
+
+    case FixedBytes: {
+        int64_t len;
+
+        if (!PyBytes_Check(v)) {
+            PyErr_SetString(PyExc_TypeError, "expected bytes object");
+            return -1;
+        }
+
+        len = PyBytes_GET_SIZE(v);
+
+        if (len >= (int64_t)t->FixedBytes.size) {
+            PyErr_Format(PyExc_ValueError,
+                "maximum bytes size is %" PRIi64, t->FixedBytes.size);
+            return -1;
+        }
+
+        memcpy(x.ptr, PyBytes_AS_STRING(v), len);
+        return 0;
+    }
+
 #if 0
-    case FixedString: case FixedBytes:
     case Char: case String: case Bytes:
         return 0;
 #endif

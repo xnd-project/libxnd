@@ -1,61 +1,67 @@
 
 # ==============================================================================
-#                            Unix Makefile for libxnd
+#                          Unix Makefile for libxnd
 # ==============================================================================
 
+
 LIBSTATIC = libxnd.a
-LIBNDTYPESDIR = ../ndtypes/libndtypes
+LIBNAME = libxnd.so
+LIBSONAME = libxnd.so.0
+LIBSHARED = libxnd.so.0.1.0
 
-CC ?= gcc
-LD ?= gcc
-AR ?= ar
-RANLIB ?= ranlib
-CFLAGS ?= -Wall -Wextra -std=c11 -pedantic -O2 -g
+CC = gcc-4.9
+LD = gcc-4.9
+AR = ar
+RANLIB = ranlib
+XND_PGEN = -fprofile-generate -fprofile-values
+XND_PUSE = -fprofile-use -freorder-blocks
 
-ifeq ($(MAKECMDGOALS), check)
-  CFLAGS = -Wall -Wextra -Werror -std=c11 -pedantic -O2 -g
+LIBNDTYPESDIR = ./ndtypes/libndtypes
+ifdef LIBNDTYPESDIR
+XND_INCLUDES = -I../$(LIBNDTYPESDIR)
 endif
 
-ifeq ($(MAKECMDGOALS), memcheck)
-  CFLAGS = -Wall -Wextra -Werror -std=c11 -pedantic -O2 -g
+CONFIGURE_CFLAGS =  -Wall -Wextra -std=c11 -pedantic  -O2
+XND_CFLAGS = $(strip $(XND_INCLUDES) $(CONFIGURE_CFLAGS) $(CFLAGS))
+
+CONFIGURE_LDFLAGS =  -shared -Wl,-soname,libxnd.so.0
+XND_LDFLAGS = $(strip $(CONFIGURE_LDFLAGS) $(LDFLAGS))
+
+ifeq ($(MAKECMDGOALS), profile_gen)
+  XND_CFLAGS += $(XND_PGEN)
+  XND_LDFLAGS += $(XND_PGEN)
+endif
+ifeq ($(MAKECMDGOALS), profile_use)
+  XND_CFLAGS += $(XND_PUSE)
+  XND_LDFLAGS += $(XND_PUSE)
 endif
 
-ifeq ($(MAKECMDGOALS), coverage)
-  CFLAGS = -Wall -Wextra -std=c11 -pedantic -O0 -g -fno-inline -fprofile-arcs -ftest-coverage -fpic
-  LDFLAGS = -fprofile-arcs
-endif
+XND_CFLAGS_SHARED = $(XND_CFLAGS) -fPIC
 
 
-default: $(LIBSTATIC)
-
+default: $(LIBSTATIC) $(LIBSHARED)
 
 OBJS = xnd.o
 
+SHARED_OBJS = .objs/xnd.o
 
-$(LIBSTATIC):\
-Makefile $(OBJS)
+
+$(LIBSTATIC): Makefile $(OBJS)
 	$(AR) rc $(LIBSTATIC) $(OBJS)
 	$(RANLIB) $(LIBSTATIC)
 
+$(LIBSHARED): Makefile $(SHARED_OBJS)
+	$(LD) $(XND_LDFLAGS) -o $(LIBSHARED) $(SHARED_OBJS)
+	ln -sf $(LIBSHARED) $(LIBNAME)
+	ln -sf $(LIBSHARED) $(LIBSONAME)
+
 xnd.o:\
 Makefile xnd.c xnd.h
-	$(CC) -I $(LIBNDTYPESDIR) $(CFLAGS) -c xnd.c
+	$(CC) $(XND_CFLAGS) -c xnd.c
 
-
-# Tests
-runtest:\
-Makefile tests/runtest.c tests/test_fixed.c tests/test.h $(LIBSTATIC)
-	$(CC) -I. -I $(LIBNDTYPESDIR) -L $(LIBNDTYPESDIR) $(CFLAGS) -DTEST_ALLOC \
-	-o tests/runtest tests/runtest.c tests/test_fixed.c $(LIBSTATIC) \
-	 $(LIBNDTYPESDIR)/libndtypes.a
-
-check:\
-Makefile runtest
-	./tests/runtest
-
-memcheck:\
-Makefile runtest
-	valgrind --leak-check=full --show-leak-kinds=all ./tests/runtest
+.objs/xnd.o:\
+Makefile xnd.c xnd.h
+	$(CC) $(XND_CFLAGS_SHARED) -c xnd.c -o .objs/xnd.o
 
 
 # Coverage
@@ -64,14 +70,15 @@ Makefile clean runtest
 	./tests/runtest
 	for file in *.c; do gcov -l "$$file" > /dev/null 2>&1; done
 
+FORCE:
 
 clean: FORCE
-	rm -f *.o *.gch *.gcov *.gcda *.gcno tests/runtest $(LIBSTATIC)
+	rm -f *.o *.so *.gch *.gcda *.gcno *.gcov *.dyn *.dpi *.lock
+	rm -f $(LIBSTATIC) $(LIBSHARED) $(LIBSONAME) $(LIBNAME)
+	cd .objs && rm -f *.o *.so *.gch *.gcda *.gcno *.gcov *.dyn *.dpi *.lock
 
 distclean: clean
-	rm -rf ndtypes
+	rm -f Makefile
 
-
-FORCE:
 
 
