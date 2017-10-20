@@ -38,23 +38,22 @@ import subprocess
 import shutil
 
 
-DESCRIPTION = \
-    """Dynamic types for data description and in-memory computations"""
+DESCRIPTION = """Typed memory container based on libndtypes"""
 
 
 def get_module_path():
     pathlist = glob("build/lib.*/")
     if pathlist:
         return pathlist[0]
-    raise RuntimeError("cannot find ndtypes module in build directory")
+    raise RuntimeError("cannot find xnd module in build directory")
 
 def copy_ext():
     if sys.platform == "win32":
-        pathlist = glob("build/lib.*/ndtypes/_ndtypes.*.pyd")
+        pathlist = glob("build/lib.*/xnd/_xnd.*.pyd")
     else:
-        pathlist = glob("build/lib.*/ndtypes/_ndtypes.*.so")
+        pathlist = glob("build/lib.*/xnd/_xnd.*.so")
     if pathlist:
-        shutil.copy2(pathlist[0], "python/ndtypes")
+        shutil.copy2(pathlist[0], "python/xnd")
 
 
 if len(sys.argv) == 2:
@@ -64,13 +63,13 @@ if len(sys.argv) == 2:
         path = module_path + ':' + python_path if python_path else module_path
         env = os.environ.copy()
         env['PYTHONPATH'] = path
-        ret = subprocess.call([sys.executable, "python/test_ndtypes.py"], env=env)
+        ret = subprocess.call([sys.executable, "python/test_xnd.py"], env=env)
         sys.exit(ret)
     elif sys.argv[1] == 'clean':
         shutil.rmtree("build", ignore_errors=True)
-        os.chdir("python/ndtypes")
+        os.chdir("python/xnd")
         shutil.rmtree("__pycache__", ignore_errors=True)
-        for f in glob("_ndtypes*.so"):
+        for f in glob("_xnd*.so"):
             os.remove(f)
         sys.exit(0)
     else:
@@ -78,18 +77,18 @@ if len(sys.argv) == 2:
 
 
 def ndtypes_ext():
-    include_dirs = ["libndtypes"]
-    library_dirs = ["libndtypes"]
-    depends = ["libndtypes/ndtypes.h"]
-    sources = ["python/ndtypes/_ndtypes.c"]
+    include_dirs = ["libxnd", "ndtypes/libndtypes"]
+    library_dirs = ["libxnd", "ndtypes/libndtypes"]
+    depends = ["libxnd/xnd.h"]
+    sources = ["python/xnd/_xnd.c"]
 
     if sys.platform == "win32":
-        libraries = ["libndtypes-0.1.0.dll"]
+        libraries = ["libxnd-0.1.0.dll"]
         extra_compile_args = ["/DIMPORT"]
         extra_link_args = []
         runtime_library_dirs = []
     else:
-        libraries = ["ndtypes"]
+        libraries = ["xnd"]
         extra_compile_args = ["-Wextra", "-Wno-missing-field-initializers", "-std=c11"]
         if sys.platform == "darwin":
             extra_link_args = ["-Wl,-rpath,@loader_path"]
@@ -99,7 +98,7 @@ def ndtypes_ext():
             runtime_library_dirs = ["$ORIGIN"]
 
     return Extension (
-      "ndtypes._ndtypes",
+      "xnd._xnd",
       include_dirs = include_dirs,
       library_dirs = library_dirs,
       depends = depends,
@@ -111,20 +110,20 @@ def ndtypes_ext():
     )
 
 setup (
-    name = "ndtypes",
+    name = "xnd",
     version = "0.1",
     description = DESCRIPTION,
-    url = "https://github.com/plures/ndtypes",
+    url = "https://github.com/plures/xnd",
     license = "BSD License",
-    keywords = ["ndtypes", "array computing", "data description"],
+    keywords = ["xnd", "array computing", "data description"],
     platforms = ["Many"],
     classifiers = [
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
     ],
     package_dir = {"": "python"},
-    packages = ["ndtypes"],
-    package_data = {"ndtypes": ["libndtypes*"]},
+    packages = ["xnd"],
+    package_data = {"xnd": ["libxnd*"]},
     ext_modules = [ndtypes_ext()],
 )
 
