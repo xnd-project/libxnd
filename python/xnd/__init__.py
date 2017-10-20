@@ -1,4 +1,4 @@
-# Make sure libndtypes.so is loaded and initialized by _ndtypes.so.
+# Ensure that libndtypes is loaded and initialized.
 import ndtypes
 del ndtypes
 
