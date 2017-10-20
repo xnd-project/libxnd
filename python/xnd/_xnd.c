@@ -310,7 +310,7 @@ pyxnd_init(const xnd_t x, PyObject *v)
         }
 
         shape = t->Record.shape;
-        if (PyDict_GET_SIZE(v) != shape) {
+        if (PyDict_Size(v) != shape) {
             PyErr_Format(PyExc_ValueError,
                 "xnd: expected dict with size %" PRIi64, shape);
             return -1;
@@ -424,11 +424,17 @@ pyxnd_init(const xnd_t x, PyObject *v)
     }
 
     case Float16: {
+#if PY_VERSION_HEX >= 0x03060000
         double tmp = PyFloat_AsDouble(v);
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
         return _PyFloat_Pack2(tmp, (unsigned char *)x.ptr, litte_endian);
+#else
+        PyErr_SetString(PyExc_NotImplementedError,
+            "half-float not implemented in Python versions < 3.6");
+        return -1;
+#endif
     }
 
     case Float32: {
