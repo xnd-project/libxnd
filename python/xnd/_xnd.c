@@ -454,6 +454,7 @@ pyxnd_init(const xnd_t x, PyObject *v)
     }
 
     case Complex32: {
+#if PY_VERSION_HEX >= 0x03060000
         Py_complex c = PyComplex_AsCComplex(v);
         if (c.real == -1.0 && PyErr_Occurred()) {
             return -1;
@@ -462,6 +463,11 @@ pyxnd_init(const xnd_t x, PyObject *v)
             return -1;
         }
         return _PyFloat_Pack2(c.imag, (unsigned char *)(x.ptr+2), litte_endian);
+#else
+        PyErr_SetString(PyExc_NotImplementedError,
+            "half-float not implemented in Python versions < 3.6");
+        return -1;
+#endif
     }
 
     case Complex64: {
