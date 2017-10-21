@@ -34,6 +34,9 @@
 #include <Python.h>
 #include "complexobject.h"
 #include <stdlib.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <stdbool.h>
 #include "ndtypes.h"
 #include "xnd.h"
 
