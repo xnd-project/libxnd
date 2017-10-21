@@ -15,15 +15,14 @@ default: runtest runtest_shared
 
 runtest:\
 Makefile runtest.c test_fixed.c test.h $(SRCDIR)/xnd.h $(SRCDIR)/$(LIBSTATIC)
-	$(CC) -I$(SRCDIR) -I../../$(LIBNDTYPESDIR) $(XND_CFLAGS) -DTEST_ALLOC \
+	$(CC) -I$(SRCDIR) -I../../$(LIBNDTYPESDIR) $(XND_CFLAGS) \
 	-o runtest runtest.c test_fixed.c $(SRCDIR)/libxnd.a \
 	../../$(LIBNDTYPESDIR)/libndtypes.a
 
 runtest_shared:\
 Makefile runtest.c test_fixed.c test.h $(SRCDIR)/xnd.h $(SRCDIR)/$(LIBSHARED)
 	$(CC) -I$(SRCDIR) -I../../$(LIBNDTYPESDIR) -L$(SRCDIR) -L../../$(LIBNDTYPESDIR) \
-	$(XND_CFLAGS) -DTEST_ALLOC -o runtest_shared runtest.c test_fixed.c \
-	-lxnd -lndtypes
+	$(XND_CFLAGS) -o runtest_shared runtest.c test_fixed.c -lxnd -lndtypes
 
 
 FORCE:
