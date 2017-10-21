@@ -42,7 +42,7 @@ Makefile xnd.c xnd.h
 
 .objs\xnd.obj:\
 Makefile xnd.c xnd.h
-        $(CC) $(CFLAGS_SHARED) -c xnd.c
+        $(CC) -I $(LIBNDTYPESDIR) $(CFLAGS_SHARED) -c xnd.c
 
 check:\
 Makefile default
