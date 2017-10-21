@@ -7,22 +7,26 @@ os: Visual Studio 2015
 
 environment:
   matrix:
-    - PYTHON_ARCH: "x86_64"
-      platform: x64
-    - PYTHON_ARCH: "x86"
-      platform: x86
-
-before_build:
-  "\"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat\" %platform%"
+    - PLATFORM: "x64"
+      VCBUILD: "vcbuild64.bat"
+      RUNTEST: "runtest64.bat"
+      PYTHON: "C:\\Python35-x64"
+    - PLATFORM: "x86"
+      VCBUILD: "vcbuild32.bat"
+      RUNTEST: "runtest32.bat"
+      PYTHON: "C:\\Python35"
 
 build_script:
   - git clone https://github.com/plures/ndtypes.git
-  - cd ndtypes\libndtypes
-  - copy /y Makefile.vc Makefile
-  - nmake
-  - cd ..\..\libxnd
-  - copy /y Makefile.vc Makefile
-  - nmake check
-
+  - cd ndtypes\vcbuild
+  - "%VCBUILD%"
+  - cd ..
+  - "\"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat\" %PLATFORM%"
+  - "%PYTHON%\\python.exe setup.py install --local=..\\python"
+  - cd ..\vcbuild
+  - "%VCBUILD%"
+  - "%RUNTEST%"
+  - "%PYTHON%\\python.exe setup.py build"
+  - "%PYTHON%\\python.exe setup.py test"
 
 
