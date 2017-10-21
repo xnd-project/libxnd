@@ -26,7 +26,11 @@ build_script:
   - cd ..\vcbuild
   - "%VCBUILD%"
   - "%RUNTEST%"
+  - cd ..
   - "%PYTHON%\\python.exe setup.py build"
   - "%PYTHON%\\python.exe setup.py test"
+  - "%PYTHON%\\python.exe setup.py clean"
+  - cd vcbuild
+  - vcdistclean.bat
 
 
