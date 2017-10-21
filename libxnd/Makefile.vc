@@ -57,7 +57,7 @@ FORCE:
 clean: FORCE
 	del /q /f *.exe *.obj *.lib *.dll *.exp *.manifest 2>NUL
 	cd .objs && del /q /f *.obj 2>NUL
-	cd ..\python\ndtypes && del *.lib *.dll *.pyd 2>NUL
+	cd ..\python\xnd && del *.lib *.dll *.pyd 2>NUL
 
 distclean: clean
 	del Makefile 2>NUL
