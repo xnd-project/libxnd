@@ -4,6 +4,7 @@ SRCDIR = ..
 LIBSTATIC = libxnd-0.1.0.lib
 LIBSHARED = libxnd-0.1.0.dll.lib
 LIBNDTYPESDIR = ../../ndtypes/libndtypes
+LIBNDTYPESIMPORT = $(LIBNDTYPESDIR)\libndtypes-0.1.0.dll.lib
 
 
 CC = cl.exe
@@ -21,7 +22,7 @@ Makefile runtest.c test_fixed.c test.h $(SRCDIR)\xnd.h $(SRCDIR)\$(LIBSTATIC)
 runtest_shared:\
 Makefile runtest.c test_fixed.c test.h $(SRCDIR)\xnd.h $(SRCDIR)\$(LIBSHARED)
 	$(CC) -I$(SRCDIR) -I$(LIBNDTYPESDIR) $(CFLAGS_SHARED) /Feruntest_shared \
-	runtest.c test_fixed.c $(SRCDIR)\$(LIBSHARED)
+	runtest.c test_fixed.c $(SRCDIR)\$(LIBSHARED) $(LIBNDTYPESIMPORT)
 
 
 FORCE:
