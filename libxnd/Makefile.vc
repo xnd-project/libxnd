@@ -33,9 +33,9 @@ Makefile $(OBJS)
 
 $(LIBSHARED):\
 Makefile $(SHARED_OBJS)
-        -@if exist $@ del $(LIBSHARED)
-        link /nologo /DLL /MANIFEST /out:$(LIBSHARED) /implib:$(LIBIMPORT) /implib:$(LIBNDTYPESIMPORT) $(SHARED_OBJS)
-        mt /nologo -manifest $(LIBSHARED).manifest -outputresource:$(LIBSHARED);2
+	-@if exist $@ del $(LIBSHARED)
+	link /nologo /DLL /MANIFEST /out:$(LIBSHARED) /implib:$(LIBIMPORT) $(SHARED_OBJS) $(LIBNDTYPESIMPORT)
+	mt /nologo -manifest $(LIBSHARED).manifest -outputresource:$(LIBSHARED);2
 
 xnd.obj:\
 Makefile xnd.c xnd.h
@@ -43,7 +43,7 @@ Makefile xnd.c xnd.h
 
 .objs\xnd.obj:\
 Makefile xnd.c xnd.h
-        $(CC) -I $(LIBNDTYPESDIR) $(CFLAGS_SHARED) -c xnd.c
+	$(CC) -I $(LIBNDTYPESDIR) $(CFLAGS_SHARED) -c xnd.c
 
 check:\
 Makefile default
