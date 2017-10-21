@@ -3,7 +3,7 @@
 #                  Visual C (nmake) Makefile for libxnd
 # ======================================================================
 
-LIBSTATIC = libxnd.lib
+LIBSTATIC = libxnd-0.1.0.lib
 LIBIMPORT = libxnd-0.1.0.dll.lib
 LIBSHARED = libxnd-0.1.0.dll
 LIBNDTYPESDIR = ..\ndtypes\libndtypes
