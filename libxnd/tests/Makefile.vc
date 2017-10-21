@@ -1,0 +1,36 @@
+
+SRCDIR = ..
+
+LIBSTATIC = libxnd-0.1.0.lib
+LIBSHARED = libxnd-0.1.0.dll.lib
+LIBNDTYPESDIR = ../../ndtypes/libndtypes
+
+
+CC = cl.exe
+CFLAGS = /nologo /MT /Ox /GS /EHsc
+CFLAGS_SHARED = /nologo /DIMPORT /MD /Ox /GS /EHsc
+
+default: runtest runtest_shared
+
+
+runtest:\
+Makefile runtest.c test_fixed.c test.h $(SRCDIR)\xnd.h $(SRCDIR)\$(LIBSTATIC)
+	$(CC) -I$(SRCDIR) -I$(LIBNDTYPESDIR) $(CFLAGS) /Feruntest runtest.c \
+	tests\runtest.c tests\test_fixed.c $(LIBSTATIC) \
+	$(LIBNDTYPESDIR)\libndtypes.lib
+
+runtest_shared:\
+Makefile runtest.c test_fixed.c test.h $(SRCDIR)\xnd.h $(SRCDIR)\$(LIBSHARED)
+	$(CC) -I$(SRCDIR) -I$(LIBNDTYPESDIR) $(CFLAGS_SHARED) /Feruntest_shared runtest.c \
+	tests\runtest.c tests\test_fixed.c $(SRCDIR)\$(LIBSHARED)
+
+
+FORCE:
+
+clean: FORCE
+	del /q /f *.exe *.obj *.lib *.dll *.exp *.manifest 2>NUL
+
+distclean: clean
+	del /q /f Makefile 2>NUL
+
+

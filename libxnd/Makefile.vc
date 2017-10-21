@@ -4,50 +4,62 @@
 # ======================================================================
 
 LIBSTATIC = libxnd.lib
+LIBIMPORT = libxnd-0.1.0.dll.lib
+LIBSHARED = libxnd-0.1.0.dll
 LIBNDTYPESDIR = ..\ndtypes\libndtypes
 
-!if "$(DEBUG)" == "1"
-OPT = /MDd /Od /Zi
-!else
-OPT = /MD /Ox /GS /EHsc
-!endif
+OPT = /MT /Ox /GS /EHsc
+OPT_SHARED = /DEXPORT /MD /Ox /GS /EHsc /Fo.objs^\
 
-CFLAGS = /W4 /wd4200 /wd4201 /wd4204 /nologo $(OPT)
-CFLAGS_FOR_GENERATED = /W4 /wd4200 /wd4201 /wd4244 /wd4267 /wd4702 /wd4127 /nologo /DYY_NO_UNISTD_H=1 /D__STDC_VERSION__=199901L $(OPT)
-CFLAGS_FOR_PARSER = /W4 /wd4200 /wd4201 /wd4090 /nologo /DYY_NO_UNISTD_H=1 $(OPT)
+COMMON_CFLAGS = /nologo /W4 /wd4200 /wd4201 /wd4204
+CFLAGS = $(COMMON_CFLAGS) $(OPT)
+CFLAGS_SHARED = $(COMMON_CFLAGS) $(OPT_SHARED)
 
 
-default: $(LIBSTATIC)
+default: $(LIBSTATIC) $(LIBSHARED)
+	copy /y $(LIBSHARED) ..\python\xnd
 
 
 OBJS = xnd.obj
+
+SHARED_OBJS = .objs\xnd.obj
 
 
 $(LIBSTATIC):\
 Makefile $(OBJS)
 	-@if exist $@ del $(LIBSTATIC)
-	lib $(LFLAGS) /out:$(LIBSTATIC) $(OBJS)
+	lib /nologo /out:$(LIBSTATIC) $(OBJS)
+
+$(LIBSHARED):\
+Makefile $(SHARED_OBJS)
+        -@if exist $@ del $(LIBSHARED)
+        link /nologo /DLL /MANIFEST /out:$(LIBSHARED) /implib:$(LIBIMPORT) $(SHARED_OBJS)
+        mt /nologo -manifest $(LIBSHARED).manifest -outputresource:$(LIBSHARED);2
 
 xnd.obj:\
 Makefile xnd.c xnd.h
 	$(CC) -I $(LIBNDTYPESDIR) $(CFLAGS) -c xnd.c
 
-# Tests
-runtest:\
-Makefile tests\runtest.c tests\test_fixed.c tests\test.h $(LIBSTATIC)
-	$(CC) -I. -I $(LIBNDTYPESDIR) $(CFLAGS) -DTEST_ALLOC /Fetests\runtest.exe \
-	tests\runtest.c tests\test_fixed.c $(LIBSTATIC) \
-	$(LIBNDTYPESDIR)\libndtypes.lib
+.objs\xnd.obj:\
+Makefile xnd.c xnd.h
+        $(CC) $(CFLAGS_SHARED) -c xnd.c
 
 check:\
-Makefile runtest
+Makefile default
+	cd tests && copy /y Makefile.vc Makefile && nmake /nologo
 	.\tests\runtest.exe
-
-
-clean: FORCE
-	del /Q /F *.obj tests\runtest.exe $(LIBSTATIC)
+	.\tests\runtest_shared.exe
 
 
 FORCE:
+
+clean: FORCE
+	del /q /f *.exe *.obj *.lib *.dll *.exp *.manifest 2>NUL
+	cd .objs && del /q /f *.obj 2>NUL
+	cd ..\python\ndtypes && del *.lib *.dll *.pyd 2>NUL
+
+distclean: clean
+	del Makefile 2>NUL
+
 
 
