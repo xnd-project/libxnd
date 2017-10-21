@@ -7,6 +7,7 @@ LIBSTATIC = libxnd.lib
 LIBIMPORT = libxnd-0.1.0.dll.lib
 LIBSHARED = libxnd-0.1.0.dll
 LIBNDTYPESDIR = ..\ndtypes\libndtypes
+LIBNDTYPESIMPORT = $(LIBNDTYPESDIR)\libndtypes-0.1.0.dll.lib
 
 OPT = /MT /Ox /GS /EHsc
 OPT_SHARED = /DEXPORT /MD /Ox /GS /EHsc /Fo.objs^\
@@ -33,7 +34,7 @@ Makefile $(OBJS)
 $(LIBSHARED):\
 Makefile $(SHARED_OBJS)
         -@if exist $@ del $(LIBSHARED)
-        link /nologo /DLL /MANIFEST /out:$(LIBSHARED) /implib:$(LIBIMPORT) $(SHARED_OBJS)
+        link /nologo /DLL /MANIFEST /out:$(LIBSHARED) /implib:$(LIBIMPORT) /implib:$(LIBNDTYPESIMPORT) $(SHARED_OBJS)
         mt /nologo -manifest $(LIBSHARED).manifest -outputresource:$(LIBSHARED);2
 
 xnd.obj:\

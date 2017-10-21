@@ -41,6 +41,19 @@
 #include "ndtypes.h"
 
 
+#ifdef _MSC_VER
+  #if defined (EXPORT)
+    #define XND_API __declspec(dllexport)
+  #elif defined(IMPORT)
+    #define XND_API __declspec(dllimport)
+  #else
+    #define XND_API
+  #endif
+#else
+  #define XND_API
+#endif
+
+
 /* mem.ptr special value to indicate NA */
 #define XND_MISSING ((void *)0x1)
 
@@ -260,12 +273,12 @@ XND_DATA_SET_VALID(xnd_t *mem)
 /*                               API functions                               */
 /*****************************************************************************/
 
-char *xnd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx);
-int xnd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx);
-void xnd_del(xnd_t a);
-xnd_t xnd_empty(const char *datashape, ndt_context_t *ctx);
-int xnd_subarray_set_valid(xnd_t a, const int64_t *indices, int len, ndt_context_t *ctx);
-xnd_t xnd_subarray(const xnd_t a, const int64_t *indices, int len, ndt_context_t *ctx);
+XND_API char *xnd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx);
+XND_API int xnd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx);
+XND_API void xnd_del(xnd_t a);
+XND_API xnd_t xnd_empty(const char *datashape, ndt_context_t *ctx);
+XND_API int xnd_subarray_set_valid(xnd_t a, const int64_t *indices, int len, ndt_context_t *ctx);
+XND_API xnd_t xnd_subarray(const xnd_t a, const int64_t *indices, int len, ndt_context_t *ctx);
 
 
 #endif /* XND_H */
