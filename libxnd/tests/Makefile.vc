@@ -16,13 +16,12 @@ default: runtest runtest_shared
 runtest:\
 Makefile runtest.c test_fixed.c test.h $(SRCDIR)\xnd.h $(SRCDIR)\$(LIBSTATIC)
 	$(CC) -I$(SRCDIR) -I$(LIBNDTYPESDIR) $(CFLAGS) /Feruntest runtest.c \
-	tests\runtest.c tests\test_fixed.c $(LIBSTATIC) \
-	$(LIBNDTYPESDIR)\libndtypes.lib
+	runtest.c test_fixed.c $(LIBSTATIC) $(LIBNDTYPESDIR)\libndtypes.lib
 
 runtest_shared:\
 Makefile runtest.c test_fixed.c test.h $(SRCDIR)\xnd.h $(SRCDIR)\$(LIBSHARED)
 	$(CC) -I$(SRCDIR) -I$(LIBNDTYPESDIR) $(CFLAGS_SHARED) /Feruntest_shared runtest.c \
-	tests\runtest.c tests\test_fixed.c $(SRCDIR)\$(LIBSHARED)
+	runtest.c test_fixed.c $(SRCDIR)\$(LIBSHARED)
 
 
 FORCE:
