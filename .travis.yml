@@ -18,13 +18,12 @@ matrix:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=gcc-4.9
         - cd ndtypes
-        - ./configure && make
         - python3 setup.py install --local=../python
         - cd ..
       script:
         - ./configure --with-ndtypes-path=.
         - make check
-        - python3 setup.py build
+        - python3 setup.py module
         - python3 setup.py test
 
     - compiler: gcc
@@ -32,13 +31,12 @@ matrix:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=gcc-4.9
         - cd ndtypes
-        - ./configure && make
         - python3 setup.py install --local=../python
         - cd ..
       script:
         - ./configure --with-ndtypes-path=.
         - make memcheck
-        - python3 setup.py build
+        - python3 setup.py module
         - python3 setup.py test
 
     - compiler: clang
@@ -46,13 +44,12 @@ matrix:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
         - cd ndtypes
-        - ./configure && make
         - python3 setup.py install --local=../python
         - cd ..
       script:
         - ./configure --with-ndtypes-path=.
         - make check
-        - python3 setup.py build
+        - python3 setup.py module
         - python3 setup.py test
 
     - language: objective-c
@@ -62,13 +59,12 @@ matrix:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
         - cd ndtypes
-        - ./configure && make
         - python3 setup.py install --local=../python
         - cd ..
       script:
         - ./configure --with-ndtypes-path=.
         - make check
-        - python3 setup.py build
+        - python3 setup.py module
         - python3 setup.py test
 
 before_install:

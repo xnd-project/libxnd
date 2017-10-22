@@ -31,14 +31,17 @@
 #
 
 from distutils.core import setup, Extension
-from distutils.cmd import Command
 from glob import glob
+import platform
 import sys, os
 import subprocess
 import shutil
 
 
 DESCRIPTION = """Typed memory container based on libndtypes"""
+
+ARCH = platform.architecture()[0]
+BUILD_ALL = True
 
 
 def get_module_path():
@@ -57,6 +60,9 @@ def copy_ext():
 
 
 if len(sys.argv) == 2:
+    if sys.argv[1] == 'module':
+       sys.argv[1] = 'build'
+       BUILD_ALL = False
     if sys.argv[1] == 'test':
         module_path = get_module_path()
         python_path = os.getenv('PYTHONPATH')
@@ -71,6 +77,13 @@ if len(sys.argv) == 2:
         shutil.rmtree("__pycache__", ignore_errors=True)
         for f in glob("_xnd*.so"):
             os.remove(f)
+        sys.exit(0)
+    elif sys.argv[1] == 'distclean':
+        if sys.platform == "win32":
+            os.chdir("vcbuild")
+            os.system("vcdistclean.bat")
+        else:
+            os.system("make distclean")
         sys.exit(0)
     else:
         pass
@@ -87,6 +100,17 @@ def ndtypes_ext():
         extra_compile_args = ["/DIMPORT"]
         extra_link_args = []
         runtime_library_dirs = []
+
+        if BUILD_ALL:
+            from distutils.msvc9compiler import MSVCCompiler
+            MSVCCompiler().initialize()
+            os.chdir("vcbuild")
+            if ARCH == "64bit":
+                  os.system("vcbuild64.bat")
+            else:
+                  os.system("vcbuild32.bat")
+            os.chdir("..")
+
     else:
         libraries = ["xnd", "ndtypes"]
         extra_compile_args = ["-Wextra", "-Wno-missing-field-initializers", "-std=c11"]
@@ -96,6 +120,9 @@ def ndtypes_ext():
         else:
             extra_link_args = []
             runtime_library_dirs = ["$ORIGIN"]
+
+        if BUILD_ALL:
+            os.system("./configure --with-ndtypes-path=. && make")
 
     return Extension (
       "xnd._xnd",

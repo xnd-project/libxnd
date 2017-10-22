@@ -21,18 +21,14 @@ before_build:
 
 build_script:
   - git clone https://github.com/plures/ndtypes.git
-  - cd ndtypes\vcbuild
-  - "%VCBUILD%"
-  - cd ..
+  - cd ndtypes
   - "%PYTHON%\\python.exe setup.py install --local=..\\python"
   - cd ..\vcbuild
   - "%VCBUILD%"
   - "%RUNTEST%"
   - cd ..
-  - "%PYTHON%\\python.exe setup.py build"
+  - "%PYTHON%\\python.exe setup.py module"
   - "%PYTHON%\\python.exe setup.py test"
-  - "%PYTHON%\\python.exe setup.py clean"
-  - cd vcbuild
-  - vcdistclean.bat
+  - "%PYTHON%\\python.exe setup.py distclean"
 
 

@@ -24,7 +24,9 @@ For building the xnd Python module
 ----------------------------------
 # This also builds libndtypes and copies the ndtypes package into the
 # python directory next to the xnd package.
+cd ndtypes
 python3 setup.py install --local=../python
+cd ..
 
 
 Unix: libxnd build instructions
