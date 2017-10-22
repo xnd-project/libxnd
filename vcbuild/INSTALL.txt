@@ -1,0 +1,42 @@
+
+
+libxnd build instructions for Visual Studio
+===========================================
+
+
+Requirements
+------------
+
+  - Visual Studio 2015 or later.
+
+
+64-bit build
+------------
+
+# Set the build environment
+vcvarsall.bat x64
+
+# Build:  If successful, the static library, the dynamic library, the
+# common header file and two executables for running the unit tests
+# should be in the dist64 directory.
+vcbuild64.bat
+
+# Test
+runtest64.bat
+
+
+32-bit build
+------------
+
+# Set the build environment
+vcvarsall.bat x86
+
+# Build:  If successful, the static library, the dynamic library, the
+# common header file and two executables for running the unit tests
+# should be in the dist32 directory.
+vcbuild32.bat
+
+# Test
+runtest32.bat
+
+

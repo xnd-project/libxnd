@@ -1,0 +1,95 @@
+
+
+Requirements (libndtypes)
+=========================
+
+Unless libndtypes is installed in the system directories, it is recommended
+to clone libndtypes into the xnd directory.
+
+
+Get ndtypes
+-----------
+git clone https://github.com/plures/ndtypes.git
+
+
+For building libxnd only
+------------------------
+cd ndtypes
+./configure
+make
+cd ..
+
+
+For building the xnd Python module
+----------------------------------
+# This also builds libndtypes and copies the ndtypes package into the
+# python directory next to the xnd package.
+python3 setup.py install --local=../python
+
+
+Unix: libxnd build instructions
+===============================
+
+# Build
+./configure --with-ndtypes-path=.
+make
+
+# Test
+make check
+
+# Install
+make install
+
+# Clean
+make clean
+
+# Distclean
+make distclean
+
+
+Windows: libxnd build instructions
+==================================
+
+See vcbuild/INSTALL.txt.
+
+
+Unix/Windows: Python module build instructions
+==============================================
+
+To avoid shared library mismatches, the Python module builds with an rpath
+and ships the library inside the package.
+
+Unless you are a distributor with tight control over the system library
+versions, it is not recommended to install the library for the Python
+module.
+
+
+Build all
+---------
+
+# Build libxnd and the module (libxnd is copied into the package)
+python3 setup.py build
+
+# Test
+python3 setup.py test
+
+# Install
+python3 setup.py install
+
+# Clean libxnd and the module
+python3 setup.py distclean
+
+
+Build the module only (for developing)
+--------------------------------------
+
+First, build libxnd as above. This also copies the shared library into
+the package.  Then, to avoid rebuilding the library repeatedly, use:
+
+# Build the module
+python3 setup.py module
+
+# Clean the module
+python3 setup.py clean
+
+
