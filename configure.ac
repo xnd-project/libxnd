@@ -82,21 +82,15 @@ AC_SUBST(LIBNDTYPESDIR)
 # Compiler dependent settings:
 XND_WARN=
 XND_OPT="-O2"
-XND_PGEN=
-XND_PUSE=
 case $CC in
     *gcc*)
         XND_WARN="-Wall -Wextra -std=c11 -pedantic"
         XND_OPT="-O2"
-        XND_PGEN="-fprofile-generate -fprofile-values"
-        XND_PUSE="-fprofile-use -freorder-blocks"
         ;;
     *icc*)
         AR=xiar
         XND_WARN="-Wall"
         XND_OPT="-O2"
-        XND_PGEN="-wd11505 -prof-gen"
-        XND_PUSE="-wd11505 -prof-use"
         ;;
     *clang*)
         XND_WARN="-Wall -Wextra -std=c11 -pedantic"
@@ -115,8 +109,6 @@ AC_SUBST(AR)
 AC_SUBST(XND_WARN)
 AC_SUBST(XND_OPT)
 
-AC_SUBST(XND_PGEN)
-AC_SUBST(XND_PUSE)
 
 if test -z "$CFLAGS"; then
     CONFIGURE_CFLAGS="$XND_INCLUDE $XND_WARN $XND_CONFIG $XND_OPT"
