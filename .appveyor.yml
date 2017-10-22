@@ -16,12 +16,14 @@ environment:
       RUNTEST: "runtest32.bat"
       PYTHON: "C:\\Python35"
 
+before_build:
+  "\"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat\" %PLATFORM%"
+
 build_script:
   - git clone https://github.com/plures/ndtypes.git
   - cd ndtypes\vcbuild
   - "%VCBUILD%"
   - cd ..
-  - "\"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat\" %PLATFORM%"
   - "%PYTHON%\\python.exe setup.py install --local=..\\python"
   - cd ..\vcbuild
   - "%VCBUILD%"

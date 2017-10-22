@@ -1,7 +1,5 @@
 @ECHO off
 
-call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86
-
 if not exist dist32 mkdir dist32
 if exist dist32\* del /q dist32\*
 
