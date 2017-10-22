@@ -589,8 +589,6 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 CONFIGURE_LDFLAGS
 CONFIGURE_CFLAGS
-XND_PUSE
-XND_PGEN
 XND_OPT
 XND_WARN
 LD
@@ -3486,21 +3484,15 @@ fi
 # Compiler dependent settings:
 XND_WARN=
 XND_OPT="-O2"
-XND_PGEN=
-XND_PUSE=
 case $CC in
     *gcc*)
         XND_WARN="-Wall -Wextra -std=c11 -pedantic"
         XND_OPT="-O2"
-        XND_PGEN="-fprofile-generate -fprofile-values"
-        XND_PUSE="-fprofile-use -freorder-blocks"
         ;;
     *icc*)
         AR=xiar
         XND_WARN="-Wall"
         XND_OPT="-O2"
-        XND_PGEN="-wd11505 -prof-gen"
-        XND_PUSE="-wd11505 -prof-use"
         ;;
     *clang*)
         XND_WARN="-Wall -Wextra -std=c11 -pedantic"
@@ -3514,8 +3506,6 @@ esac
 if test -z "$LD"; then
     LD="$CC"
 fi
-
-
 
 
 

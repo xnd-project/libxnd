@@ -31,8 +31,7 @@ clean: FORCE
 	rm -f *.o *.gch *.gcda *.gcno *.gcov *.dyn *.dpi *.lock
 	rm -f runtest runtest_shared
 
-distclean: FORCE
-	$(MAKE) clean
+distclean: clean
 	rm -rf Makefile
 
 
