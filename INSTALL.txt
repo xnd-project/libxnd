@@ -3,8 +3,8 @@
 Requirements (libndtypes)
 =========================
 
-Unless libndtypes is installed in the system directories, it is recommended
-to clone libndtypes into the xnd directory.
+Unless libndtypes has already been installed in the system directories,
+it is recommended to clone libndtypes into the xnd directory.
 
 
 Get ndtypes
@@ -22,8 +22,8 @@ cd ..
 
 For building the xnd Python module
 ----------------------------------
-# This also builds libndtypes and copies the ndtypes package into the
-# python directory next to the xnd package.
+# This also builds libndtypes and copies the ndtypes Python package into
+# the python directory next to the xnd package.
 cd ndtypes
 python3 setup.py install --local=../python
 cd ..
