@@ -54,11 +54,14 @@
 #endif
 
 
-/* mem.ptr special value to indicate NA */
+/* xnd.ptr: special value to indicate NA */
 #define XND_MISSING ((void *)0x1)
 
-/* convenience macro to extract a pointer value */
-#define XND_POINTER_DATA(ptr) (((ndt_pointer_t *)ptr)->data)
+/* convenience macros to extract embedded values */
+#define XND_POINTER_DATA(ptr) (*((char **)ptr))
+#define XND_BYTES_SIZE(ptr) (((ndt_bytes_t *)ptr)->size)
+#define XND_BYTES_DATA(ptr) (((ndt_bytes_t *)ptr)->data)
+
 
 /* typed memory */
 typedef struct _xnd_t {
