@@ -75,6 +75,13 @@ xnd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
  * Initialize typed memory. If 'alloc_pointers' is true, allocate memory
  * for all pointer subtypes and initialize that memory. Otherwise, set
  * pointers to NULL.
+ *
+ * Pointer subtypes include:
+ *   - Any type of the form 'Pointer(t)'.
+ *
+ * Never allocated are (sizes are not known):
+ *   - The 'String' type (pointer to NUL-terminated UTF8 string).
+ *   - The 'Bytes' type ({size: size_t, data: char *bytes}).
  */
 int
 xnd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
