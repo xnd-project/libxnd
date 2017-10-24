@@ -82,6 +82,9 @@ xnd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
  * Never allocated are (sizes are not known):
  *   - The 'String' type (pointer to NUL-terminated UTF8 string).
  *   - The 'Bytes' type ({size: size_t, data: char *bytes}).
+ *
+ *   At all times the data pointers must be NULL or pointers to valid memory.
+ *   Once initialized, the pointers belong to the array.
  */
 int
 xnd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
