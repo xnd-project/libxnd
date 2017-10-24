@@ -237,6 +237,7 @@ get_uint(PyObject *v, uint64_t max)
 static int
 pyxnd_init(const xnd_t x, PyObject *v)
 {
+    NDT_STATIC_CONTEXT(ctx);
     const ndt_t *t = x.type;
     int64_t shape, i;
     xnd_t next;
@@ -610,8 +611,48 @@ pyxnd_init(const xnd_t x, PyObject *v)
         return 0;
     }
 
+    case String: {
+        Py_ssize_t size;
+        const char *cp;
+        char*s;
+
+        cp = PyUnicode_AsUTF8AndSize(v, &size);
+        if (cp == NULL) {
+            return -1;
+        }
+
+        s = ndt_strdup(cp, &ctx);
+        if (s == NULL) {
+            (void)seterr(&ctx);
+            return -1;
+        }
+
+        XND_POINTER_DATA(x.ptr) = s;
+        return 0;
+    }
+
+    case Bytes: {
+        Py_ssize_t size;
+        char *cp;
+        char*s;
+
+        if (PyBytes_AsStringAndSize(v, &cp, &size) < 0) {
+            return -1;
+        }
+
+        s = ndt_aligned_alloc(x.type->Bytes.target_align, size, 1);
+        if (s == NULL) {
+            PyErr_NoMemory();
+            return -1;
+        }
+
+        XND_BYTES_SIZE(x.ptr) = size;
+        XND_BYTES_DATA(x.ptr) = s;
+        return 0;
+    }
+
 #if 0
-    case Char: case String: case Bytes:
+    case Char:
         return 0;
 #endif
 
