@@ -341,6 +341,24 @@ pyxnd_init(const xnd_t x, PyObject *v)
         return 0;
     }
 
+    case Pointer: {
+        next.type = t->Constr.type;
+        next.ptr = XND_POINTER_DATA(x.ptr);
+        return pyxnd_init(next, v);
+    }
+
+    case Constr: {
+        next.type = t->Constr.type;
+        next.ptr = x.ptr;
+        return pyxnd_init(next, v);
+    }
+
+    case Nominal: {
+        PyErr_SetString(PyExc_NotImplementedError,
+            "the 'nominal' type is opaque and only useful on the C level");
+        return -1;
+    }
+
     case Bool: {
         int tmp = PyObject_IsTrue(v);
         bool b;
@@ -651,16 +669,113 @@ pyxnd_init(const xnd_t x, PyObject *v)
         return 0;
     }
 
-#if 0
-    case Char:
-        return 0;
-#endif
+    case Categorical: {
+        size_t k;
 
-    default:
-        PyErr_Format(PyExc_NotImplementedError,
-            "packing type '%s' not implemented", ndt_tag_as_string(t->tag));
+        if (PyBool_Check(v)) {
+            int tmp = PyObject_IsTrue(v);
+            if (tmp < 0) {
+                return -1;
+            }
+
+            for (k = 0; k < x.type->Categorical.ntypes; k++) {
+                if (x.type->Categorical.types[k].tag == ValBool &&
+                    tmp == x.type->Categorical.types[k].ValBool) {
+                    PACK_SINGLE(x.ptr, k, size_t);
+                    return 0;
+                }
+            }
+            goto not_found;
+        }
+
+        else if (PyLong_Check(v)) {
+            int64_t tmp = get_int(v, INT64_MIN, INT64_MAX);
+            if (tmp == -1 && PyErr_Occurred()) {
+                return -1;
+            }
+
+            for (k = 0; k < x.type->Categorical.ntypes; k++) {
+                if (x.type->Categorical.types[k].tag == ValInt64 &&
+                    tmp == x.type->Categorical.types[k].ValInt64) {
+                    PACK_SINGLE(x.ptr, k, size_t);
+                    return 0;
+                }
+            }
+            goto not_found;
+        }
+
+        else if (PyFloat_Check(v)) {
+            double tmp = PyFloat_AsDouble(v);
+            if (tmp == -1 && PyErr_Occurred()) {
+                return -1;
+            }
+
+            for (k = 0; k < x.type->Categorical.ntypes; k++) {
+                /* XXX: DBL_EPSILON? */
+                if (x.type->Categorical.types[k].tag == ValFloat64 &&
+                    tmp == x.type->Categorical.types[k].ValFloat64) {
+                    PACK_SINGLE(x.ptr, k, size_t);
+                    return 0;
+                }
+            }
+            goto not_found;
+        }
+
+        else if (PyUnicode_Check(v)) {
+            const char *tmp = PyUnicode_AsUTF8(v);
+            if (tmp == NULL) {
+                return -1;
+            }
+
+            for (k = 0; k < x.type->Categorical.ntypes; k++) {
+                if (x.type->Categorical.types[k].tag == ValString &&
+                    strcmp(tmp, x.type->Categorical.types[k].ValString) == 0) {
+                    PACK_SINGLE(x.ptr, k, size_t);
+                    return 0;
+                }
+            }
+            goto not_found;
+        }
+
+    not_found:
+        for (k = 0; k < x.type->Categorical.ntypes; k++) {
+            if (x.type->Categorical.types[k].tag == ValNA) {
+                PACK_SINGLE(x.ptr, k, size_t);
+                return 0;
+            }
+        }
+
+        PyErr_Format(PyExc_ValueError, "category not found for: %.200R", v);
         return -1;
     }
+
+    case Char:
+        PyErr_SetString(PyExc_NotImplementedError,
+            "'Char' type semantics need to be defined");
+        return -1;
+
+    case Option: case OptionItem:
+        PyErr_SetString(PyExc_NotImplementedError,
+            "'Option' type not implemented");
+        return -1;
+
+    case Module:
+        PyErr_SetString(PyExc_NotImplementedError,
+            "'Module' type not implemented");
+        return -1;
+
+    /* NOT REACHED: intercepted by ndt_is_abstract(). */
+    case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
+    case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
+    case ComplexKind: case FixedStringKind: case FixedBytesKind: case Field:
+    case Void: case Function:
+        PyErr_SetString(PyExc_RuntimeError, "unexpected abstract type");
+        return -1;
+    }
+
+    /* NOT REACHED: tags should be exhaustive */
+    PyErr_SetString(PyExc_RuntimeError, "invalid type tag");
+    return -1;
 }
 
 static PyObject *Ndt;
@@ -689,7 +804,7 @@ pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds UNUSED)
         return NULL;
     }
 
-    PTR(x) = xnd_new(NDT(t), false, &ctx);
+    PTR(x) = xnd_new(NDT(t), true, &ctx);
     if (PTR(x) == NULL) {
         return seterr(&ctx);
     }
