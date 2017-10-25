@@ -151,7 +151,7 @@ pyxnd_alloc(PyTypeObject *type)
 static void
 pyxnd_dealloc(PyObject *x)
 {
-    ndt_free(PTR(x));
+    if PTR(x) ndt_free(PTR(x));
     Py_CLEAR(NDT_REF(x));
 
     Py_TYPE(x)->tp_free(x);
@@ -780,14 +780,15 @@ pyxnd_init(const xnd_t x, PyObject *v)
 
 static PyObject *Ndt;
 static PyObject *
-pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds UNUSED)
+pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
+    static char *kwlist[] = {"type", "value", NULL};
     NDT_STATIC_CONTEXT(ctx);
-    PyObject *v = NULL;
+    PyObject *v = Py_None;
     PyObject *x, *t;
     int is_ndt;
 
-    if (!PyArg_ParseTuple(args, "O|O", &t, &v)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", kwlist, &t, &v)) {
         return NULL;
     }
 
@@ -806,15 +807,15 @@ pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds UNUSED)
 
     PTR(x) = xnd_new(NDT(t), true, &ctx);
     if (PTR(x) == NULL) {
+        Py_DECREF(x);
         return seterr(&ctx);
     }
 
     Py_INCREF(t);
-
     NDT_REF(x) = t;
     TYP(x) = NDT(t);
 
-    if (v && pyxnd_init(XND(x), v) < 0) {
+    if (v != Py_None && pyxnd_init(XND(x), v) < 0) {
         Py_DECREF(x);
         return NULL;
     }
