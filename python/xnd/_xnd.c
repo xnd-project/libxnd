@@ -835,7 +835,7 @@ static PyMethodDef pyxnd_methods [] =
 static PyTypeObject Xnd_Type =
 {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "xnd.xnd",                              /* tp_name */
+    "xnd._xnd",                             /* tp_name */
     sizeof(XndObject),                      /* tp_basicsize */
     0,                                      /* tp_itemsize */
     (destructor) pyxnd_dealloc,             /* tp_dealloc */
@@ -916,7 +916,7 @@ PyInit__xnd(void)
     }
 
     Py_INCREF(&Xnd_Type);
-    if (PyModule_AddObject(m, "xnd", (PyObject *)&Xnd_Type) < 0) {
+    if (PyModule_AddObject(m, "_xnd", (PyObject *)&Xnd_Type) < 0) {
         goto error;
     }
 
