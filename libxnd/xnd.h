@@ -66,6 +66,7 @@
 /* typed memory */
 typedef struct _xnd_t {
     const ndt_t *type;  /* type of the data */
+    int64_t index;      /* linear index for var dims */
     char *ptr;          /* data */
 } xnd_t;
 

@@ -1,8 +1,9 @@
 # Ensure that libndtypes is loaded and initialized.
 from ndtypes import ndt, MAX_DIM
 from ._xnd import _xnd
+from itertools import accumulate
 
-__all__ = ['xnd', 'typeof']
+__all__ = ['xnd', 'typeof', '_typeof']
 
 
 # ======================================================================
@@ -38,7 +39,6 @@ def _typeof(value):
     if isinstance(value, list):
         data, shapes = data_shapes(value)
         opt = None in data
-        data = [x for x in data if x is not None]
 
         if not data:
             dtype = 'float64'
@@ -56,6 +56,7 @@ def _typeof(value):
         var = False
         for lst in shapes:
             opt = None in lst
+            lst = [0 if x is None else x for x in lst]
             var, t = choose_dim_type(opt=opt, shapes=lst, typ=t, have_var=var)
 
         return t
@@ -87,10 +88,11 @@ def choose_dim_type(*, opt=False, shapes=None, typ=None, have_var=False):
     """
     opt = '?' if opt else ''
     n = len(set(shapes))
-    if not have_var and n <= 1:
+    if not have_var and not opt and n <= 1:
         shape = 0 if n == 0 else shapes[0]
         return False, "%s%d * %s" % (opt, shape, typ)
-    return True, "%svar * %s" % (opt, typ)
+    offsets = [0] + list(accumulate(shapes))
+    return True, "%svar(offsets=%s) * %s" % (opt, offsets, typ)
 
 def data_shapes(tree):
     """Extract array data and dimension shapes from a nested list. The

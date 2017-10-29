@@ -39,7 +39,7 @@
 
 
 /* error return value */
-static xnd_t err = {NULL, NULL};
+static xnd_t err = {NULL, 0, NULL};
 
 
 /*****************************************************************************/
@@ -226,29 +226,31 @@ xnd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
 xnd_t
 xnd_empty(const char *datashape, ndt_context_t *ctx)
 {
-    xnd_t a;
+    xnd_t x;
 
-    a.type = ndt_from_string(datashape, ctx);
-    if (a.type == NULL) {
+    x.type = ndt_from_string(datashape, ctx);
+    if (x.type == NULL) {
         return err;
     }
 
-    a.ptr = xnd_new(a.type, 1, ctx);
-    if (a.ptr == NULL) {
-        ndt_del((ndt_t *)a.type);
+    x.index = 0;
+
+    x.ptr = xnd_new(x.type, 1, ctx);
+    if (x.ptr == NULL) {
+        ndt_del((ndt_t *)x.type);
         return err;
     }
 
-    return a;
+    return x;
 }
 
 /* Delete the space required for a type. Pointer types are deallocated. */
 void
-xnd_del(xnd_t a)
+xnd_del(xnd_t x)
 {
-    // xnd_clear(a);
-    ndt_del((ndt_t *)a.type);
-    ndt_free(a.ptr);
+    // xnd_clear(x);
+    ndt_del((ndt_t *)x.type);
+    ndt_free(x.ptr);
 }
 
 /* Clear pointer types */
@@ -267,7 +269,7 @@ xnd_del(xnd_t a)
  */
 int
 xnd_subarray_set_valid(xnd_t a, const int64_t *indices, int len,
-                      ndt_context_t *ctx)
+                       ndt_context_t *ctx)
 {
     const ndt_t *t = a.type;
     xnd_t next;
@@ -342,11 +344,10 @@ xnd_subarray_set_valid(xnd_t a, const int64_t *indices, int len,
 
 /* Return a typed subarray */
 xnd_t
-xnd_subarray(const xnd_t a, const int64_t *indices, int len, ndt_context_t *ctx)
+xnd_subarray(const xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
 {
-    const ndt_t *t = a.type;
+    const ndt_t *t = x.type;
     xnd_t next;
-    int64_t shape;
     int i;
 
     if (ndt_is_abstract(t)) {
@@ -355,68 +356,91 @@ xnd_subarray(const xnd_t a, const int64_t *indices, int len, ndt_context_t *ctx)
     }
 
     if (len == 0) {
-#if 0 // XXX
         if (ndt_is_optional(t)) {
-            switch (t->tag) {
-            case VarDim: case OptionItem:
-                if (!XND_DATA_IS_VALID(&a)) {
-                    next = a;
-                    next.ptr = XND_MISSING;
-                    return next;
-                }
-            default:
-                return a;
-            }
+            ndt_err_format(ctx, NDT_NotImplementedError,
+                "options temporarily disabled");
+            return err;
         }
-        else {
-#endif
-            return a;
+        return x;
     }
 
     i = indices[0];
 
     switch (t->tag) {
-    case FixedDim:
-        shape = t->FixedDim.shape;
-        next.type = t->FixedDim.type;
-        next.ptr = a.ptr + i * t->Concrete.FixedDim.stride;
-        break;
-#if 0 // XXX
-    case VarDim:
-        if (ndt_is_optional(t) && !XND_DATA_IS_VALID(&a)) {
-            goto missing_dimension_error;
+    case FixedDim: {
+        assert(x.index == 0);
+
+        if (i < 0 || i >= t->FixedDim.shape) {
+            ndt_err_format(ctx, NDT_ValueError,
+                "fixed dim index out of bounds");
+            return err;
         }
-        shape = XND_VAR_SHAPE(&a);
-        next.type = t->VarDim.type;
-        next.ptr = XND_NEXT_DIM(&a) + t->Concrete.VarDim.suboffset + i * t->Concrete.VarDim.stride;
+
+        next.type = t->FixedDim.type;
+        next.index = 0;
+        next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
         break;
-#endif
-    case Tuple:
-        shape = t->Tuple.shape;
+    }
+
+    case VarDim: {
+        const int32_t noffsets = t->Concrete.VarDim.noffsets;
+        int32_t start, stop;
+
+        if (ndt_is_optional(t)) {
+            ndt_err_format(ctx, NDT_NotImplementedError,
+                "optional dimensions temporarily disabled");
+            return err;
+        }
+
+        if (x.index+1 >= noffsets) {
+            ndt_err_format(ctx, NDT_RuntimeError,
+                "var dim offset index out of bounds");
+            return err;
+        }
+
+        start = t->Concrete.VarDim.offsets[x.index];
+        stop = t->Concrete.VarDim.offsets[x.index+1];
+
+        if (i < 0 || i >= stop) {
+            ndt_err_format(ctx, NDT_ValueError, "var dim index out of bounds");
+            return err;
+        }
+
+        next.type = t->VarDim.type;
+        next.index = start + i;
+        next.ptr = x.ptr;
+        break;
+    }
+
+    case Tuple: {
+        if (i < 0 || i >= t->Tuple.shape) {
+            ndt_err_format(ctx, NDT_ValueError, "tuple index out of bounds");
+            return err;
+        }
+
         next.type = t->Tuple.types[i];
+        next.index = 0;
         next.ptr += t->Concrete.Tuple.offset[i];
         break;
-    case Record:
-        shape = t->Record.shape;
+    }
+
+    case Record: {
+        if (i < 0 || i >= t->Record.shape) {
+            ndt_err_format(ctx, NDT_ValueError, "record index out of bounds");
+            return err;
+        }
+
         next.type = t->Record.types[i];
+        next.index = 0;
         next.ptr += t->Concrete.Record.offset[i];
         break;
+    }
+
     default:
         ndt_err_format(ctx, NDT_ValueError, "type not indexable");
         return err;
     }
 
-    if (i < 0 || i >= shape) {
-        ndt_err_format(ctx, NDT_ValueError, "index out of bounds");
-        return err;
-    }
-
     return xnd_subarray(next, indices+1, len-1, ctx);
-
-
-#if 0 // XXX
-missing_dimension_error:
-    ndt_err_format(ctx, NDT_ValueError, "cannot index missing dimension");
-    return err;
-#endif
 }
+

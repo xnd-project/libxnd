@@ -75,6 +75,7 @@ static PyTypeObject Xnd_Type;
 #define NDT_REF(v) (((XndObject *)v)->ndt)
 #define XND(v) (((XndObject *)v)->xnd)
 #define TYP(v) (((XndObject *)v)->xnd.type)
+#define INDEX(v) (((XndObject *)v)->xnd.index)
 #define PTR(v) (((XndObject *)v)->xnd.ptr)
 
 
@@ -142,6 +143,7 @@ pyxnd_alloc(PyTypeObject *type)
     }
  
     TYP(x) = NULL;
+    INDEX(x) = 0;
     PTR(x) = NULL;
     NDT_REF(x) = NULL;
 
@@ -235,7 +237,7 @@ get_uint(PyObject *v, uint64_t max)
 }
 
 static int
-pyxnd_init(const xnd_t x, PyObject *v)
+pyxnd_init(xnd_t x, PyObject *v)
 {
     NDT_STATIC_CONTEXT(ctx);
     const ndt_t *t = x.type;
@@ -247,8 +249,16 @@ pyxnd_init(const xnd_t x, PyObject *v)
         return -1;
     }
 
+    /* Add the linear index from var dimensions. For a chain of fixed
+       dimensions, x.index is zero. */
+    if (t->ndim == 0) {
+        x.ptr += x.index * t->data_size;
+    }
+
     switch (t->tag) {
     case FixedDim: {
+        assert(x.index == 0);
+
         if (!PyList_Check(v)) {
             PyErr_Format(PyExc_TypeError,
                 "xnd: expected list, not '%.200s'", Py_TYPE(v)->tp_name);
@@ -263,6 +273,8 @@ pyxnd_init(const xnd_t x, PyObject *v)
         }
 
         next.type = t->FixedDim.type;
+        next.index = 0;
+
         for (i = 0; i < shape; i++) {
             next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
             if (pyxnd_init(next, PyList_GET_ITEM(v, i)) < 0) {
@@ -273,10 +285,45 @@ pyxnd_init(const xnd_t x, PyObject *v)
         return 0;
     }
 
-    case VarDim: 
-        PyErr_Format(PyExc_NotImplementedError,
-            "xnd: initialization from var dim not implemented");
-        return -1;
+    case VarDim: {
+        const int32_t noffsets = t->Concrete.VarDim.noffsets;
+        int32_t start, stop;
+
+        if (!PyList_Check(v)) {
+            PyErr_Format(PyExc_TypeError,
+                "xnd: expected list, not '%.200s'", Py_TYPE(v)->tp_name);
+            return -1;
+        }
+
+        if (x.index < 0 || x.index+1 >= noffsets) {
+            PyErr_Format(PyExc_RuntimeError,
+                "xnd: offset index out of range: index=%" PRIi32, " noffsets=%" PRIi32,
+                x.index, noffsets);
+            return -1;
+        }
+
+        start = t->Concrete.VarDim.offsets[x.index];
+        stop = t->Concrete.VarDim.offsets[x.index+1];
+
+        shape = stop - start;
+        if (PyList_GET_SIZE(v) != shape) {
+            PyErr_Format(PyExc_ValueError,
+                "xnd: expected list with size %" PRIi64, shape);
+            return -1;
+        }
+
+        next.type = t->VarDim.type;
+        next.ptr = x.ptr;
+
+        for (i = 0; i < shape; i++) {
+            next.index =  start + i;
+            if (pyxnd_init(next, PyList_GET_ITEM(v, i)) < 0) {
+                return -1;
+            }
+        }
+
+        return 0;
+    }
 
     case Tuple: {
         if (!PyTuple_Check(v)) {
