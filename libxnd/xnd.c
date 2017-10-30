@@ -54,7 +54,7 @@ xnd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
 
     if (ndt_is_abstract(t)) {
         ndt_err_format(ctx, NDT_ValueError,
-                       "cannot create concrete memory from abstract type");
+                       "cannot create xnd container from abstract type");
         return NULL;
     }
 

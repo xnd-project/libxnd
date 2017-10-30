@@ -80,9 +80,9 @@ static PyTypeObject Xnd_Type;
 
 
 #if PY_LITTLE_ENDIAN
-static const int litte_endian = 1;
+static const int little_endian = 1;
 #else
-static const int litte_endian = 0;
+static const int little_endian = 0;
 #endif
 
 static PyObject *
@@ -166,6 +166,14 @@ pyxnd_dealloc(PyObject *x)
         _x = (type)src;                      \
         memcpy(ptr, (char *)&_x, sizeof _x); \
     } while (0)
+
+#define UNPACK_SINGLE(dest, ptr, type) \
+    do {                                     \
+        type _x;                             \
+        memcpy((char *)&_x, ptr, sizeof _x); \
+        dest = _x;                           \
+    } while (0)
+
 
 PyObject *
 dict_get_item(PyObject *v, const char *key)
@@ -341,6 +349,7 @@ pyxnd_init(xnd_t x, PyObject *v)
 
         for (i = 0; i < shape; i++) {
             next.type = t->Tuple.types[i];
+            next.index = 0;
             next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
 
             if (pyxnd_init(next, PyTuple_GET_ITEM(v, i)) < 0) {
@@ -369,6 +378,7 @@ pyxnd_init(xnd_t x, PyObject *v)
 
         for (i = 0; i < shape; i++) {
             next.type = t->Record.types[i];
+            next.index = 0;
             next.ptr = x.ptr + t->Concrete.Record.offset[i];
 
             tmp = dict_get_item(v, t->Record.names[i]);
@@ -389,13 +399,15 @@ pyxnd_init(xnd_t x, PyObject *v)
     }
 
     case Pointer: {
-        next.type = t->Constr.type;
+        next.type = t->Pointer.type;
+        next.index = 0;
         next.ptr = XND_POINTER_DATA(x.ptr);
         return pyxnd_init(next, v);
     }
 
     case Constr: {
         next.type = t->Constr.type;
+        next.index = 0;
         next.ptr = x.ptr;
         return pyxnd_init(next, v);
     }
@@ -498,7 +510,7 @@ pyxnd_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        return _PyFloat_Pack2(tmp, (unsigned char *)x.ptr, litte_endian);
+        return _PyFloat_Pack2(tmp, (unsigned char *)x.ptr, little_endian);
 #else
         PyErr_SetString(PyExc_NotImplementedError,
             "half-float not implemented in Python versions < 3.6");
@@ -511,7 +523,7 @@ pyxnd_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        return _PyFloat_Pack4(tmp, (unsigned char *)x.ptr, litte_endian);
+        return _PyFloat_Pack4(tmp, (unsigned char *)x.ptr, little_endian);
     }
 
     case Float64: {
@@ -519,7 +531,7 @@ pyxnd_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        return _PyFloat_Pack8(tmp, (unsigned char *)x.ptr, litte_endian);
+        return _PyFloat_Pack8(tmp, (unsigned char *)x.ptr, little_endian);
     }
 
     case Complex32: {
@@ -528,10 +540,10 @@ pyxnd_init(xnd_t x, PyObject *v)
         if (c.real == -1.0 && PyErr_Occurred()) {
             return -1;
         }
-        if (_PyFloat_Pack2(c.real, (unsigned char *)x.ptr, litte_endian) < 0) {
+        if (_PyFloat_Pack2(c.real, (unsigned char *)x.ptr, little_endian) < 0) {
             return -1;
         }
-        return _PyFloat_Pack2(c.imag, (unsigned char *)(x.ptr+2), litte_endian);
+        return _PyFloat_Pack2(c.imag, (unsigned char *)(x.ptr+2), little_endian);
 #else
         PyErr_SetString(PyExc_NotImplementedError,
             "half-float not implemented in Python versions < 3.6");
@@ -544,10 +556,10 @@ pyxnd_init(xnd_t x, PyObject *v)
         if (c.real == -1.0 && PyErr_Occurred()) {
             return -1;
         }
-        if (_PyFloat_Pack4(c.real, (unsigned char *)x.ptr, litte_endian) < 0) {
+        if (_PyFloat_Pack4(c.real, (unsigned char *)x.ptr, little_endian) < 0) {
             return -1;
         }
-        return _PyFloat_Pack4(c.imag, (unsigned char *)(x.ptr+4), litte_endian);
+        return _PyFloat_Pack4(c.imag, (unsigned char *)(x.ptr+4), little_endian);
     }
 
     case Complex128: {
@@ -555,10 +567,10 @@ pyxnd_init(xnd_t x, PyObject *v)
         if (c.real == -1.0 && PyErr_Occurred()) {
             return -1;
         }
-        if (_PyFloat_Pack8(c.real, (unsigned char *)x.ptr, litte_endian) < 0) {
+        if (_PyFloat_Pack8(c.real, (unsigned char *)x.ptr, little_endian) < 0) {
             return -1;
         }
-        return _PyFloat_Pack8(c.imag, (unsigned char *)(x.ptr+8), litte_endian);
+        return _PyFloat_Pack8(c.imag, (unsigned char *)(x.ptr+8), little_endian);
     }
 
     case FixedString: {
@@ -829,13 +841,13 @@ static PyObject *Ndt;
 static PyObject *
 pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-    static char *kwlist[] = {"type", "value", NULL};
+    static char *kwlist[] = {"value", "type", NULL};
     NDT_STATIC_CONTEXT(ctx);
-    PyObject *v = Py_None;
-    PyObject *x, *t;
+    PyObject *v, *t;
+    PyObject *x;
     int is_ndt;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", kwlist, &t, &v)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &v, &t)) {
         return NULL;
     }
 
@@ -862,17 +874,491 @@ pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     NDT_REF(x) = t;
     TYP(x) = NDT(t);
 
-    if (v != Py_None && pyxnd_init(XND(x), v) < 0) {
-        Py_DECREF(x);
-        return NULL;
+    if (v != Py_None) {
+        if (pyxnd_init(XND(x), v) < 0) {
+            Py_DECREF(x);
+            return NULL;
+        }
     }
 
     return x;
 }
 
 /******************************************************************************/
-/*                                 Ndt methods                                */
+/*                                 xnd methods                                */
 /******************************************************************************/
+
+static int
+dict_set_item(PyObject *dict, const char *k, PyObject *value)
+{
+    PyObject *key;
+    int ret;
+
+    key = PyUnicode_FromString(k);
+    if (key == NULL) {
+        return -1;
+    }
+
+    ret = PyDict_SetItem(dict, key, value);
+    Py_DECREF(key);
+
+    return ret;
+}
+
+static PyObject *
+_pyxnd_value(xnd_t x)
+{
+    const ndt_t *t = x.type;
+    xnd_t next;
+
+    assert(ndt_is_concrete(x.type));
+
+    /* Add the linear index from var dimensions. For a chain of fixed
+       dimensions, x.index is zero. */
+    if (t->ndim == 0) {
+        x.ptr += x.index * t->data_size;
+    }
+
+    switch (t->tag) {
+    case FixedDim: {
+        PyObject *lst, *v;
+        int64_t shape, i;
+
+        assert(x.index == 0);
+
+        shape = t->FixedDim.shape;
+        lst = PyList_New(shape);
+        if (lst == NULL) {
+            return NULL;
+        }
+
+        next.type = t->FixedDim.type;
+        next.index = 0;
+
+        for (i = 0; i < shape; i++) {
+            next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
+            v = _pyxnd_value(next);
+            if (v == NULL) {
+                Py_DECREF(lst);
+                return NULL;
+            }
+            PyList_SET_ITEM(lst, i, v);
+        }
+
+        return lst;
+    }
+
+    case VarDim: {
+        PyObject *lst, *v;
+        int32_t start, stop, shape, i;
+
+        assert(0 <= x.index && x.index+1 < t->Concrete.VarDim.noffsets);
+
+        start = t->Concrete.VarDim.offsets[x.index];
+        stop = t->Concrete.VarDim.offsets[x.index+1];
+        shape = stop - start;
+
+        lst = PyList_New(shape);
+        if (lst == NULL) {
+            return NULL;
+        }
+
+        next.type = t->VarDim.type;
+        next.ptr = x.ptr;
+
+        for (i = 0; i < shape; i++) {
+            next.index =  start + i;
+            v = _pyxnd_value(next);
+            if (v == NULL) {
+                Py_DECREF(lst);
+                return NULL;
+            }
+            PyList_SET_ITEM(lst, i, v);
+        }
+
+        return lst;
+    }
+
+    case Tuple: {
+        PyObject *tuple, *v;
+        int64_t shape, i;
+
+        shape = t->Tuple.shape;
+        tuple = PyTuple_New(shape);
+        if (tuple == NULL) {
+            return NULL;
+        }
+
+        for (i = 0; i < shape; i++) {
+            next.type = t->Tuple.types[i];
+            next.index = 0;
+            next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
+
+            v = _pyxnd_value(next);
+            if (v == NULL) {
+                Py_DECREF(tuple);
+                return NULL;
+            }
+            PyTuple_SET_ITEM(tuple, i, v);
+        }
+
+        return tuple;
+    }
+
+    case Record: {
+        PyObject *dict, *v;
+        int64_t shape, i;
+        int ret;
+
+        shape = t->Record.shape;
+        dict = PyDict_New();
+        if (dict == NULL) {
+            return NULL;
+        }
+
+        for (i = 0; i < shape; i++) {
+            next.type = t->Record.types[i];
+            next.index = 0;
+            next.ptr = x.ptr + t->Concrete.Record.offset[i];
+
+            v = _pyxnd_value(next);
+            if (v == NULL) {
+                Py_DECREF(dict);
+                return NULL;
+            }
+
+            ret = dict_set_item(dict, t->Record.names[i], v);
+            Py_DECREF(v);
+            if (ret < 0) {
+                Py_DECREF(dict);
+                return NULL;
+            }
+        }
+
+        return dict;
+    }
+
+    case Pointer: {
+        next.type = t->Pointer.type;
+        next.index = 0;
+        next.ptr = XND_POINTER_DATA(x.ptr);
+        return _pyxnd_value(next);
+    }
+
+    case Constr: {
+        next.type = t->Constr.type;
+        next.index = 0;
+        next.ptr = x.ptr;
+        return _pyxnd_value(next);
+    }
+
+    case Nominal: {
+        PyErr_SetString(PyExc_NotImplementedError,
+            "the 'nominal' type is opaque and only useful on the C level");
+        return NULL;
+    }
+
+    case Bool: {
+        bool tmp;
+        UNPACK_SINGLE(tmp, x.ptr, bool);
+        return PyBool_FromLong(tmp);
+    }
+
+    case Int8: {
+        int8_t tmp;
+        UNPACK_SINGLE(tmp, x.ptr, int8_t);
+        return PyLong_FromLong(tmp);
+    }
+
+    case Int16: {
+        int16_t tmp;
+        UNPACK_SINGLE(tmp, x.ptr, int16_t);
+        return PyLong_FromLong(tmp);
+    }
+
+    case Int32: {
+        int32_t tmp;
+        UNPACK_SINGLE(tmp, x.ptr, int32_t);
+        return PyLong_FromLong(tmp);
+    }
+
+    case Int64: {
+        int64_t tmp;
+        UNPACK_SINGLE(tmp, x.ptr, int64_t);
+        return PyLong_FromLongLong(tmp);
+    }
+
+    case Uint8: {
+        uint8_t tmp;
+        UNPACK_SINGLE(tmp, x.ptr, uint8_t);
+        return PyLong_FromUnsignedLong(tmp);
+    }
+
+    case Uint16: {
+        uint16_t tmp;
+        UNPACK_SINGLE(tmp, x.ptr, uint16_t);
+        return PyLong_FromUnsignedLong(tmp);
+    }
+
+    case Uint32: {
+        uint32_t tmp;
+        UNPACK_SINGLE(tmp, x.ptr, uint32_t);
+        return PyLong_FromUnsignedLong(tmp);
+    }
+
+    case Uint64: {
+        uint64_t tmp;
+        UNPACK_SINGLE(tmp, x.ptr, uint64_t);
+        return PyLong_FromUnsignedLongLong(tmp);
+    }
+
+    case Float16: {
+#if PY_VERSION_HEX >= 0x03060000
+        double tmp = _PyFloat_Unpack2((unsigned char *)x.ptr, little_endian);
+        if (tmp == -1.0 && PyErr_Occurred()) {
+            return NULL;
+        }
+        return PyFloat_FromDouble(tmp);
+#else
+        PyErr_SetString(PyExc_NotImplementedError,
+            "half-float not implemented in Python versions < 3.6");
+        return NULL;
+#endif
+    }
+
+    case Float32: {
+        double tmp = _PyFloat_Unpack4((unsigned char *)x.ptr, little_endian);
+        if (tmp == -1.0 && PyErr_Occurred()) {
+            return NULL;
+        }
+        return PyFloat_FromDouble(tmp);
+    }
+
+    case Float64: {
+        double tmp = _PyFloat_Unpack8((unsigned char *)x.ptr, little_endian);
+        if (tmp == -1.0 && PyErr_Occurred()) {
+            return NULL;
+        }
+        return PyFloat_FromDouble(tmp);
+    }
+
+    case Complex32: {
+#if PY_VERSION_HEX >= 0x03060000
+        Py_complex c;
+        c.real = _PyFloat_Unpack2((unsigned char *)x.ptr, little_endian);
+        if (c.real == -1.0 && PyErr_Occurred()) {
+            return NULL;
+        }
+        c.imag = _PyFloat_Unpack2((unsigned char *)x.ptr, little_endian);
+        if (c.imag == -1.0 && PyErr_Occurred()) {
+            return NULL;
+        }
+        return PyComplex_FromCComplex(c);
+#else
+        PyErr_SetString(PyExc_NotImplementedError,
+            "half-float not implemented in Python versions < 3.6");
+        return -1;
+#endif
+    }
+
+    case Complex64: {
+        Py_complex c;
+        c.real = _PyFloat_Unpack4((unsigned char *)x.ptr, little_endian);
+        if (c.real == -1.0 && PyErr_Occurred()) {
+            return NULL;
+        }
+        c.imag = _PyFloat_Unpack4((unsigned char *)x.ptr, little_endian);
+        if (c.imag == -1.0 && PyErr_Occurred()) {
+            return NULL;
+        }
+        return PyComplex_FromCComplex(c);
+    }
+
+    case Complex128: {
+        Py_complex c;
+        c.real = _PyFloat_Unpack8((unsigned char *)x.ptr, little_endian);
+        if (c.real == -1.0 && PyErr_Occurred()) {
+            return NULL;
+        }
+        c.imag = _PyFloat_Unpack8((unsigned char *)x.ptr, little_endian);
+        if (c.imag == -1.0 && PyErr_Occurred()) {
+            return NULL;
+        }
+        return PyComplex_FromCComplex(c);
+    }
+
+    case FixedString: {
+        switch (t->FixedString.encoding) {
+        case Ascii:
+            return PyUnicode_FromKindAndData(PyUnicode_1BYTE_KIND, x.ptr,
+                                             t->FixedString.size);
+
+        case Utf8:
+            return PyUnicode_FromKindAndData(PyUnicode_1BYTE_KIND, x.ptr,
+                                             t->FixedString.size);
+
+        case Utf16:
+            return PyUnicode_FromKindAndData(PyUnicode_2BYTE_KIND, x.ptr,
+                                             t->FixedString.size/2);
+
+        case Utf32:
+            return PyUnicode_FromKindAndData(PyUnicode_4BYTE_KIND, x.ptr,
+                                             t->FixedString.size/4);
+
+        case Ucs2:
+            PyErr_SetString(PyExc_NotImplementedError,
+                "ucs2 encoding not implemented");
+            return NULL;
+
+        default:
+            PyErr_SetString(PyExc_RuntimeError, "invalid encoding");
+            return NULL;
+        }
+    }
+
+    case FixedBytes: {
+        return PyBytes_FromStringAndSize(x.ptr, t->FixedBytes.size);
+    }
+
+    case String: {
+        return PyUnicode_FromString(XND_POINTER_DATA(x.ptr));
+    }
+
+    case Bytes: {
+        return PyBytes_FromStringAndSize(XND_BYTES_DATA(x.ptr), XND_BYTES_SIZE(x.ptr));
+    }
+
+#if 0
+    case Categorical: {
+        size_t k;
+
+        if (PyBool_Check(v)) {
+            int tmp = PyObject_IsTrue(v);
+            if (tmp < 0) {
+                return -1;
+            }
+
+            for (k = 0; k < x.type->Categorical.ntypes; k++) {
+                if (x.type->Categorical.types[k].tag == ValBool &&
+                    tmp == x.type->Categorical.types[k].ValBool) {
+                    PACK_SINGLE(x.ptr, k, size_t);
+                    return 0;
+                }
+            }
+            goto not_found;
+        }
+
+        else if (PyLong_Check(v)) {
+            int64_t tmp = get_int(v, INT64_MIN, INT64_MAX);
+            if (tmp == -1 && PyErr_Occurred()) {
+                return -1;
+            }
+
+            for (k = 0; k < x.type->Categorical.ntypes; k++) {
+                if (x.type->Categorical.types[k].tag == ValInt64 &&
+                    tmp == x.type->Categorical.types[k].ValInt64) {
+                    PACK_SINGLE(x.ptr, k, size_t);
+                    return 0;
+                }
+            }
+            goto not_found;
+        }
+
+        else if (PyFloat_Check(v)) {
+            double tmp = PyFloat_AsDouble(v);
+            if (tmp == -1 && PyErr_Occurred()) {
+                return -1;
+            }
+
+            for (k = 0; k < x.type->Categorical.ntypes; k++) {
+                /* XXX: DBL_EPSILON? */
+                if (x.type->Categorical.types[k].tag == ValFloat64 &&
+                    tmp == x.type->Categorical.types[k].ValFloat64) {
+                    PACK_SINGLE(x.ptr, k, size_t);
+                    return 0;
+                }
+            }
+            goto not_found;
+        }
+
+        else if (PyUnicode_Check(v)) {
+            const char *tmp = PyUnicode_AsUTF8(v);
+            if (tmp == NULL) {
+                return -1;
+            }
+
+            for (k = 0; k < x.type->Categorical.ntypes; k++) {
+                if (x.type->Categorical.types[k].tag == ValString &&
+                    strcmp(tmp, x.type->Categorical.types[k].ValString) == 0) {
+                    PACK_SINGLE(x.ptr, k, size_t);
+                    return 0;
+                }
+            }
+            goto not_found;
+        }
+
+    not_found:
+        for (k = 0; k < x.type->Categorical.ntypes; k++) {
+            if (x.type->Categorical.types[k].tag == ValNA) {
+                PACK_SINGLE(x.ptr, k, size_t);
+                return 0;
+            }
+        }
+
+        PyErr_Format(PyExc_ValueError, "category not found for: %.200R", v);
+        return -1;
+    }
+#endif
+
+    case Char:
+        PyErr_SetString(PyExc_NotImplementedError,
+            "'Char' type semantics need to be defined");
+        return NULL;
+
+    case Option: case OptionItem:
+        PyErr_SetString(PyExc_NotImplementedError,
+            "'Option' type not implemented");
+        return NULL;
+
+    case Module:
+        PyErr_SetString(PyExc_NotImplementedError,
+            "'Module' type not implemented");
+        return NULL;
+
+    /* NOT REACHED: intercepted by ndt_is_abstract(). */
+    case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
+    case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
+    case ComplexKind: case FixedStringKind: case FixedBytesKind: case Field:
+    case Void: case Function:
+        PyErr_SetString(PyExc_RuntimeError, "unexpected abstract type");
+        return NULL;
+    }
+
+    /* NOT REACHED: tags should be exhaustive */
+    PyErr_SetString(PyExc_RuntimeError, "invalid type tag");
+    return NULL;
+}
+
+static PyObject *
+pyxnd_type(PyObject *xnd, PyObject *args UNUSED)
+{
+    Py_INCREF(NDT_REF(xnd));
+    return NDT_REF(xnd);
+}
+
+static PyObject *
+pyxnd_value(PyObject *xnd, PyObject *args UNUSED)
+{
+    return _pyxnd_value(XND(xnd));
+}
+
+static PyGetSetDef pyxnd_getsets [] =
+{
+  { "type", (getter)pyxnd_type, NULL, NULL, NULL},
+  { "value", (getter)pyxnd_value, NULL, NULL, NULL},
+  {NULL}
+};
+
 
 static PyMethodDef pyxnd_methods [] =
 {
@@ -911,7 +1397,7 @@ static PyTypeObject Xnd_Type =
     0,                                      /* tp_iternext */
     pyxnd_methods,                          /* tp_methods */
     0,                                      /* tp_members */
-    0,                                      /* tp_getset */
+    pyxnd_getsets,                          /* tp_getset */
     0,                                      /* tp_base */
     0,                                      /* tp_dict */
     0,                                      /* tp_descr_get */

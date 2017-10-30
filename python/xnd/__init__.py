@@ -11,17 +11,19 @@ __all__ = ['xnd', 'typeof', '_typeof']
 # ======================================================================
 
 class xnd(_xnd):
-    def __new__(cls, *args):
-        if len(args) == 1:
-            if isinstance(args[0], ndt):
-                typ = args[0]
-                return _xnd(typ)
-            else:
-                value = args[0]
-                typ = typeof(value)
-                return _xnd(typ, value)
-        else:
-            return _xnd(*args)
+    def __new__(cls, value=None, type=None):
+        if type is None:
+            type = typeof(value)
+        elif isinstance(type, str):
+            type = ndt(type)
+        return _xnd(value, type)
+
+    @classmethod
+    def empty(cls, t):
+        if isinstance(t, str):
+            t = ndt(t)
+        return cls(value=None, type=t)
+
 
 
 # ======================================================================
