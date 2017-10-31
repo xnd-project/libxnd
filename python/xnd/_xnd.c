@@ -717,7 +717,7 @@ pyxnd_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        s = ndt_aligned_alloc(x.type->Bytes.target_align, size, 1);
+        s = ndt_aligned_alloc(t->Bytes.target_align, size, 1);
         if (s == NULL) {
             PyErr_NoMemory();
             return -1;
@@ -737,9 +737,9 @@ pyxnd_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            for (k = 0; k < x.type->Categorical.ntypes; k++) {
-                if (x.type->Categorical.types[k].tag == ValBool &&
-                    tmp == x.type->Categorical.types[k].ValBool) {
+            for (k = 0; k < t->Categorical.ntypes; k++) {
+                if (t->Categorical.types[k].tag == ValBool &&
+                    tmp == t->Categorical.types[k].ValBool) {
                     PACK_SINGLE(x.ptr, k, size_t);
                     return 0;
                 }
@@ -753,9 +753,9 @@ pyxnd_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            for (k = 0; k < x.type->Categorical.ntypes; k++) {
-                if (x.type->Categorical.types[k].tag == ValInt64 &&
-                    tmp == x.type->Categorical.types[k].ValInt64) {
+            for (k = 0; k < t->Categorical.ntypes; k++) {
+                if (t->Categorical.types[k].tag == ValInt64 &&
+                    tmp == t->Categorical.types[k].ValInt64) {
                     PACK_SINGLE(x.ptr, k, size_t);
                     return 0;
                 }
@@ -769,10 +769,10 @@ pyxnd_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            for (k = 0; k < x.type->Categorical.ntypes; k++) {
+            for (k = 0; k < t->Categorical.ntypes; k++) {
                 /* XXX: DBL_EPSILON? */
-                if (x.type->Categorical.types[k].tag == ValFloat64 &&
-                    tmp == x.type->Categorical.types[k].ValFloat64) {
+                if (t->Categorical.types[k].tag == ValFloat64 &&
+                    tmp == t->Categorical.types[k].ValFloat64) {
                     PACK_SINGLE(x.ptr, k, size_t);
                     return 0;
                 }
@@ -786,9 +786,9 @@ pyxnd_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            for (k = 0; k < x.type->Categorical.ntypes; k++) {
-                if (x.type->Categorical.types[k].tag == ValString &&
-                    strcmp(tmp, x.type->Categorical.types[k].ValString) == 0) {
+            for (k = 0; k < t->Categorical.ntypes; k++) {
+                if (t->Categorical.types[k].tag == ValString &&
+                    strcmp(tmp, t->Categorical.types[k].ValString) == 0) {
                     PACK_SINGLE(x.ptr, k, size_t);
                     return 0;
                 }
@@ -797,8 +797,8 @@ pyxnd_init(xnd_t x, PyObject *v)
         }
 
     not_found:
-        for (k = 0; k < x.type->Categorical.ntypes; k++) {
-            if (x.type->Categorical.types[k].tag == ValNA) {
+        for (k = 0; k < t->Categorical.ntypes; k++) {
+            if (t->Categorical.types[k].tag == ValNA) {
                 PACK_SINGLE(x.ptr, k, size_t);
                 return 0;
             }
@@ -911,7 +911,7 @@ _pyxnd_value(xnd_t x)
     const ndt_t *t = x.type;
     xnd_t next;
 
-    assert(ndt_is_concrete(x.type));
+    assert(ndt_is_concrete(t));
 
     /* Add the linear index from var dimensions. For a chain of fixed
        dimensions, x.index is zero. */
@@ -1228,87 +1228,41 @@ _pyxnd_value(xnd_t x)
         return PyBytes_FromStringAndSize(XND_BYTES_DATA(x.ptr), XND_BYTES_SIZE(x.ptr));
     }
 
-#if 0
     case Categorical: {
         size_t k;
 
-        if (PyBool_Check(v)) {
-            int tmp = PyObject_IsTrue(v);
-            if (tmp < 0) {
-                return -1;
-            }
+        UNPACK_SINGLE(k, x.ptr, size_t);
 
-            for (k = 0; k < x.type->Categorical.ntypes; k++) {
-                if (x.type->Categorical.types[k].tag == ValBool &&
-                    tmp == x.type->Categorical.types[k].ValBool) {
-                    PACK_SINGLE(x.ptr, k, size_t);
-                    return 0;
-                }
-            }
-            goto not_found;
+        switch (t->Categorical.types[k].tag) {
+        case ValBool: {
+            bool tmp = t->Categorical.types[k].ValBool;
+            return PyBool_FromLong(tmp);
         }
 
-        else if (PyLong_Check(v)) {
-            int64_t tmp = get_int(v, INT64_MIN, INT64_MAX);
-            if (tmp == -1 && PyErr_Occurred()) {
-                return -1;
-            }
-
-            for (k = 0; k < x.type->Categorical.ntypes; k++) {
-                if (x.type->Categorical.types[k].tag == ValInt64 &&
-                    tmp == x.type->Categorical.types[k].ValInt64) {
-                    PACK_SINGLE(x.ptr, k, size_t);
-                    return 0;
-                }
-            }
-            goto not_found;
+        case ValInt64: {
+            int64_t tmp = t->Categorical.types[k].ValInt64;
+            return PyLong_FromLongLong(tmp);
         }
 
-        else if (PyFloat_Check(v)) {
-            double tmp = PyFloat_AsDouble(v);
-            if (tmp == -1 && PyErr_Occurred()) {
-                return -1;
-            }
-
-            for (k = 0; k < x.type->Categorical.ntypes; k++) {
-                /* XXX: DBL_EPSILON? */
-                if (x.type->Categorical.types[k].tag == ValFloat64 &&
-                    tmp == x.type->Categorical.types[k].ValFloat64) {
-                    PACK_SINGLE(x.ptr, k, size_t);
-                    return 0;
-                }
-            }
-            goto not_found;
+        case ValFloat64: {
+            double tmp = t->Categorical.types[k].ValFloat64;
+            return PyFloat_FromDouble(tmp);
         }
 
-        else if (PyUnicode_Check(v)) {
-            const char *tmp = PyUnicode_AsUTF8(v);
-            if (tmp == NULL) {
-                return -1;
-            }
-
-            for (k = 0; k < x.type->Categorical.ntypes; k++) {
-                if (x.type->Categorical.types[k].tag == ValString &&
-                    strcmp(tmp, x.type->Categorical.types[k].ValString) == 0) {
-                    PACK_SINGLE(x.ptr, k, size_t);
-                    return 0;
-                }
-            }
-            goto not_found;
+        case ValString: {
+            const char *tmp = t->Categorical.types[k].ValString;
+            return PyUnicode_FromString(tmp);
         }
 
-    not_found:
-        for (k = 0; k < x.type->Categorical.ntypes; k++) {
-            if (x.type->Categorical.types[k].tag == ValNA) {
-                PACK_SINGLE(x.ptr, k, size_t);
-                return 0;
-            }
+        case ValNA: {
+            Py_RETURN_NONE;
         }
 
-        PyErr_Format(PyExc_ValueError, "category not found for: %.200R", v);
-        return -1;
+        }
+
+        PyErr_SetString(PyExc_RuntimeError, "unexpected category tag");
+        return NULL;
     }
-#endif
 
     case Char:
         PyErr_SetString(PyExc_NotImplementedError,
