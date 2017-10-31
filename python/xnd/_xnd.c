@@ -305,7 +305,7 @@ pyxnd_init(xnd_t x, PyObject *v)
 
         if (x.index < 0 || x.index+1 >= noffsets) {
             PyErr_Format(PyExc_RuntimeError,
-                "xnd: offset index out of range: index=%" PRIi32, " noffsets=%" PRIi32,
+                "xnd: offset index out of range: index=%" PRIi32 ", noffsets=%" PRIi32,
                 x.index, noffsets);
             return -1;
         }
