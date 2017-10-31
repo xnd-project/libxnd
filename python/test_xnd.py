@@ -43,7 +43,7 @@ class ConstructionTest(unittest.TestCase):
             "2 * 3 * {a : uint8, b : complex64}",
         ]
         for s in test_cases:
-            _ = xnd(ndt(s))
+            _ = xnd.empty(s)
 
 unittest.main(verbosity=2)
 
