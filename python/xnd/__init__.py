@@ -22,7 +22,7 @@ class xnd(_xnd):
         else:
             if levels is not None:
                 raise TypeError(
-                    "'type' and 'levels' arguments are mutually exclusive")
+                    "the 'type' and 'levels' arguments are mutually exclusive")
             elif isinstance(type, str):
                 type = ndt(type)
         return _xnd(value, type)
