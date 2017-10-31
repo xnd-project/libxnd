@@ -11,11 +11,20 @@ __all__ = ['xnd', 'typeof', '_typeof']
 # ======================================================================
 
 class xnd(_xnd):
-    def __new__(cls, value=None, type=None):
+    def __new__(cls, value=None, type=None, levels=None):
         if type is None:
-            type = typeof(value)
-        elif isinstance(type, str):
-            type = ndt(type)
+            if levels is not None:
+                args = ', '.join("'%s'" % l if l is not None else 'NA' for l in levels)
+                t = "%d * categorical(%s)" % (len(value), args)
+                type = ndt(t)
+            else:
+                type = typeof(value)
+        else:
+            if levels is not None:
+                raise TypeError(
+                    "'type' and 'levels' arguments are mutually exclusive")
+            elif isinstance(type, str):
+                type = ndt(type)
         return _xnd(value, type)
 
     @classmethod
