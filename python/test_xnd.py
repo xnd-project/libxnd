@@ -43,7 +43,9 @@ class ConstructionTest(unittest.TestCase):
             "2 * 3 * {a : uint8, b : complex64}",
         ]
         for s in test_cases:
-            _ = xnd.empty(s)
+            x = xnd.empty(s)
+            t = ndt(s)
+            self.assertEqual(x.type, t)
 
 unittest.main(verbosity=2)
 

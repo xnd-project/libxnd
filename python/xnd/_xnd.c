@@ -717,7 +717,8 @@ pyxnd_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        s = ndt_aligned_alloc(t->Bytes.target_align, size, 1);
+        // XXX
+        s = ndt_calloc(size, 1);
         if (s == NULL) {
             PyErr_NoMemory();
             return -1;
