@@ -348,7 +348,7 @@ xnd_subarray(const xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
 {
     const ndt_t *t = x.type;
     xnd_t next;
-    int i;
+    int64_t i;
 
     if (ndt_is_abstract(t)) {
         ndt_err_format(ctx, NDT_ValueError, "array has abstract type");
