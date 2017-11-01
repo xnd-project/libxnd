@@ -1158,7 +1158,7 @@ _pyxnd_value(xnd_t x)
 #else
         PyErr_SetString(PyExc_NotImplementedError,
             "half-float not implemented in Python versions < 3.6");
-        return -1;
+        return NULL;
 #endif
     }
 
