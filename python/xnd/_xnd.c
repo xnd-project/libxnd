@@ -1310,14 +1310,6 @@ static PyObject *
 pyxnd_align(PyObject *xnd, PyObject *args UNUSED)
 {
     uint16_t align = TYP(xnd)->data_align;
-
-    if (align != alignof(PTR(xnd))) {
-        PyErr_Format(PyExc_RuntimeError,
-            "alignment mismatch: expected %" PRIu16 ", got %zu",
-            align, alignof(PTR(xnd)));
-        return NULL;
-    }
-
     return PyLong_FromUnsignedLong(align);
 }
 
