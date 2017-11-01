@@ -58,13 +58,13 @@ xnd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
         return NULL;
     }
 
-    ptr = ndt_calloc(1, t->data_size);
+    ptr = ndt_aligned_calloc(t->data_align, t->data_size);
     if (ptr == NULL) {
         return ndt_memory_error(ctx);
     }
 
     if (xnd_init(ptr, t, alloc_pointers, ctx) < 0) {
-        ndt_free(ptr);
+        ndt_aligned_free(ptr);
         return NULL;
     }
 
@@ -138,14 +138,14 @@ xnd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx)
      * Pointer represents a pointer to an explicit type. If 'alloc_pointers'
      * is true, allocate memory for that type and set the pointer.  Otherwise,
      * if an external source sets the pointers later, they must a) have been
-     * allocated by ndt_alloc() and b) they belong to the array and will be
-     * traversed and then deallocated when the array is deallocated.
+     * allocated by ndt_aligned_calloc() and b) they belong to the array and
+     * will be traversed and then deallocated when the array is deallocated.
      *
      * If this is not desired, use the opaque 'Nominal' type instead.
      */
     case Pointer:
         if (alloc_pointers) {
-            XND_POINTER_DATA(ptr) = ndt_calloc(1, t->data_size);
+            XND_POINTER_DATA(ptr) = ndt_aligned_calloc(t->data_align, t->data_size);
             if (XND_POINTER_DATA(ptr) == NULL) {
                 ndt_err_format(ctx, NDT_MemoryError, "out of memory");
                 return -1;
@@ -250,7 +250,7 @@ xnd_del(xnd_t x)
 {
     // xnd_clear(x);
     ndt_del((ndt_t *)x.type);
-    ndt_free(x.ptr);
+    ndt_aligned_free(x.ptr);
 }
 
 /* Clear pointer types */

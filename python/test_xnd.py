@@ -47,6 +47,14 @@ class ConstructionTest(unittest.TestCase):
             t = ndt(s)
             self.assertEqual(x.type, t)
 
+    def test_type_inference(self):
+        v = [1, 2, 3]
+        x = xnd(v)
+
+        self.assertEqual(x.type, ndt("3 * int64"))
+        self.assertEqual(x.value, v)
+
+
 unittest.main(verbosity=2)
 
 

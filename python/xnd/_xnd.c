@@ -153,7 +153,7 @@ pyxnd_alloc(PyTypeObject *type)
 static void
 pyxnd_dealloc(PyObject *x)
 {
-    if PTR(x) ndt_free(PTR(x));
+    if PTR(x) ndt_aligned_free(PTR(x));
     Py_CLEAR(NDT_REF(x));
 
     Py_TYPE(x)->tp_free(x);
@@ -717,8 +717,7 @@ pyxnd_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        // XXX
-        s = ndt_calloc(size, 1);
+        s = ndt_aligned_calloc(t->Bytes.target_align, size);
         if (s == NULL) {
             PyErr_NoMemory();
             return -1;
@@ -1307,10 +1306,27 @@ pyxnd_value(PyObject *xnd, PyObject *args UNUSED)
     return _pyxnd_value(XND(xnd));
 }
 
+static PyObject *
+pyxnd_align(PyObject *xnd, PyObject *args UNUSED)
+{
+    uint16_t align = TYP(xnd)->data_align;
+
+    if (align != alignof(PTR(xnd))) {
+        PyErr_Format(PyExc_RuntimeError,
+            "alignment mismatch: expected %" PRIu16 ", got %zu",
+            align, alignof(PTR(xnd)));
+        return NULL;
+    }
+
+    return PyLong_FromUnsignedLong(align);
+}
+
+
 static PyGetSetDef pyxnd_getsets [] =
 {
   { "type", (getter)pyxnd_type, NULL, NULL, NULL},
   { "value", (getter)pyxnd_value, NULL, NULL, NULL},
+  { "align", (getter)pyxnd_align, NULL, NULL, NULL},
   {NULL}
 };
 
