@@ -43,7 +43,6 @@
 
 
 int test_fixed(void);
-int test_var(void);
 
 
 #endif /* TEST_H */
