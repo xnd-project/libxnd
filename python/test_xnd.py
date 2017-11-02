@@ -35,24 +35,85 @@ from ndtypes import ndt
 from xnd import xnd
 
 
-class ConstructionTest(unittest.TestCase):
+primitive = [
+  'bool',
+  'int8', 'int16', 'int32', 'int64',
+  'uint8', 'uint16', 'uint32', 'uint64',
+  'float16', 'float32', 'float64',
+  'complex32', 'complex64', 'complex128'
+]
 
-    def test_init(self):
+class EmptyConstructionTest(unittest.TestCase):
+
+    def test_primitive_empty(self):
         test_cases = [
-            "2 * 3 * float64",
-            "2 * 3 * {a : uint8, b : complex64}",
+            '%s', '0 * %s', '1 * %s', 'var(offsets=[0, 2]) * %s',
+            '10 * {a: int64, b: %s}'
         ]
+
+        for c in test_cases:
+            for p in primitive:
+                s = c % p
+                t = ndt(s)
+                x = xnd.empty(s)
+                self.assertEqual(x.type, t)
+
+    def test_fixed_string_empty(self):
+        test_cases = [
+          'fixed_string(1)',
+          'fixed_string(100)',
+          "fixed_string(1, 'ascii')",
+          "fixed_string(100, 'utf8')",
+          "fixed_string(200, 'utf16')",
+          "fixed_string(300, 'utf32')",
+        ]
+
         for s in test_cases:
-            x = xnd.empty(s)
             t = ndt(s)
+            x = xnd.empty(s)
             self.assertEqual(x.type, t)
 
-    def test_type_inference(self):
-        v = [1, 2, 3]
-        x = xnd(v)
+    def test_fixed_bytes_empty(self):
+        test_cases = [
+          'fixed_bytes(size=1)',
+          'fixed_bytes(size=100)',
+          'fixed_bytes(size=1, align=2)',
+          'fixed_bytes(size=100, align=16)',
+        ]
 
-        self.assertEqual(x.type, ndt("3 * int64"))
-        self.assertEqual(x.value, v)
+        for s in test_cases:
+            t = ndt(s)
+            x = xnd.empty(s)
+            self.assertEqual(x.type, t)
+
+
+class TypeInferenceTest(unittest.TestCase):
+
+    def test_float64(self):
+        d = {'a': 2.221e100, 'b': float('inf')}
+        typeof_d = "{a: float64, b: float64}"
+
+        test_cases = [
+          # 'float64' is the default dtype if there is no data at all.
+          ([], "0 * float64"),
+          ([[]], "1 * 0 * float64"),
+          ([[], []], "2 * 0 * float64"),
+          ([[[]], [[]]], "2 * 1 * 0 * float64"),
+          ([[[]], [[], []]], "var(offsets=[0, 2]) * var(offsets=[0, 1, 3]) * var(offsets=[0, 0, 0, 0]) * float64"),
+
+          ([0.0], "1 * float64"),
+          ([0.0, 1.2], "2 * float64"),
+          ([[0.0], [1.2]], "2 * 1 * float64"),
+
+          (d, typeof_d),
+          ([d] * 2, "2 * %s" % typeof_d),
+          ([[d] * 2] * 10, "10 * 2 * %s" % typeof_d)
+        ]
+
+        for v, t in test_cases:
+            x = xnd(v)
+            self.assertEqual(x.type, ndt(t))
+            self.assertEqual(x.value, v)
 
 
 unittest.main(verbosity=2)
