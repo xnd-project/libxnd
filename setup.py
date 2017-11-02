@@ -40,8 +40,16 @@ import shutil
 
 DESCRIPTION = """Typed memory container based on libndtypes"""
 
+
+PY_MAJOR = sys.version_info[0]
+PY_MINOR = sys.version_info[1]
 ARCH = platform.architecture()[0]
 BUILD_ALL = True
+
+
+if PY_MAJOR < 3:
+    raise NotImplementedError(
+        "python2 support is not implemented")
 
 
 def get_module_path():
@@ -147,6 +155,8 @@ setup (
     classifiers = [
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
+        "Programming Language :: C",
+        "Programming Language :: Python :: 3"
     ],
     package_dir = {"": "python"},
     packages = ["xnd"],
