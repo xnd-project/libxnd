@@ -64,11 +64,11 @@ def _typeof(value):
             dtype = '?' + dtype
 
         t = dtype
-        var = False
+        var = any(len(set(lst)) > 1 or None in lst for lst in shapes)
         for lst in shapes:
             opt = None in lst
             lst = [0 if x is None else x for x in lst]
-            var, t = choose_dim_type(opt=opt, shapes=lst, typ=t, have_var=var)
+            t = add_dim(opt=opt, shapes=lst, typ=t, use_var=var)
 
         return t
 
@@ -92,18 +92,18 @@ def _typeof(value):
     elif isinstance(value, bytes):
         return 'bytes'
 
-def choose_dim_type(*, opt=False, shapes=None, typ=None, have_var=False):
-    """Choose a dimension type based on the list of 'shapes' that are present
-       in a dimension. If all 'shapes' are equal, the more efficient FixedDim
-       type suffices.
+def add_dim(*, opt=False, shapes=None, typ=None, use_var=False):
+    """Construct a new dimension type based on the list of 'shapes' that
+       are present in a dimension.
     """
-    opt = '?' if opt else ''
-    n = len(set(shapes))
-    if not have_var and not opt and n <= 1:
+    if use_var:
+        offsets = [0] + list(accumulate(shapes))
+        return "%svar(offsets=%s) * %s" % ('?' if opt else '', offsets, typ)
+    else:
+        n = len(set(shapes))
+        assert n <= 1 and not None in shapes
         shape = 0 if n == 0 else shapes[0]
-        return False, "%s%d * %s" % (opt, shape, typ)
-    offsets = [0] + list(accumulate(shapes))
-    return True, "%svar(offsets=%s) * %s" % (opt, offsets, typ)
+        return "%d * %s" % (shape, typ)
 
 def data_shapes(tree):
     """Extract array data and dimension shapes from a nested list. The
@@ -150,7 +150,7 @@ def data_shapes(tree):
                          (min_level, max_level))
 
     data = acc[max_level]
-    shapes = reversed(acc[0:max_level])
+    shapes = list(reversed(acc[0:max_level]))
 
     return data, shapes
 
