@@ -249,7 +249,6 @@ pyxnd_init(xnd_t x, PyObject *v)
 {
     NDT_STATIC_CONTEXT(ctx);
     const ndt_t *t = x.type;
-    int64_t shape, i;
     xnd_t next;
 
     if (ndt_is_abstract(t)) {
@@ -265,6 +264,8 @@ pyxnd_init(xnd_t x, PyObject *v)
 
     switch (t->tag) {
     case FixedDim: {
+        int64_t shape, i;
+
         assert(x.index == 0);
 
         if (!PyList_Check(v)) {
@@ -296,6 +297,7 @@ pyxnd_init(xnd_t x, PyObject *v)
     case VarDim: {
         const int32_t noffsets = t->Concrete.VarDim.noffsets;
         int32_t start, stop;
+        int64_t shape, i;
 
         if (!PyList_Check(v)) {
             PyErr_Format(PyExc_TypeError,
@@ -334,6 +336,8 @@ pyxnd_init(xnd_t x, PyObject *v)
     }
 
     case Tuple: {
+        int64_t shape, i;
+
         if (!PyTuple_Check(v)) {
             PyErr_Format(PyExc_TypeError,
                 "xnd: expected tuple, not '%.200s'", Py_TYPE(v)->tp_name);
@@ -361,6 +365,8 @@ pyxnd_init(xnd_t x, PyObject *v)
     }
 
     case Record: {
+        int64_t shape, i;
+
         PyObject *tmp;
 
         if (!PyDict_Check(v)) {

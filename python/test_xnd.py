@@ -144,6 +144,25 @@ class TypeInferenceTest(unittest.TestCase):
             self.assertEqual(x.type, ndt(t))
             self.assertEqual(x.value, v)
 
+    def test_string(self):
+        t = ("supererogatory", "exiguous")
+        typeof_t = "(string, string)"
+
+        test_cases = [
+          (["mov"], "1 * string"),
+          (["mov", "$0"], "2 * string"),
+          ([["cmp"], ["$0"]], "2 * 1 * string"),
+
+          (t, typeof_t),
+          ([t] * 2, "2 * %s" % typeof_t),
+          ([[t] * 2] * 10, "10 * 2 * %s" % typeof_t)
+        ]
+
+        for v, t in test_cases:
+            x = xnd(v)
+            self.assertEqual(x.type, ndt(t))
+            self.assertEqual(x.value, v)
+
 
 unittest.main(verbosity=2)
 
