@@ -383,7 +383,7 @@ xnd_subarray(const xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
     }
 
     case VarDim: {
-        const int64_t noffsets = t->Concrete.VarDim.noffsets;
+        const int32_t noffsets = t->Concrete.VarDim.noffsets;
         int32_t start, stop;
 
         if (ndt_is_optional(t)) {
