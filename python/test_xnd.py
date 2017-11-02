@@ -33,7 +33,12 @@
 import unittest
 from ndtypes import ndt
 from xnd import xnd
+from collections import OrderedDict as od
+import sys
 
+
+# Yes, we acknowledge that it is not guaranteed even in 3.6.
+HAVE_ORDERED_DICT_LITERALS = (sys.version_info >= (3, 6))
 
 primitive = [
   'bool',
@@ -42,6 +47,7 @@ primitive = [
   'float16', 'float32', 'float64',
   'complex32', 'complex64', 'complex128'
 ]
+
 
 class EmptyConstructionTest(unittest.TestCase):
 
@@ -90,7 +96,10 @@ class EmptyConstructionTest(unittest.TestCase):
 class TypeInferenceTest(unittest.TestCase):
 
     def test_float64(self):
-        d = {'a': 2.221e100, 'b': float('inf')}
+        if HAVE_ORDERED_DICT_LITERALS:
+            d = {'a': 2.221e100, 'b': float('inf')}
+        else:
+            d = od([('a', 2.221e100), ('b', float('inf'))])
         typeof_d = "{a: float64, b: float64}"
 
         test_cases = [
@@ -114,6 +123,30 @@ class TypeInferenceTest(unittest.TestCase):
             x = xnd(v)
             self.assertEqual(x.type, ndt(t))
             self.assertEqual(x.value, v)
+
+
+    def test_int64(self):
+        t = (1, -2, -3)
+        typeof_t = "(int64, int64, int64)"
+
+        test_cases = [
+          ([0], "1 * int64"),
+          ([0, 1], "2 * int64"),
+          ([[0], [1]], "2 * 1 * int64"),
+
+          (t, typeof_t),
+          ([t] * 2, "2 * %s" % typeof_t),
+          ([[t] * 2] * 10, "10 * 2 * %s" % typeof_t)
+        ]
+
+        for v, t in test_cases:
+            x = xnd(v)
+            self.assertEqual(x.type, ndt(t))
+            self.assertEqual(x.value, v)
+
+
+unittest.main(verbosity=2)
+
 
 
 unittest.main(verbosity=2)
