@@ -89,6 +89,37 @@ class EmptyConstructionTest(unittest.TestCase):
             x = xnd.empty(s)
             self.assertEqual(x.type, t)
 
+    def test_string_empty(self):
+        test_cases = [
+          'string',
+          '(string)',
+          '10 * 2 * string',
+          '10 * 2 * (string, string)',
+          '10 * 2 * {a: string, b: string}',
+          'var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * {a: string, b: string}'
+        ]
+
+        for s in test_cases:
+            t = ndt(s)
+            x = xnd.empty(s)
+            self.assertEqual(x.type, t)
+
+    def test_bytes_empty(self):
+        test_cases = [
+          'bytes(align=16)',
+          '(bytes(align=32))',
+          '10 * 2 * bytes',
+          '10 * 2 * (bytes, bytes)',
+          '10 * 2 * {a: bytes(align=32), b: bytes(align=1)}',
+          '10 * 2 * {a: bytes(align=1), b: bytes(align=32)}',
+          'var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * {a: bytes(align=32), b: bytes}'
+        ]
+
+        for s in test_cases:
+            t = ndt(s)
+            x = xnd.empty(s)
+            self.assertEqual(x.type, t)
+
 
 class TypeInferenceTest(unittest.TestCase):
 
