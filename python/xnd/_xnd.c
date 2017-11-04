@@ -174,21 +174,6 @@ pyxnd_dealloc(PyObject *xnd)
     } while (0)
 
 
-PyObject *
-dict_get_item(PyObject *v, const char *key)
-{
-    PyObject *k, *r;
-
-    k = PyUnicode_FromString(key);
-    if (k == NULL) {
-        return NULL;
-    }
-
-    r =  PyDict_GetItemWithError(v, k);
-    Py_DECREF(k);
-    return r;
-}
-
 static int64_t
 get_int(PyObject *v, int64_t min, int64_t max)
 {
@@ -387,7 +372,7 @@ pyxnd_init(xnd_t x, PyObject *v)
             next.type = t->Record.types[i];
             next.ptr = x.ptr + t->Concrete.Record.offset[i];
 
-            tmp = dict_get_item(v, t->Record.names[i]);
+            tmp = PyMapping_GetItemString(v, t->Record.names[i]);
             if (tmp == NULL) {
                 if (!PyErr_Occurred()) {
                     PyErr_Format(PyExc_ValueError,
