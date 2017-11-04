@@ -33,8 +33,25 @@
 import unittest
 from ndtypes import ndt
 from xnd import xnd
-from collections import OrderedDict as od
+from collections import OrderedDict
 import sys
+
+
+# OrderedDict literals hack.
+class Record(OrderedDict):
+    @staticmethod
+    def _kv(s):
+        if not isinstance(s, slice):
+            raise TypeError("expect key-value pair")
+        if s.step is not None:
+            raise ValueError("expect key-value pair")
+        return s.start, s.stop
+    def __getitem__(self, items):
+        if not isinstance(items, tuple):
+            items = (items,)
+        return OrderedDict(list(map(self._kv, items)))
+
+R = Record()
 
 
 primitive = [
@@ -124,8 +141,7 @@ class EmptyConstructionTest(unittest.TestCase):
 class TypeInferenceTest(unittest.TestCase):
 
     def test_tuple(self):
-        d = od([('a', (2.0, b"bytes")),
-                ('b', ("str", float('inf')))])
+        d = R['a': (2.0, b"bytes"), 'b': ("str", float('inf'))]
         typeof_d = "{a: (float64, bytes), b: (string, float64)}"
 
         test_cases = [
@@ -146,18 +162,15 @@ class TypeInferenceTest(unittest.TestCase):
             self.assertEqual(x.value, v)
 
     def test_record(self):
-        d = od([('a', (2.0, b"bytes")),
-                ('b', ("str", float('inf')))])
+        d = R['a': (2.0, b"bytes"), 'b': ("str", float('inf'))]
         typeof_d = "{a: (float64, bytes), b: (string, float64)}"
 
         test_cases = [
           ({}, "{}"),
           ({'x': {}}, "{x: {}}"),
-          (od([('x', {}), ('y', {})]), "{x: {}, y: {}}"),
-          (od([('x', od([('y', {})])),
-               ('z', {})]), "{x: {y: {}}, z: {}}"),
-          (od([('x', od([('y', {})])),
-               ('z', od([('a', {}), ('b', {})]))]), "{x: {y: {}}, z: {a: {}, b: {}}}"),
+          (R['x': {}, 'y': {}], "{x: {}, y: {}}"),
+          (R['x': R['y': {}], 'z': {}], "{x: {y: {}}, z: {}}"),
+          (R['x': R['y': {}], 'z': R['a': {}, 'b': {}]], "{x: {y: {}}, z: {a: {}, b: {}}}"),
           (d, typeof_d)
         ]
 
@@ -167,7 +180,7 @@ class TypeInferenceTest(unittest.TestCase):
             self.assertEqual(x.value, v)
 
     def test_float64(self):
-        d = od([('a', 2.221e100), ('b', float('inf'))])
+        d = R['a': 2.221e100, 'b': float('inf')]
         typeof_d = "{a: float64, b: float64}"
 
         test_cases = [
