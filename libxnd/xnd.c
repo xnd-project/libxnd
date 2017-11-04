@@ -406,8 +406,8 @@ xnd_clear_bytes(xnd_t *x, const uint32_t flags)
     assert(x->type->tag == Bytes);
 
     if (flags & XND_OWN_BYTES) {
-        ndt_aligned_free(XND_POINTER_DATA(x->ptr));
-        XND_POINTER_DATA(x->ptr) = NULL;
+        ndt_aligned_free(XND_BYTES_DATA(x->ptr));
+        XND_BYTES_DATA(x->ptr) = NULL;
     }
 }
 

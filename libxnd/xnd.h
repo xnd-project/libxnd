@@ -72,7 +72,6 @@
 #define XND_POINTER_DATA(ptr) (*((char **)ptr))
 #define XND_BYTES_SIZE(ptr) (((ndt_bytes_t *)ptr)->size)
 #define XND_BYTES_DATA(ptr) (((ndt_bytes_t *)ptr)->data)
-#define XND_BYTES_CHAR_DATA(ptr) (*(char **)(((ndt_bytes_t *)ptr)->data))
 
 
 /* Typed memory block, usually a view. */

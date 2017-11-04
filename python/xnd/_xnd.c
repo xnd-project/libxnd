@@ -729,8 +729,10 @@ pyxnd_init(xnd_t x, PyObject *v)
             return -1;
         }
 
+        memcpy(s, cp, size);
+
         XND_BYTES_SIZE(x.ptr) = size;
-        XND_BYTES_CHAR_DATA(x.ptr) = s;
+        XND_BYTES_DATA(x.ptr) = (uint8_t *)s;
         return 0;
     }
 
@@ -1231,7 +1233,8 @@ _pyxnd_value(xnd_t x)
     }
 
     case Bytes: {
-        return PyBytes_FromStringAndSize(XND_BYTES_CHAR_DATA(x.ptr), XND_BYTES_SIZE(x.ptr));
+        return PyBytes_FromStringAndSize((char *)XND_BYTES_DATA(x.ptr),
+                                         XND_BYTES_SIZE(x.ptr));
     }
 
     case Categorical: {

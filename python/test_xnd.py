@@ -163,9 +163,24 @@ class TypeInferenceTest(unittest.TestCase):
             self.assertEqual(x.type, ndt(t))
             self.assertEqual(x.value, v)
 
+    def test_bytes(self):
+        t = (b"lagrange", b"points")
+        typeof_t = "(bytes, bytes)"
 
-unittest.main(verbosity=2)
+        test_cases = [
+          ([b"L1"], "1 * bytes"),
+          ([b"L2", b"L3", b"L4"], "3 * bytes"),
+          ([[b"L5"], [b"none"]], "2 * 1 * bytes"),
 
+          (t, typeof_t),
+          ([t] * 2, "2 * %s" % typeof_t),
+          ([[t] * 2] * 10, "10 * 2 * %s" % typeof_t)
+        ]
+
+        for v, t in test_cases:
+            x = xnd(v)
+            self.assertEqual(x.type, ndt(t))
+            self.assertEqual(x.value, v)
 
 
 unittest.main(verbosity=2)
