@@ -37,9 +37,6 @@ from collections import OrderedDict as od
 import sys
 
 
-# Yes, we acknowledge that it is not guaranteed even in 3.6.
-HAVE_ORDERED_DICT_LITERALS = (sys.version_info >= (3, 6))
-
 primitive = [
   'bool',
   'int8', 'int16', 'int32', 'int64',
@@ -95,11 +92,49 @@ class EmptyConstructionTest(unittest.TestCase):
 
 class TypeInferenceTest(unittest.TestCase):
 
+    def test_tuple(self):
+        d = od([('a', (2.0, b"bytes")),
+                ('b', ("str", float('inf')))])
+        typeof_d = "{a: (float64, bytes), b: (string, float64)}"
+
+        test_cases = [
+          ((), "()"),
+          (((),), "(())"),
+          (((), ()), "((), ())"),
+          ((((),), ()), "((()), ())"),
+          ((((),), ((), ())), "((()), ((), ()))"),
+          ((1, 2, 3), "(int64, int64, int64)"),
+          ((1.0, 2, "str"), "(float64, int64, string)"),
+          ((1.0, 2, ("str", b"bytes", d)),
+           "(float64, int64, (string, bytes, %s))" % typeof_d)
+        ]
+
+        for v, t in test_cases:
+            x = xnd(v)
+            self.assertEqual(x.type, ndt(t))
+            self.assertEqual(x.value, v)
+
+    def test_record(self):
+        d = od([('a', (2.0, b"bytes")),
+                ('b', ("str", float('inf')))])
+        typeof_d = "{a: (float64, bytes), b: (string, float64)}"
+
+        test_cases = [
+          ({}, "{}"),
+          ({'x': {}}, "{x: {}}"),
+          ({'x': {}, 'y': {}}, "{x: {}, y: {}}"),
+          ({'x': {'y': {}}, 'z': {}}, "{x: {y: {}}, z: {}}"),
+          ({'x': {'y': {}}, 'z': {'a': {}, 'b': {}}}, "{x: {y: {}}, z: {a: {}, b: {}}}"),
+          (d, typeof_d)
+        ]
+
+        for v, t in test_cases:
+            x = xnd(v)
+            self.assertEqual(x.type, ndt(t))
+            self.assertEqual(x.value, v)
+
     def test_float64(self):
-        if HAVE_ORDERED_DICT_LITERALS:
-            d = {'a': 2.221e100, 'b': float('inf')}
-        else:
-            d = od([('a', 2.221e100), ('b', float('inf'))])
+        d = od([('a', 2.221e100), ('b', float('inf'))])
         typeof_d = "{a: float64, b: float64}"
 
         test_cases = [
@@ -123,7 +158,6 @@ class TypeInferenceTest(unittest.TestCase):
             x = xnd(v)
             self.assertEqual(x.type, ndt(t))
             self.assertEqual(x.value, v)
-
 
     def test_int64(self):
         t = (1, -2, -3)
