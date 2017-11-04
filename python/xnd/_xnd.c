@@ -65,18 +65,20 @@ typedef struct {
 typedef struct {
     PyObject_HEAD
     PyObject *ndt;
-    xnd_t xnd;
+    xnd_master_t *xnd;
 } XndObject;
 
 #undef XND
 static PyTypeObject Xnd_Type;
 #define Xnd_CheckExact(v) (Py_TYPE(v) == &Xnd_Type)
 #define Xnd_Check(v) PyObject_TypeCheck(v, &Xnd_Type)
-#define NDT_REF(v) (((XndObject *)v)->ndt)
+#define NDT_OBJ(v) (((XndObject *)v)->ndt)
+#define FLAGS(v) (((XndObject *)v)->xnd->flags)
 #define XND(v) (((XndObject *)v)->xnd)
-#define TYP(v) (((XndObject *)v)->xnd.type)
-#define INDEX(v) (((XndObject *)v)->xnd.index)
-#define PTR(v) (((XndObject *)v)->xnd.ptr)
+#define MASTER(v) (((XndObject *)v)->xnd->master)
+#define INDEX(v) (((XndObject *)v)->xnd->master.index)
+#define TYPE(v) (((XndObject *)v)->xnd->master.type)
+#define PTR(v) (((XndObject *)v)->xnd->master.ptr)
 
 
 #if PY_LITTLE_ENDIAN
@@ -142,21 +144,18 @@ pyxnd_alloc(PyTypeObject *type)
         return NULL;
     }
  
-    TYP(x) = NULL;
-    INDEX(x) = 0;
-    PTR(x) = NULL;
-    NDT_REF(x) = NULL;
+    NDT_OBJ(x) = NULL;
+    XND(x) = NULL;
 
     return (PyObject *)x;
 }
 
 static void
-pyxnd_dealloc(PyObject *x)
+pyxnd_dealloc(PyObject *xnd)
 {
-    if PTR(x) ndt_aligned_free(PTR(x));
-    Py_CLEAR(NDT_REF(x));
-
-    Py_TYPE(x)->tp_free(x);
+    xnd_del(XND(xnd));
+    Py_CLEAR(NDT_OBJ(xnd));
+    Py_TYPE(xnd)->tp_free(xnd);
 }
 
 
@@ -266,8 +265,6 @@ pyxnd_init(xnd_t x, PyObject *v)
     case FixedDim: {
         int64_t shape, i;
 
-        assert(x.index == 0);
-
         if (!PyList_Check(v)) {
             PyErr_Format(PyExc_TypeError,
                 "xnd: expected list, not '%.200s'", Py_TYPE(v)->tp_name);
@@ -281,8 +278,9 @@ pyxnd_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        next.type = t->FixedDim.type;
+        assert(x.index == 0);
         next.index = 0;
+        next.type = t->FixedDim.type;
 
         for (i = 0; i < shape; i++) {
             next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
@@ -351,9 +349,10 @@ pyxnd_init(xnd_t x, PyObject *v)
             return -1;
         }
 
+        next.index = 0;
+
         for (i = 0; i < shape; i++) {
             next.type = t->Tuple.types[i];
-            next.index = 0;
             next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
 
             if (pyxnd_init(next, PyTuple_GET_ITEM(v, i)) < 0) {
@@ -382,9 +381,10 @@ pyxnd_init(xnd_t x, PyObject *v)
             return -1;
         }
 
+        next.index = 0;
+
         for (i = 0; i < shape; i++) {
             next.type = t->Record.types[i];
-            next.index = 0;
             next.ptr = x.ptr + t->Concrete.Record.offset[i];
 
             tmp = dict_get_item(v, t->Record.names[i]);
@@ -405,15 +405,15 @@ pyxnd_init(xnd_t x, PyObject *v)
     }
 
     case Pointer: {
-        next.type = t->Pointer.type;
         next.index = 0;
+        next.type = t->Pointer.type;
         next.ptr = XND_POINTER_DATA(x.ptr);
         return pyxnd_init(next, v);
     }
 
     case Constr: {
-        next.type = t->Constr.type;
         next.index = 0;
+        next.type = t->Constr.type;
         next.ptr = x.ptr;
         return pyxnd_init(next, v);
     }
@@ -717,7 +717,7 @@ pyxnd_init(xnd_t x, PyObject *v)
     case Bytes: {
         Py_ssize_t size;
         char *cp;
-        char*s;
+        char *s;
 
         if (PyBytes_AsStringAndSize(v, &cp, &size) < 0) {
             return -1;
@@ -730,7 +730,7 @@ pyxnd_init(xnd_t x, PyObject *v)
         }
 
         XND_BYTES_SIZE(x.ptr) = size;
-        XND_BYTES_DATA(x.ptr) = s;
+        XND_BYTES_CHAR_DATA(x.ptr) = s;
         return 0;
     }
 
@@ -849,15 +849,15 @@ pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     static char *kwlist[] = {"value", "type", NULL};
     NDT_STATIC_CONTEXT(ctx);
-    PyObject *v, *t;
-    PyObject *x;
+    PyObject *value, *ndt;
+    PyObject *xnd;
     int is_ndt;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &v, &t)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &value, &ndt)) {
         return NULL;
     }
 
-    is_ndt = PyObject_IsInstance(t, Ndt);
+    is_ndt = PyObject_IsInstance(ndt, Ndt);
     if (is_ndt <= 0) {
         if (is_ndt == 0) {
             PyErr_SetString(PyExc_TypeError, "expected ndt");
@@ -865,29 +865,29 @@ pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
         return NULL;
     }
 
-    x = pyxnd_alloc(type);
-    if (x == NULL) {
+    xnd = pyxnd_alloc(type);
+    if (xnd == NULL) {
         return NULL;
     }
 
-    PTR(x) = xnd_new(NDT(t), true, &ctx);
-    if (PTR(x) == NULL) {
-        Py_DECREF(x);
+    XND(xnd) = xnd_empty_from_type(NDT(ndt), XND_OWN_EMBEDDED, &ctx);
+    if (PTR(xnd) == NULL) {
+        Py_DECREF(xnd);
         return seterr(&ctx);
     }
 
-    Py_INCREF(t);
-    NDT_REF(x) = t;
-    TYP(x) = NDT(t);
+    Py_INCREF(ndt);
+    NDT_OBJ(xnd) = ndt;
+    TYPE(xnd) = NDT(ndt);
 
-    if (v != Py_None) {
-        if (pyxnd_init(XND(x), v) < 0) {
-            Py_DECREF(x);
+    if (value != Py_None) {
+        if (pyxnd_init(MASTER(xnd), value) < 0) {
+            Py_DECREF(xnd);
             return NULL;
         }
     }
 
-    return x;
+    return xnd;
 }
 
 /******************************************************************************/
@@ -1231,7 +1231,7 @@ _pyxnd_value(xnd_t x)
     }
 
     case Bytes: {
-        return PyBytes_FromStringAndSize(XND_BYTES_DATA(x.ptr), XND_BYTES_SIZE(x.ptr));
+        return PyBytes_FromStringAndSize(XND_BYTES_CHAR_DATA(x.ptr), XND_BYTES_SIZE(x.ptr));
     }
 
     case Categorical: {
@@ -1302,20 +1302,20 @@ _pyxnd_value(xnd_t x)
 static PyObject *
 pyxnd_type(PyObject *xnd, PyObject *args UNUSED)
 {
-    Py_INCREF(NDT_REF(xnd));
-    return NDT_REF(xnd);
+    Py_INCREF(NDT_OBJ(xnd));
+    return NDT_OBJ(xnd);
 }
 
 static PyObject *
 pyxnd_value(PyObject *xnd, PyObject *args UNUSED)
 {
-    return _pyxnd_value(XND(xnd));
+    return _pyxnd_value(MASTER(xnd));
 }
 
 static PyObject *
 pyxnd_align(PyObject *xnd, PyObject *args UNUSED)
 {
-    uint16_t align = TYP(xnd)->data_align;
+    uint16_t align = TYPE(xnd)->data_align;
     return PyLong_FromUnsignedLong(align);
 }
 

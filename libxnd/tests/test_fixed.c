@@ -42,15 +42,16 @@ int
 test_fixed(void)
 {
     ndt_context_t *ctx;
-    xnd_t a, b;
-    uint16_t *p;
+    xnd_master_t *x;
+    xnd_t view;
+    uint16_t *ptr;
     int ret = 0;
     int i, j, k, l;
     int64_t indices[3];
 
     /* a1 = [[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]] */
-    const char *type1 = "3 * 2 * 2 * uint16";
-    uint16_t data1[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    const char *datashape = "3 * 2 * 2 * uint16";
+    uint16_t data[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
 
 
     ctx = ndt_context_new();
@@ -61,14 +62,14 @@ test_fixed(void)
 
 
     /***** Type with fixed dimensions *****/
-    a = xnd_empty(type1, ctx);
-    if (a.type == NULL) {
+    x = xnd_empty_from_string(datashape, XND_OWN_ALL, ctx);
+    if (x == NULL) {
         goto error;
     }
 
-    p = (uint16_t *)a.ptr;
-    for (i = 0; i < ARRAY_SIZE(data1); i++) {
-        p[i] = data1[i];
+    ptr = (uint16_t *)x->master.ptr;
+    for (i = 0; i < ARRAY_SIZE(data); i++) {
+        ptr[i] = data[i];
     }
 
     for (i = 0; i < 3; i++) {
@@ -76,12 +77,12 @@ test_fixed(void)
             for (k = 0; k < 2; k++) {
                 indices[0] = i; indices[1] = j; indices[2] = k;
                 l = i * 4 + j * 2 + k;
-                b = xnd_subarray(a, indices, 3, ctx);
-                if (b.ptr == NULL) {
+                view = xnd_subarray(x->master, indices, 3, ctx);
+                if (view.ptr == NULL) {
                     goto error;
                 }
-                assert(b.type->tag == Uint16);
-                if (*(uint16_t *)b.ptr != data1[l]) {
+                assert(view.type->tag == Uint16);
+                if (*(uint16_t *)view.ptr != data[l]) {
                     ndt_err_format(ctx, NDT_RuntimeError, "unexpected value");
                     goto error;
                 }
@@ -94,7 +95,7 @@ test_fixed(void)
 
 
 out:
-    xnd_del(a);
+    xnd_del(x);
     ndt_context_del(ctx);
     return ret;
 

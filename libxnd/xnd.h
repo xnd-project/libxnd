@@ -54,33 +54,56 @@
 #endif
 
 
-/* xnd.ptr: special value to indicate NA */
-#define XND_MISSING ((void *)0x1)
+/*
+ * Ownership flags: The library itself has no notion of how many exported
+ * views a master buffer has. The Python bindings for example use Pythons's
+ * reference counting to to keep track of exported memory blocks.
+ */
+#define XND_OWN_TYPE     0x00000001U /* type pointer */
+#define XND_OWN_STRINGS  0x00000002U /* embedded string pointers */
+#define XND_OWN_BYTES    0x00000004U /* embedded bytes pointers */
+#define XND_OWN_POINTERS 0x00000008U /* embedded pointers */
 
-/* convenience macros to extract embedded values */
+#define XND_OWN_ALL (XND_OWN_TYPE|XND_OWN_STRINGS|XND_OWN_BYTES|XND_OWN_POINTERS)
+#define XND_OWN_EMBEDDED (XND_OWN_STRINGS|XND_OWN_BYTES|XND_OWN_POINTERS)
+
+
+/* Convenience macros to extract embedded values. */
 #define XND_POINTER_DATA(ptr) (*((char **)ptr))
 #define XND_BYTES_SIZE(ptr) (((ndt_bytes_t *)ptr)->size)
 #define XND_BYTES_DATA(ptr) (((ndt_bytes_t *)ptr)->data)
+#define XND_BYTES_CHAR_DATA(ptr) (*(char **)(((ndt_bytes_t *)ptr)->data))
 
 
-/* typed memory */
-typedef struct _xnd_t {
-    const ndt_t *type;  /* type of the data */
+/* Typed memory block, usually a view. */
+typedef struct xnd {
     int64_t index;      /* linear index for var dims */
+    const ndt_t *type;  /* type of the data */
     char *ptr;          /* data */
 } xnd_t;
 
+/* Master memory block. */
+typedef struct xnd_master {
+    uint32_t flags; /* ownership flags */
+    xnd_t master;   /* typed memory */
+} xnd_master_t;
+
 
 /*****************************************************************************/
-/*                               API functions                               */
+/*                         Create xnd memory blocks                          */
 /*****************************************************************************/
 
-XND_API char *xnd_new(const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx);
-XND_API int xnd_init(char *ptr, const ndt_t *t, bool alloc_pointers, ndt_context_t *ctx);
-XND_API void xnd_del(xnd_t a);
-XND_API xnd_t xnd_empty(const char *datashape, ndt_context_t *ctx);
-XND_API int xnd_subarray_set_valid(xnd_t a, const int64_t *indices, int len, ndt_context_t *ctx);
-XND_API xnd_t xnd_subarray(const xnd_t a, const int64_t *indices, int len, ndt_context_t *ctx);
+XND_API xnd_master_t *xnd_empty_from_string(const char *datashape, uint32_t flags, ndt_context_t *ctx);
+XND_API xnd_master_t *xnd_empty_from_type(const ndt_t *t, uint32_t flags, ndt_context_t *ctx);
+XND_API void xnd_del(xnd_master_t *x);
+
+
+/*****************************************************************************/
+/*                         Traverse xnd memory blocks                        */
+/*****************************************************************************/
+
+XND_API xnd_t xnd_subarray(const xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx);
+XND_API int xnd_subarray_set_valid(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx);
 
 
 #endif /* XND_H */
