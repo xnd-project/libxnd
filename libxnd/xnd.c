@@ -120,7 +120,7 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
         int64_t i;
 
         assert(x.index == 0);
-        next.index = 0;
+        next.index = x.index;
         next.type = t->FixedDim.type;
 
         for (i = 0; i < t->FixedDim.shape; i++) {
@@ -431,7 +431,7 @@ xnd_clear(xnd_t x, const uint32_t flags)
         int64_t i;
 
         assert(x.index == 0);
-        next.index = 0;
+        next.index = x.index;
         next.type = t->FixedDim.type;
 
         for (i = 0; i < t->FixedDim.shape; i++) {
@@ -665,8 +665,8 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
-        next.type = t->Record.types[i];
         next.index = 0;
+        next.type = t->Record.types[i];
         next.ptr += t->Concrete.Record.offset[i];
 
         break;

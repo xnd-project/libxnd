@@ -264,7 +264,7 @@ pyxnd_init(xnd_t x, PyObject *v)
         }
 
         assert(x.index == 0);
-        next.index = 0;
+        next.index = x.index;
         next.type = t->FixedDim.type;
 
         for (i = 0; i < shape; i++) {
@@ -924,7 +924,7 @@ _pyxnd_value(xnd_t x)
         }
 
         assert(x.index == 0);
-        next.index = 0;
+        next.index = x.index;
         next.type = t->FixedDim.type;
 
         for (i = 0; i < shape; i++) {
@@ -981,9 +981,10 @@ _pyxnd_value(xnd_t x)
             return NULL;
         }
 
+        next.index = 0;
+
         for (i = 0; i < shape; i++) {
             next.type = t->Tuple.types[i];
-            next.index = 0;
             next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
 
             v = _pyxnd_value(next);
@@ -1008,9 +1009,10 @@ _pyxnd_value(xnd_t x)
             return NULL;
         }
 
+        next.index = 0;
+
         for (i = 0; i < shape; i++) {
             next.type = t->Record.types[i];
-            next.index = 0;
             next.ptr = x.ptr + t->Concrete.Record.offset[i];
 
             v = _pyxnd_value(next);
@@ -1031,15 +1033,15 @@ _pyxnd_value(xnd_t x)
     }
 
     case Pointer: {
-        next.type = t->Pointer.type;
         next.index = 0;
+        next.type = t->Pointer.type;
         next.ptr = XND_POINTER_DATA(x.ptr);
         return _pyxnd_value(next);
     }
 
     case Constr: {
-        next.type = t->Constr.type;
         next.index = 0;
+        next.type = t->Constr.type;
         next.ptr = x.ptr;
         return _pyxnd_value(next);
     }
