@@ -77,7 +77,7 @@ test_fixed(void)
             for (k = 0; k < 2; k++) {
                 indices[0] = i; indices[1] = j; indices[2] = k;
                 l = i * 4 + j * 2 + k;
-                view = xnd_subarray(x->master, indices, 3, ctx);
+                view = xnd_subtree(x->master, indices, 3, ctx);
                 if (view.ptr == NULL) {
                     goto error;
                 }
