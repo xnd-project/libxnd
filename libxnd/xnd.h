@@ -101,8 +101,7 @@ XND_API void xnd_del(xnd_master_t *x);
 /*                         Traverse xnd memory blocks                        */
 /*****************************************************************************/
 
-XND_API xnd_t xnd_subarray(const xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx);
-XND_API int xnd_subarray_set_valid(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx);
+XND_API xnd_t xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx);
 
 
 #endif /* XND_H */

@@ -257,7 +257,7 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
 
     /* Nominal represents an opaque piece of memory that just has a size
        and an alignment. If it represents a pointer, the pointer needs to
-       be externally initialized and does not belong to the array. */
+       be externally initialized and does not belong to the memory block. */
     case Nominal:
         return 0;
 
@@ -575,26 +575,23 @@ xnd_del(xnd_master_t *x)
 
 
 /*****************************************************************************/
-/*                Subarrays (single elements are a special case)             */
+/*                 Subtrees (single elements are a special case)             */
 /*****************************************************************************/
 
-/* Return a typed subarray */
+/* Return a typed subtree of a memory block */
 xnd_t
-xnd_subarray(const xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
+xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
 {
     const ndt_t *t = x.type;
     xnd_t next;
     int64_t i;
 
-    if (ndt_is_abstract(t)) {
-        ndt_err_format(ctx, NDT_ValueError, "array has abstract type");
-        return xnd_error;
-    }
+    assert(ndt_is_concrete(t));
 
     if (len == 0) {
         if (ndt_is_optional(t)) {
             ndt_err_format(ctx, NDT_NotImplementedError,
-                "options temporarily disabled");
+                "options are temporarily disabled");
             return xnd_error;
         }
         return x;
@@ -604,17 +601,17 @@ xnd_subarray(const xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
 
     switch (t->tag) {
     case FixedDim: {
-        assert(x.index == 0);
-
         if (i < 0 || i >= t->FixedDim.shape) {
             ndt_err_format(ctx, NDT_ValueError,
                 "fixed dim index out of bounds");
             return xnd_error;
         }
 
+        assert(x.index == 0);
+        next.index = x.index;
         next.type = t->FixedDim.type;
-        next.index = 0;
         next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
+
         break;
     }
 
@@ -624,11 +621,11 @@ xnd_subarray(const xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
 
         if (ndt_is_optional(t)) {
             ndt_err_format(ctx, NDT_NotImplementedError,
-                "optional dimensions temporarily disabled");
+                "optional dimensions are temporarily disabled");
             return xnd_error;
         }
 
-        if (x.index+1 >= noffsets) {
+        if (x.index < 0 || x.index+1 >= noffsets) {
             ndt_err_format(ctx, NDT_RuntimeError,
                 "var dim offset index out of bounds");
             return xnd_error;
@@ -642,9 +639,10 @@ xnd_subarray(const xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
-        next.type = t->VarDim.type;
         next.index = start + i;
+        next.type = t->VarDim.type;
         next.ptr = x.ptr;
+
         break;
     }
 
@@ -654,9 +652,10 @@ xnd_subarray(const xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
-        next.type = t->Tuple.types[i];
         next.index = 0;
+        next.type = t->Tuple.types[i];
         next.ptr += t->Concrete.Tuple.offset[i];
+
         break;
     }
 
@@ -669,6 +668,7 @@ xnd_subarray(const xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
         next.type = t->Record.types[i];
         next.index = 0;
         next.ptr += t->Concrete.Record.offset[i];
+
         break;
     }
 
@@ -677,6 +677,5 @@ xnd_subarray(const xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
         return xnd_error;
     }
 
-    return xnd_subarray(next, indices+1, len-1, ctx);
+    return xnd_subtree(next, indices+1, len-1, ctx);
 }
-

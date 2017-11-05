@@ -917,16 +917,15 @@ _pyxnd_value(xnd_t x)
         PyObject *lst, *v;
         int64_t shape, i;
 
-        assert(x.index == 0);
-
         shape = t->FixedDim.shape;
         lst = PyList_New(shape);
         if (lst == NULL) {
             return NULL;
         }
 
-        next.type = t->FixedDim.type;
+        assert(x.index == 0);
         next.index = 0;
+        next.type = t->FixedDim.type;
 
         for (i = 0; i < shape; i++) {
             next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
