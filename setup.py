@@ -98,7 +98,7 @@ if len(sys.argv) == 2:
 
 
 def ndtypes_ext():
-    include_dirs = ["libxnd", "ndtypes/libndtypes"]
+    include_dirs = ["libxnd", "ndtypes/libndtypes", "ndtypes/python/ndtypes"]
     library_dirs = ["libxnd", "ndtypes/libndtypes"]
     depends = ["libxnd/xnd.h"]
     sources = ["python/xnd/_xnd.c"]

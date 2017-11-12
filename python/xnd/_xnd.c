@@ -38,6 +38,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include "ndtypes.h"
+#include "pyndtypes.h"
 #include "xnd.h"
 
 
@@ -53,14 +54,6 @@
   #endif
 #endif
 
-typedef struct {
-    PyObject_HEAD
-    ndt_t *ndt;
-} NdtObject;
-
-#undef NDT
-#define NDT(v) (((NdtObject *)v)->ndt)
-
 
 typedef struct {
     PyObject_HEAD
@@ -68,7 +61,6 @@ typedef struct {
     xnd_master_t *xnd;
 } XndObject;
 
-#undef XND
 static PyTypeObject Xnd_Type;
 #define Xnd_CheckExact(v) (Py_TYPE(v) == &Xnd_Type)
 #define Xnd_Check(v) PyObject_TypeCheck(v, &Xnd_Type)
@@ -830,7 +822,6 @@ pyxnd_init(xnd_t x, PyObject *v)
     return -1;
 }
 
-static PyObject *Ndt;
 static PyObject *
 pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
@@ -838,17 +829,13 @@ pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     NDT_STATIC_CONTEXT(ctx);
     PyObject *value, *ndt;
     PyObject *xnd;
-    int is_ndt;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &value, &ndt)) {
         return NULL;
     }
 
-    is_ndt = PyObject_IsInstance(ndt, Ndt);
-    if (is_ndt <= 0) {
-        if (is_ndt == 0) {
-            PyErr_SetString(PyExc_TypeError, "expected ndt");
-        }
+    if (!Ndt_Check(ndt)) {
+        PyErr_SetString(PyExc_TypeError, "expected ndt");
         return NULL;
     }
 
@@ -857,7 +844,7 @@ pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
         return NULL;
     }
 
-    XND(xnd) = xnd_empty_from_type(NDT(ndt), XND_OWN_EMBEDDED, &ctx);
+    XND(xnd) = xnd_empty_from_type(CONST_NDT(ndt), XND_OWN_EMBEDDED, &ctx);
     if (PTR(xnd) == NULL) {
         Py_DECREF(xnd);
         return seterr(&ctx);
@@ -865,7 +852,7 @@ pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 
     Py_INCREF(ndt);
     NDT_OBJ(xnd) = ndt;
-    TYPE(xnd) = NDT(ndt);
+    TYPE(xnd) = CONST_NDT(ndt);
 
     if (value != Py_None) {
         if (pyxnd_init(MASTER(xnd), value) < 0) {
@@ -1384,21 +1371,18 @@ PyMODINIT_FUNC
 PyInit__xnd(void)
 {
     PyObject *m = NULL;
-    PyObject *ndtypes = NULL;
+    static int initialized = 0;
+
+    if (!initialized) {
+        if (import_ndtypes() < 0) {
+            return NULL;
+        }
+        initialized = 1;
+    }
 
     Xnd_Type.tp_base = &PyBaseObject_Type;
     if (PyType_Ready(&Xnd_Type) < 0) {
-        goto error;
-    }
-
-    ndtypes = PyImport_ImportModule("ndtypes");
-    if (ndtypes == NULL) {
-        goto error;
-    }
-    Ndt = PyObject_GetAttrString(ndtypes, "ndt");
-    Py_CLEAR(ndtypes);
-    if (Ndt == NULL) {
-        goto error;
+        return NULL;
     }
 
     m = PyModule_Create(&xnd_module);
