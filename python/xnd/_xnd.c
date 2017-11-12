@@ -54,6 +54,27 @@
   #endif
 #endif
 
+#if PY_LITTLE_ENDIAN
+static const int little_endian = 1;
+#else
+static const int little_endian = 0;
+#endif
+
+
+/****************************************************************************/
+/*                               Error handling                             */
+/****************************************************************************/
+
+static PyObject *
+seterr(ndt_context_t *ctx)
+{
+    return Ndt_SetError(ctx);
+}
+
+
+/****************************************************************************/
+/*                                 xnd object                               */
+/****************************************************************************/
 
 typedef struct {
     PyObject_HEAD
@@ -71,54 +92,6 @@ static PyTypeObject Xnd_Type;
 #define INDEX(v) (((XndObject *)v)->xnd->master.index)
 #define TYPE(v) (((XndObject *)v)->xnd->master.type)
 #define PTR(v) (((XndObject *)v)->xnd->master.ptr)
-
-
-#if PY_LITTLE_ENDIAN
-static const int little_endian = 1;
-#else
-static const int little_endian = 0;
-#endif
-
-static PyObject *
-seterr(ndt_context_t *ctx)
-{
-    PyObject *exc = PyExc_RuntimeError;
-
-    switch (ctx->err) {
-    case NDT_Success: /* should never be set on error */
-        exc = PyExc_RuntimeError;
-        break;
-    case NDT_ValueError:
-        exc = PyExc_ValueError;
-        break;
-    case NDT_TypeError:
-        exc = PyExc_TypeError;
-        break;
-    case NDT_InvalidArgumentError:
-        exc = PyExc_ValueError;
-        break;
-    case NDT_NotImplementedError:
-        exc = PyExc_NotImplementedError;
-        break;
-    case NDT_LexError: case NDT_ParseError:
-        exc = PyExc_ValueError;
-        break;
-    case NDT_OSError:
-        exc = PyExc_OSError;
-        break;
-    case NDT_RuntimeError:
-        exc = PyExc_RuntimeError;
-        break;
-    case NDT_MemoryError:
-        exc = PyExc_MemoryError;
-        break;
-    }
-
-    PyErr_SetString(exc, ndt_context_msg(ctx));
-    ndt_context_del(ctx);
-
-    return NULL;
-};
 
 
 static PyObject *
