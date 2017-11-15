@@ -87,8 +87,6 @@ typedef struct xnd_master {
     xnd_t master;   /* typed memory */
 } xnd_master_t;
 
-extern const xnd_t xnd_error;
-
 
 /*****************************************************************************/
 /*                         Create xnd memory blocks                          */
@@ -104,6 +102,13 @@ XND_API void xnd_del(xnd_master_t *x);
 /*****************************************************************************/
 
 XND_API xnd_t xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx);
+
+
+/*****************************************************************************/
+/*                               Error handling                              */
+/*****************************************************************************/
+
+XND_API extern const xnd_t xnd_error;
 
 
 #endif /* XND_H */
