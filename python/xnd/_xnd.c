@@ -871,8 +871,6 @@ static PyTypeObject Xnd_Type;
 #define Xnd_Check(v) PyObject_TypeCheck(v, &Xnd_Type)
 
 #define TYPE_OWNER(v) (((XndObject *)v)->type)
-#define TYPE_OWNER(v) (((XndObject *)v)->type)
-
 #define XND(v) (((XndObject *)v)->xnd)
 #define XND_INDEX(v) (((XndObject *)v)->xnd.index)
 #define XND_TYPE(v) (((XndObject *)v)->xnd.type)
