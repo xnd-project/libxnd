@@ -663,7 +663,7 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
 
         next.index = 0;
         next.type = t->Tuple.types[i];
-        next.ptr += t->Concrete.Tuple.offset[i];
+        next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
 
         break;
     }
@@ -676,7 +676,7 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
 
         next.index = 0;
         next.type = t->Record.types[i];
-        next.ptr += t->Concrete.Record.offset[i];
+        next.ptr = x.ptr + t->Concrete.Record.offset[i];
 
         break;
     }
