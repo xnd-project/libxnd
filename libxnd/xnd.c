@@ -563,14 +563,19 @@ xnd_clear(xnd_t x, const uint32_t flags)
 void
 xnd_del(xnd_master_t *x)
 {
-    xnd_clear(x->master, x->flags);
+    if (x != NULL) {
+        if (x->master.ptr != NULL && x->master.type != NULL) {
+            xnd_clear(x->master, x->flags);
 
-    if (x->flags & XND_OWN_TYPE) {
-        ndt_del((ndt_t *)x->master.type);
+            if (x->flags & XND_OWN_TYPE) {
+                ndt_del((ndt_t *)x->master.type);
+            }
+
+            ndt_aligned_free(x->master.ptr);
+        }
+
+        ndt_free(x);
     }
-
-    ndt_aligned_free(x->master.ptr);
-    ndt_free(x);
 }
 
 
