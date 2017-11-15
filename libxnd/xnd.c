@@ -593,10 +593,14 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
 
     assert(ndt_is_concrete(t));
 
+    if (t->ndim == 0) {
+        x.ptr += x.index * t->data_size;
+    }
+
     if (len == 0) {
         if (ndt_is_optional(t)) {
             ndt_err_format(ctx, NDT_NotImplementedError,
-                "options are temporarily disabled");
+                "option type is temporarily disabled");
             return xnd_error;
         }
         return x;
