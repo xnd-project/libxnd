@@ -157,7 +157,7 @@ mblock_from_typed_value(PyObject *type, PyObject *value)
 }
 
 static PyTypeObject MemoryBlock_Type = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyVarObject_HEAD_INIT(NULL, 0)
     "_xnd.memblock",
     sizeof(MemoryBlockObject),
     0,
