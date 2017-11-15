@@ -285,7 +285,6 @@ class IndexTest(unittest.TestCase):
         self.assertEqual(x[1,1], 4)
         self.assertEqual(x[1,2], 5)
 
-        self.assertRaises(NotImplementedError, x.__getitem__, 1)
         self.assertRaises(IndexError, x.__getitem__, (0, 3))
         self.assertRaises(IndexError, x.__getitem__, (2, 0))
 
@@ -304,6 +303,16 @@ class IndexTest(unittest.TestCase):
         self.assertEqual(x[1,1], "volatile")
         self.assertEqual(x[1,2], (4, 5, 6))
 
+    def test_subview(self):
+        # fixed
+        x = xnd([["a", "b"], ["c", "d"]])
+        self.assertEqual(x[0].value, ["a", "b"])
+        self.assertEqual(x[1].value, ["c", "d"])
+
+        # var
+        x = xnd([["a", "b"], ["x", "y", "z"]])
+        self.assertEqual(x[0].value, ["a", "b"])
+        self.assertEqual(x[1].value, ["x", "y", "z"])
 
 
 

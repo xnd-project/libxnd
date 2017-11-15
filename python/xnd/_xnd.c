@@ -1358,6 +1358,36 @@ _pyxnd_value(xnd_t x)
     return NULL;
 }
 
+
+/******************************************************************************/
+/*                                xnd subscript                               */
+/******************************************************************************/
+
+static PyObject *
+pyxnd_view(const XndObject *src, xnd_t x)
+{
+    XndObject *view;
+    PyObject *type;
+
+    type = Ndt_CopySubtree(src->type, x.type);
+    if (type == NULL) {
+        return NULL;
+    }
+
+    view = pyxnd_alloc(Py_TYPE(src));
+    if (view == NULL) {
+        Py_DECREF(type);
+        return NULL;
+    }
+
+    Py_INCREF(src->mblock);
+    view->mblock = src->mblock;
+    view->type = type;
+    view->xnd = x;
+
+    return (PyObject *)view;
+}
+
 static Py_ssize_t
 get_index(PyObject *key, Py_ssize_t shape)
 {
@@ -1564,9 +1594,7 @@ pyxnd_subscript(XndObject *self, PyObject *key)
         return _pyxnd_value(x);
     }
     else {
-        PyErr_SetString(PyExc_NotImplementedError,
-            "subviews are not implemented");
-        return NULL;
+        return pyxnd_view(self, x);
     }
 }
 
