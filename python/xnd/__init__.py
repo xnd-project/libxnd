@@ -25,7 +25,7 @@ class xnd(_xnd):
                     "the 'type' and 'levels' arguments are mutually exclusive")
             elif isinstance(type, str):
                 type = ndt(type)
-        return _xnd(value, type)
+        return _xnd(type, value)
 
     @classmethod
     def empty(cls, t):

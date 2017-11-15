@@ -73,56 +73,116 @@ seterr(ndt_context_t *ctx)
 
 
 /****************************************************************************/
-/*                                 xnd object                               */
+/*                           MemoryBlock Object                             */
 /****************************************************************************/
+
+/* This object owns the memory that is shared by several xnd objects. It is
+   never exposed to the Python level.
+
+   The memory block is created by the primary xnd object on initialization.
+   Sub-views, slices etc. share the memory block.
+
+   At a later stage, the object will potentially need to communicate with
+   Arrow or other formats in order to acquire and manage external memory
+   blocks. */
+
 
 typedef struct {
     PyObject_HEAD
-    PyObject *ndt;
-    xnd_master_t *xnd;
-} XndObject;
+    PyObject *type;    /* type owner */
+    xnd_master_t *xnd; /* memblock owner */
+} MemoryBlockObject;
 
-static PyTypeObject Xnd_Type;
-#define Xnd_CheckExact(v) (Py_TYPE(v) == &Xnd_Type)
-#define Xnd_Check(v) PyObject_TypeCheck(v, &Xnd_Type)
-#define NDT_OBJ(v) (((XndObject *)v)->ndt)
-#define FLAGS(v) (((XndObject *)v)->xnd->flags)
-#define XND(v) (((XndObject *)v)->xnd)
-#define MASTER(v) (((XndObject *)v)->xnd->master)
-#define INDEX(v) (((XndObject *)v)->xnd->master.index)
-#define TYPE(v) (((XndObject *)v)->xnd->master.type)
-#define PTR(v) (((XndObject *)v)->xnd->master.ptr)
+static int mblock_init(xnd_t x, PyObject *v);
+static PyTypeObject MemoryBlock_Type;
 
 
-static PyObject *
-pyxnd_alloc(PyTypeObject *type)
+static MemoryBlockObject *
+mblock_alloc(void)
 {
-    XndObject *x;
+    MemoryBlockObject *self;
 
-    if (type == &Xnd_Type) {
-        x = PyObject_New(XndObject, &Xnd_Type);
-    }
-    else {
-        x = (XndObject *)type->tp_alloc(type, 0);
-    }
-    if (x == NULL) {
+    self = PyObject_New(MemoryBlockObject, &MemoryBlock_Type);
+    if (self == NULL) {
         return NULL;
     }
  
-    NDT_OBJ(x) = NULL;
-    XND(x) = NULL;
+    self->type = NULL;
+    self->xnd = NULL;
 
-    return (PyObject *)x;
+    return self;
 }
 
 static void
-pyxnd_dealloc(PyObject *xnd)
+mblock_dealloc(MemoryBlockObject *self)
 {
-    xnd_del(XND(xnd));
-    Py_CLEAR(NDT_OBJ(xnd));
-    Py_TYPE(xnd)->tp_free(xnd);
+    xnd_del(self->xnd);
+    Py_CLEAR(self->type);
+    PyObject_Del(self);
 }
 
+static MemoryBlockObject *
+mblock_from_typed_value(PyObject *type, PyObject *value)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    MemoryBlockObject *self;
+
+    if (!Ndt_Check(type)) {
+        PyErr_SetString(PyExc_TypeError, "expected ndt object");
+        return NULL;
+    }
+
+    self = mblock_alloc();
+    if (self == NULL) {
+        return NULL;
+    }
+
+    self->xnd = xnd_empty_from_type(CONST_NDT(type), XND_OWN_EMBEDDED, &ctx);
+    if (self->xnd == NULL) {
+        Py_DECREF(self);
+        seterr(&ctx);
+        return NULL;
+    }
+    Py_INCREF(type);
+    self->type = type;
+
+    if (value != Py_None) {
+        if (mblock_init(self->xnd->master, value) < 0) {
+            Py_DECREF(self);
+            return NULL;
+        }
+    }
+
+    return self;
+}
+
+static PyTypeObject MemoryBlock_Type = {
+    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    "_xnd.memblock",
+    sizeof(MemoryBlockObject),
+    0,
+    (destructor)mblock_dealloc,       /* tp_dealloc */
+    0,                                /* tp_print */
+    0,                                /* tp_getattr */
+    0,                                /* tp_setattr */
+    0,                                /* tp_reserved */
+    0,                                /* tp_repr */
+    0,                                /* tp_as_number */
+    0,                                /* tp_as_sequence */
+    0,                                /* tp_as_mapping */
+    0,                                /* tp_hash */
+    0,                                /* tp_call */
+    0,                                /* tp_str */
+    PyObject_GenericGetAttr,          /* tp_getattro */
+    0,                                /* tp_setattro */
+    0,                                /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT,               /* tp_flags */
+};
+
+
+/****************************************************************************/
+/*                      MemoryBlock Object Initialization                   */
+/****************************************************************************/
 
 #define PACK_SINGLE(ptr, src, type) \
     do {                                     \
@@ -137,7 +197,6 @@ pyxnd_dealloc(PyObject *xnd)
         memcpy((char *)&_x, ptr, sizeof _x); \
         dest = _x;                           \
     } while (0)
-
 
 static int64_t
 get_int(PyObject *v, int64_t min, int64_t max)
@@ -194,7 +253,7 @@ get_uint(PyObject *v, uint64_t max)
 }
 
 static int
-pyxnd_init(xnd_t x, PyObject *v)
+mblock_init(xnd_t x, PyObject *v)
 {
     NDT_STATIC_CONTEXT(ctx);
     const ndt_t *t = x.type;
@@ -234,7 +293,7 @@ pyxnd_init(xnd_t x, PyObject *v)
 
         for (i = 0; i < shape; i++) {
             next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
-            if (pyxnd_init(next, PyList_GET_ITEM(v, i)) < 0) {
+            if (mblock_init(next, PyList_GET_ITEM(v, i)) < 0) {
                 return -1;
             }
         }
@@ -275,7 +334,7 @@ pyxnd_init(xnd_t x, PyObject *v)
 
         for (i = 0; i < shape; i++) {
             next.index =  start + i;
-            if (pyxnd_init(next, PyList_GET_ITEM(v, i)) < 0) {
+            if (mblock_init(next, PyList_GET_ITEM(v, i)) < 0) {
                 return -1;
             }
         }
@@ -305,7 +364,7 @@ pyxnd_init(xnd_t x, PyObject *v)
             next.type = t->Tuple.types[i];
             next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
 
-            if (pyxnd_init(next, PyTuple_GET_ITEM(v, i)) < 0) {
+            if (mblock_init(next, PyTuple_GET_ITEM(v, i)) < 0) {
                 return -1;
             }
         }
@@ -346,7 +405,7 @@ pyxnd_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            if (pyxnd_init(next, tmp) < 0) {
+            if (mblock_init(next, tmp) < 0) {
                 return -1;
             }
         }
@@ -358,14 +417,14 @@ pyxnd_init(xnd_t x, PyObject *v)
         next.index = 0;
         next.type = t->Pointer.type;
         next.ptr = XND_POINTER_DATA(x.ptr);
-        return pyxnd_init(next, v);
+        return mblock_init(next, v);
     }
 
     case Constr: {
         next.index = 0;
         next.type = t->Constr.type;
         next.ptr = x.ptr;
-        return pyxnd_init(next, v);
+        return mblock_init(next, v);
     }
 
     case Nominal: {
@@ -795,47 +854,100 @@ pyxnd_init(xnd_t x, PyObject *v)
     return -1;
 }
 
-static PyObject *
-pyxnd_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+
+/****************************************************************************/
+/*                                 xnd object                               */
+/****************************************************************************/
+
+typedef struct {
+    PyObject_HEAD
+    MemoryBlockObject *mblock; /* owner of the primary type and memory block */
+    PyObject *type;            /* owner of the current type */
+    xnd_t xnd;                 /* typed view, does not own anything */
+} XndObject;
+
+static PyTypeObject Xnd_Type;
+#define Xnd_CheckExact(v) (Py_TYPE(v) == &Xnd_Type)
+#define Xnd_Check(v) PyObject_TypeCheck(v, &Xnd_Type)
+
+#define TYPE_OWNER(v) (((XndObject *)v)->type)
+#define TYPE_OWNER(v) (((XndObject *)v)->type)
+
+#define XND(v) (((XndObject *)v)->xnd)
+#define XND_INDEX(v) (((XndObject *)v)->xnd.index)
+#define XND_TYPE(v) (((XndObject *)v)->xnd.type)
+#define XND_PTR(v) (((XndObject *)v)->xnd.ptr)
+
+
+static XndObject *
+pyxnd_alloc(PyTypeObject *type)
 {
-    static char *kwlist[] = {"value", "type", NULL};
-    NDT_STATIC_CONTEXT(ctx);
-    PyObject *value, *ndt;
-    PyObject *xnd;
+    XndObject *self;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &value, &ndt)) {
+    if (type == &Xnd_Type) {
+        self = PyObject_New(XndObject, &Xnd_Type);
+    }
+    else {
+        self = (XndObject *)type->tp_alloc(type, 0);
+    }
+    if (self == NULL) {
         return NULL;
     }
+ 
+    self->mblock = NULL;
+    self->type = NULL;
+    self->xnd.index = 0;
+    self->xnd.type  = NULL;
+    self->xnd.ptr = NULL;
 
-    if (!Ndt_Check(ndt)) {
-        PyErr_SetString(PyExc_TypeError, "expected ndt");
-        return NULL;
-    }
-
-    xnd = pyxnd_alloc(type);
-    if (xnd == NULL) {
-        return NULL;
-    }
-
-    XND(xnd) = xnd_empty_from_type(CONST_NDT(ndt), XND_OWN_EMBEDDED, &ctx);
-    if (PTR(xnd) == NULL) {
-        Py_DECREF(xnd);
-        return seterr(&ctx);
-    }
-
-    Py_INCREF(ndt);
-    NDT_OBJ(xnd) = ndt;
-    TYPE(xnd) = CONST_NDT(ndt);
-
-    if (value != Py_None) {
-        if (pyxnd_init(MASTER(xnd), value) < 0) {
-            Py_DECREF(xnd);
-            return NULL;
-        }
-    }
-
-    return xnd;
+    return self;
 }
+
+static void
+pyxnd_dealloc(XndObject *self)
+{
+    Py_CLEAR(self->mblock);
+    Py_CLEAR(self->type);
+    Py_TYPE(self)->tp_free(self);
+}
+
+static PyObject *
+pyxnd_new(PyTypeObject *tp, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"type", "value", NULL};
+    PyObject *type, *value = Py_None;
+    MemoryBlockObject *mblock;
+    XndObject *self;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", kwlist, &type,
+        &value)) {
+        return NULL;
+    }
+
+    mblock = mblock_from_typed_value(type, value);
+    if (mblock == NULL) {
+        return NULL;
+    }
+
+    self = pyxnd_alloc(tp);
+    if (self == NULL) {
+        Py_DECREF(mblock);
+        return NULL;
+    }
+
+    Py_INCREF(mblock);
+    self->mblock = mblock;
+
+    Py_INCREF(mblock->type);
+    self->type = mblock->type;
+
+    self->xnd.index = 0;
+    self->xnd.type = mblock->xnd->master.type;
+    self->xnd.ptr = mblock->xnd->master.ptr;
+
+    return (PyObject *)self;
+}
+
 
 /******************************************************************************/
 /*                                 xnd methods                                */
@@ -1249,22 +1361,22 @@ _pyxnd_value(xnd_t x)
 }
 
 static PyObject *
-pyxnd_type(PyObject *xnd, PyObject *args UNUSED)
+pyxnd_type(PyObject *self, PyObject *args UNUSED)
 {
-    Py_INCREF(NDT_OBJ(xnd));
-    return NDT_OBJ(xnd);
+    Py_INCREF(TYPE_OWNER(self));
+    return TYPE_OWNER(self);
 }
 
 static PyObject *
-pyxnd_value(PyObject *xnd, PyObject *args UNUSED)
+pyxnd_value(PyObject *self, PyObject *args UNUSED)
 {
-    return _pyxnd_value(MASTER(xnd));
+    return _pyxnd_value(XND(self));
 }
 
 static PyObject *
-pyxnd_align(PyObject *xnd, PyObject *args UNUSED)
+pyxnd_align(PyObject *self, PyObject *args UNUSED)
 {
-    uint16_t align = TYPE(xnd)->data_align;
+    uint16_t align = XND_TYPE(self)->data_align;
     return PyLong_FromUnsignedLong(align);
 }
 
@@ -1351,6 +1463,10 @@ PyInit__xnd(void)
             return NULL;
         }
         initialized = 1;
+    }
+
+    if (PyType_Ready(&MemoryBlock_Type) < 0) {
+        return NULL;
     }
 
     Xnd_Type.tp_base = &PyBaseObject_Type;
