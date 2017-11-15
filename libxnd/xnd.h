@@ -87,6 +87,8 @@ typedef struct xnd_master {
     xnd_t master;   /* typed memory */
 } xnd_master_t;
 
+extern const xnd_t xnd_error;
+
 
 /*****************************************************************************/
 /*                         Create xnd memory blocks                          */

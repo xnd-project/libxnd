@@ -263,6 +263,50 @@ class TypeInferenceTest(unittest.TestCase):
             self.assertEqual(x.value, v)
 
 
+class IndexTest(unittest.TestCase):
+
+    def test_indexing(self):
+        x = xnd([])
+        self.assertRaises(IndexError, x.__getitem__, 0)
+        self.assertRaises(IndexError, x.__getitem__, (0, 0))
+
+        x = xnd([0])
+        self.assertEqual(x[0], 0)
+
+        self.assertRaises(IndexError, x.__getitem__, 1)
+        self.assertRaises(IndexError, x.__getitem__, (0, 1))
+
+        x = xnd([[0,1,2], [3,4,5]])
+        self.assertEqual(x[0,0], 0)
+        self.assertEqual(x[0,1], 1)
+        self.assertEqual(x[0,2], 2)
+
+        self.assertEqual(x[1,0], 3)
+        self.assertEqual(x[1,1], 4)
+        self.assertEqual(x[1,2], 5)
+
+        self.assertRaises(NotImplementedError, x.__getitem__, 1)
+        self.assertRaises(IndexError, x.__getitem__, (0, 3))
+        self.assertRaises(IndexError, x.__getitem__, (2, 0))
+
+        t1 = (1.0, "capricious", (1, 2, 3))
+        t2 = (2.0, "volatile", (4, 5, 6))
+
+        x = xnd([t1, t2])
+        self.assertEqual(x[0], t1)
+        self.assertEqual(x[1], t2)
+
+        self.assertEqual(x[0,0], 1.0)
+        self.assertEqual(x[0,1], "capricious")
+        self.assertEqual(x[0,2], (1, 2, 3))
+
+        self.assertEqual(x[1,0], 2.0)
+        self.assertEqual(x[1,1], "volatile")
+        self.assertEqual(x[1,2], (4, 5, 6))
+
+
+
+
 unittest.main(verbosity=2)
 
 
