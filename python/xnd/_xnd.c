@@ -392,9 +392,9 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case Record: {
-        int64_t shape, i;
-
         PyObject *tmp;
+        int64_t shape, i;
+        int ret;
 
         if (!PyDict_Check(v)) {
             PyErr_Format(PyExc_TypeError,
@@ -424,7 +424,9 @@ mblock_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            if (mblock_init(next, tmp) < 0) {
+            ret = mblock_init(next, tmp);
+            Py_DECREF(tmp);
+            if (ret < 0) {
                 return -1;
             }
         }
