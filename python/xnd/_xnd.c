@@ -102,7 +102,7 @@ mblock_alloc(void)
 {
     MemoryBlockObject *self;
 
-    self = PyObject_New(MemoryBlockObject, &MemoryBlock_Type);
+    self = PyObject_GC_New(MemoryBlockObject, &MemoryBlock_Type);
     if (self == NULL) {
         return NULL;
     }
@@ -110,15 +110,31 @@ mblock_alloc(void)
     self->type = NULL;
     self->xnd = NULL;
 
+    PyObject_GC_Track(self);
     return self;
+}
+
+static int
+mblock_traverse(MemoryBlockObject *self, visitproc visit, void *arg)
+{
+    Py_VISIT(self->type);
+    return 0;
+}
+
+static int
+mblock_clear(MemoryBlockObject *self)
+{
+    Py_CLEAR(self->type);
+    xnd_del(self->xnd);
+    return 0;
 }
 
 static void
 mblock_dealloc(MemoryBlockObject *self)
 {
-    xnd_del(self->xnd);
-    Py_CLEAR(self->type);
-    PyObject_Del(self);
+    PyObject_GC_UnTrack(self);
+    mblock_clear(self);
+    PyObject_GC_Del(self);
 }
 
 static MemoryBlockObject *
@@ -161,22 +177,25 @@ static PyTypeObject MemoryBlock_Type = {
     "_xnd.memblock",
     sizeof(MemoryBlockObject),
     0,
-    (destructor)mblock_dealloc,       /* tp_dealloc */
-    0,                                /* tp_print */
-    0,                                /* tp_getattr */
-    0,                                /* tp_setattr */
-    0,                                /* tp_reserved */
-    0,                                /* tp_repr */
-    0,                                /* tp_as_number */
-    0,                                /* tp_as_sequence */
-    0,                                /* tp_as_mapping */
-    0,                                /* tp_hash */
-    0,                                /* tp_call */
-    0,                                /* tp_str */
-    PyObject_GenericGetAttr,          /* tp_getattro */
-    0,                                /* tp_setattro */
-    0,                                /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT,               /* tp_flags */
+    (destructor)mblock_dealloc,              /* tp_dealloc */
+    0,                                       /* tp_print */
+    0,                                       /* tp_getattr */
+    0,                                       /* tp_setattr */
+    0,                                       /* tp_reserved */
+    0,                                       /* tp_repr */
+    0,                                       /* tp_as_number */
+    0,                                       /* tp_as_sequence */
+    0,                                       /* tp_as_mapping */
+    0,                                       /* tp_hash */
+    0,                                       /* tp_call */
+    0,                                       /* tp_str */
+    PyObject_GenericGetAttr,                 /* tp_getattro */
+    0,                                       /* tp_setattro */
+    0,                                       /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC, /* tp_flags */
+    NULL,                                    /* tp_doc */
+    (traverseproc)mblock_traverse,           /* tp_traverse */
+    (inquiry)mblock_clear,                   /* tp_clear */
 };
 
 
@@ -706,7 +725,7 @@ mblock_init(xnd_t x, PyObject *v)
     case String: {
         Py_ssize_t size;
         const char *cp;
-        char*s;
+        char *s;
 
         cp = PyUnicode_AsUTF8AndSize(v, &size);
         if (cp == NULL) {
@@ -882,12 +901,7 @@ pyxnd_alloc(PyTypeObject *type)
 {
     XndObject *self;
 
-    if (type == &Xnd_Type) {
-        self = PyObject_New(XndObject, &Xnd_Type);
-    }
-    else {
-        self = (XndObject *)type->tp_alloc(type, 0);
-    }
+    self = (XndObject *)type->tp_alloc(type, 0);
     if (self == NULL) {
         return NULL;
     }
@@ -901,11 +915,27 @@ pyxnd_alloc(PyTypeObject *type)
     return self;
 }
 
-static void
-pyxnd_dealloc(XndObject *self)
+static int
+pyxnd_traverse(XndObject *self, visitproc visit, void *arg)
+{
+    Py_VISIT(self->mblock);
+    Py_VISIT(self->type);
+    return 0;
+}
+
+static int
+pyxnd_clear(XndObject *self)
 {
     Py_CLEAR(self->mblock);
     Py_CLEAR(self->type);
+    return 0;
+}
+
+static void
+pyxnd_dealloc(XndObject *self)
+{
+    PyObject_GC_UnTrack(self);
+    pyxnd_clear(self);
     Py_TYPE(self)->tp_free(self);
 }
 
@@ -933,10 +963,8 @@ pyxnd_new(PyTypeObject *tp, PyObject *args, PyObject *kwds)
         return NULL;
     }
 
-    Py_INCREF(mblock);
-    self->mblock = mblock;
-
     Py_INCREF(mblock->type);
+    self->mblock = mblock;
     self->type = mblock->type;
 
     self->xnd.index = 0;
@@ -1662,10 +1690,11 @@ static PyTypeObject Xnd_Type =
     (setattrofunc) 0,                       /* tp_setattro */
     (PyBufferProcs *) 0,                    /* tp_as_buffer */
     (Py_TPFLAGS_DEFAULT|
-     Py_TPFLAGS_BASETYPE),                  /* tp_flags */
-    0, // xnd_doc,                          /* tp_doc */
-    0,                                      /* tp_traverse */
-    0,                                      /* tp_clear */
+     Py_TPFLAGS_BASETYPE|
+     Py_TPFLAGS_HAVE_GC),                   /* tp_flags */
+    0,                                      /* tp_doc */
+    (traverseproc)pyxnd_traverse,           /* tp_traverse */
+    (inquiry)pyxnd_clear,                   /* tp_clear */
     0,                                      /* tp_richcompare */
     0,                                      /* tp_weaklistoffset */
     0,                                      /* tp_iter */
@@ -1679,9 +1708,9 @@ static PyTypeObject Xnd_Type =
     0,                                      /* tp_descr_set */
     0,                                      /* tp_dictoffset */
     0,                                      /* tp_init */
-    0,                                      /* tp_alloc */
+    PyType_GenericAlloc,                    /* tp_alloc */
     pyxnd_new,                              /* tp_new */
-    PyObject_Del,                           /* tp_free */
+    PyObject_GC_Del,                        /* tp_free */
 };
 
 static struct PyModuleDef xnd_module = {
