@@ -121,19 +121,12 @@ mblock_traverse(MemoryBlockObject *self, visitproc visit, void *arg)
     return 0;
 }
 
-static int
-mblock_clear(MemoryBlockObject *self)
-{
-    Py_CLEAR(self->type);
-    xnd_del(self->xnd);
-    return 0;
-}
-
 static void
 mblock_dealloc(MemoryBlockObject *self)
 {
     PyObject_GC_UnTrack(self);
-    mblock_clear(self);
+    xnd_del(self->xnd);
+    Py_CLEAR(self->type);
     PyObject_GC_Del(self);
 }
 
@@ -195,7 +188,7 @@ static PyTypeObject MemoryBlock_Type = {
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC, /* tp_flags */
     NULL,                                    /* tp_doc */
     (traverseproc)mblock_traverse,           /* tp_traverse */
-    (inquiry)mblock_clear,                   /* tp_clear */
+    NULL,                                    /* tp_clear */
 };
 
 
@@ -925,19 +918,12 @@ pyxnd_traverse(XndObject *self, visitproc visit, void *arg)
     return 0;
 }
 
-static int
-pyxnd_clear(XndObject *self)
-{
-    Py_CLEAR(self->mblock);
-    Py_CLEAR(self->type);
-    return 0;
-}
-
 static void
 pyxnd_dealloc(XndObject *self)
 {
     PyObject_GC_UnTrack(self);
-    pyxnd_clear(self);
+    Py_CLEAR(self->mblock);
+    Py_CLEAR(self->type);
     Py_TYPE(self)->tp_free(self);
 }
 
@@ -1394,12 +1380,38 @@ _pyxnd_value(xnd_t x)
 /******************************************************************************/
 
 static PyObject *
-pyxnd_view(const XndObject *src, xnd_t x)
+pyxnd_view_copy_type(const XndObject *src, const xnd_t x)
 {
     XndObject *view;
     PyObject *type;
 
     type = Ndt_CopySubtree(src->type, x.type);
+    if (type == NULL) {
+        return NULL;
+    }
+
+    view = pyxnd_alloc(Py_TYPE(src));
+    if (view == NULL) {
+        Py_DECREF(type);
+        return NULL;
+    }
+
+    Py_INCREF(src->mblock);
+    view->mblock = src->mblock;
+    view->type = type;
+    view->xnd = x;
+    view->xnd.type = CONST_NDT(type);
+
+    return (PyObject *)view;
+}
+
+static PyObject *
+pyxnd_view_move_type(const XndObject *src, xnd_t x)
+{
+    XndObject *view;
+    PyObject *type;
+
+    type = Ndt_MoveSubtree(src->type, (ndt_t *)x.type);
     if (type == NULL) {
         return NULL;
     }
@@ -1460,14 +1472,17 @@ get_index_record(const ndt_t *t, PyObject *key)
     return get_index(key, t->Record.shape);
 }
 
+/*
+ * Return a zero copy view of an xnd object.  If a dtype is indexable,
+ * descend into the dtype.
+ */
 static xnd_t
-_pyxnd_subtree(xnd_t x, const PyObject *indices, int nth)
+pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
 {
-    PyObject *key;
     const ndt_t *t = x.type;
     xnd_t next;
+    PyObject *key;
 
-    assert(PyTuple_Check(indices));
     assert(ndt_is_concrete(t));
 
     /* Add the linear index from var dimensions. For a chain of fixed
@@ -1476,7 +1491,7 @@ _pyxnd_subtree(xnd_t x, const PyObject *indices, int nth)
         x.ptr += x.index * t->data_size;
     }
 
-    if (nth == PyTuple_GET_SIZE(indices)) {
+    if (len == 0) {
         if (ndt_is_optional(t)) {
             PyErr_SetString(PyExc_NotImplementedError,
                 "option type is temporarily disabled");
@@ -1485,7 +1500,7 @@ _pyxnd_subtree(xnd_t x, const PyObject *indices, int nth)
         return x;
     }
 
-    key = PyTuple_GET_ITEM(indices, nth);
+    key = indices[0];
 
     switch (t->tag) {
     case FixedDim: {
@@ -1560,17 +1575,229 @@ _pyxnd_subtree(xnd_t x, const PyObject *indices, int nth)
         return xnd_error;
     }
 
-    return _pyxnd_subtree(next, indices, nth+1);
+    return pyxnd_subtree(next, indices+1, len-1);
+}
+
+static xnd_t pyxnd_index(xnd_t x, PyObject *indices[], int len);
+static xnd_t pyxnd_slice(xnd_t x, PyObject *indices[], int len);
+
+static xnd_t
+pyxnd_multikey(xnd_t x, PyObject *indices[], int len)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    const ndt_t *t = x.type;
+    PyObject *key;
+    xnd_t next;
+
+    assert(len >= 0);
+    assert(ndt_is_concrete(t));
+    assert(x.ptr != NULL);
+
+    if (len > t->ndim) {
+        PyErr_SetString(PyExc_IndexError, "too many indices");
+        return xnd_error;
+    }
+
+    if (len == 0) {
+        if (ndt_is_optional(t)) {
+            PyErr_SetString(PyExc_NotImplementedError,
+                "option type is temporarily disabled");
+            return xnd_error;
+        }
+        next.index = x.index;
+        next.type = ndt_copy(t, &ctx);
+        if (next.type == NULL) {
+            seterr(&ctx);
+            return xnd_error;
+        }
+        next.ptr = x.ptr;
+
+        return next;
+    }
+
+    key = indices[0];
+
+    if (PyIndex_Check(key)) {
+        return pyxnd_index(x, indices, len);
+    }
+    else if (PySlice_Check(key)) {
+        return pyxnd_slice(x, indices, len);
+    }
+
+    PyErr_SetString(PyExc_RuntimeError,
+        "multikey: internal error: key must be index or slice");
+
+    return xnd_error;
+}
+
+/*
+ * Return a view with a copy of the type.  Indexing into the dtype is
+ * not permitted.
+ */
+static xnd_t
+pyxnd_index(xnd_t x, PyObject *indices[], int len)
+{
+    const ndt_t *t = x.type;
+    xnd_t next;
+    PyObject *key;
+
+    assert(len > 0);
+    assert(PyIndex_Check(indices[0]));
+    assert(ndt_is_concrete(t));
+    assert(x.ptr != NULL);
+
+    /* Add the linear index from var dimensions. For a chain of fixed
+       dimensions, x.index is zero. */
+    if (t->ndim == 0) {
+        x.ptr += x.index * t->data_size;
+    }
+
+    key = indices[0];
+
+    switch (t->tag) {
+    case FixedDim: {
+        Py_ssize_t i = get_index(key, t->FixedDim.shape);
+        if (i < 0) {
+            return xnd_error;
+        }
+
+        next.index = x.index;
+        next.type = t->FixedDim.type;
+        next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
+
+        break;
+    }
+
+    case VarDim: {
+        int32_t start, stop, shape;
+        Py_ssize_t i;
+
+        if (ndt_is_optional(t)) {
+            PyErr_SetString(PyExc_NotImplementedError,
+                "optional dimensions are temporarily disabled");
+            return xnd_error;
+        }
+
+        assert(0 <= x.index && x.index+1 < t->Concrete.VarDim.noffsets);
+
+        start = t->Concrete.VarDim.offsets[x.index];
+        stop = t->Concrete.VarDim.offsets[x.index+1];
+        shape = stop - start;
+
+        i = get_index(key, shape);
+        if (i < 0) {
+            return xnd_error;
+        }
+
+        next.index = start + i;
+        next.type = t->VarDim.type;
+        next.ptr = x.ptr;
+
+        break;
+    }
+
+    default:
+        PyErr_SetString(PyExc_IndexError,
+            "cannot index the dtype or a non-indexable type");
+        return xnd_error;
+    }
+
+    return pyxnd_multikey(next, indices+1, len-1);
+}
+
+static xnd_t
+pyxnd_slice(xnd_t x, PyObject *indices[], int len)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    const ndt_t *t = x.type;
+    xnd_t next;
+    PyObject *key;
+
+    assert(len > 0);
+    assert(PySlice_Check(indices[0]));
+    assert(ndt_is_concrete(t));
+    assert(x.ptr != NULL);
+
+    key = indices[0];
+
+    switch (t->tag) {
+    case FixedDim: {
+        Py_ssize_t start, stop, step, shape;
+        if (PySlice_GetIndicesEx(key, t->FixedDim.shape,
+                                  &start, &stop, &step, &shape) < 0) {
+            return xnd_error;
+        }
+
+        next.index = x.index;
+        next.type = t->FixedDim.type;
+        next.ptr = x.ptr + start * t->Concrete.FixedDim.stride;
+
+        next = pyxnd_multikey(next, indices+1, len-1);
+        if (next.ptr == NULL) {
+            return xnd_error;
+        }
+
+        x.index = next.index;
+        x.type = ndt_fixed_dim((ndt_t *)next.type, shape,
+                               t->Concrete.FixedDim.stride * step,
+                               ndt_order(t), &ctx);
+        if (x.type == NULL) {
+            seterr(&ctx);
+            return xnd_error;
+        }
+        x.ptr = next.ptr;
+
+        return x;
+    }
+
+    case VarDim: {
+        PyErr_SetString(PyExc_NotImplementedError,
+            "slicing var dimensions is not implemented");
+        return xnd_error;
+    }
+
+    case Tuple: {
+        PyErr_SetString(PyExc_NotImplementedError,
+            "slicing tuples is not supported");
+        return xnd_error;
+    }
+
+    case Record: {
+        PyErr_SetString(PyExc_NotImplementedError,
+            "slicing records is not supported");
+        return xnd_error;
+    }
+
+    default:
+        PyErr_SetString(PyExc_IndexError, "type not sliceable");
+        return xnd_error;
+    }
 }
 
 static int
-is_well_formed_key(PyObject *key)
+is_multiindex(const PyObject *key)
 {
     Py_ssize_t size, i;
 
-    if (PyIndex_Check(key) || PySlice_Check(key)) {
-        return 1;
+    if (!PyTuple_Check(key)) {
+        return 0;
     }
+
+    size = PyTuple_GET_SIZE(key);
+    for (i = 0; i < size; i++) {
+        PyObject *x = PyTuple_GET_ITEM(key, i);
+        if (!PyIndex_Check(x)) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+static int
+is_multikey(const PyObject *key)
+{
+    Py_ssize_t size, i;
 
     if (!PyTuple_Check(key)) {
         return 0;
@@ -1588,34 +1815,8 @@ is_well_formed_key(PyObject *key)
 }
 
 static PyObject *
-pyxnd_subscript(XndObject *self, PyObject *key)
+value_or_view_copy(XndObject *self, xnd_t x)
 {
-    xnd_t x;
-
-    if (PyIndex_Check(key)) {
-        PyObject *indices = PyTuple_New(1);
-        if (indices == NULL) {
-            return NULL;
-        }
-        Py_INCREF(key);
-        PyTuple_SET_ITEM(indices, 0, key);
-
-        x = _pyxnd_subtree(self->xnd, indices, 0);
-        Py_DECREF(indices);
-    }
-    else if (PyTuple_Check(key)) {
-        x = _pyxnd_subtree(self->xnd, key, 0);
-    }
-    else if (is_well_formed_key(key)) {
-        PyErr_SetString(PyExc_NotImplementedError,
-            "slicing is not implemented");
-        return NULL;
-    }
-    else {
-        PyErr_SetString(PyExc_TypeError, "invalid subscript key");
-        return NULL;
-    }
-
     if (x.ptr == NULL) {
         return NULL;
     }
@@ -1623,17 +1824,84 @@ pyxnd_subscript(XndObject *self, PyObject *key)
     if (x.type->ndim == 0) {
         return _pyxnd_value(x);
     }
-    else {
-        return pyxnd_view(self, x);
-    }
+
+    return pyxnd_view_copy_type(self, x);
 }
 
+static PyObject *
+value_or_view_move(XndObject *self, xnd_t x)
+{
+    if (x.ptr == NULL) {
+        return NULL;
+    }
+
+    if (x.type->ndim == 0) {
+        return _pyxnd_value(x);
+    }
+
+    return pyxnd_view_move_type(self, x);
+}
+
+static PyObject *
+pyxnd_subscript(XndObject *self, PyObject *key)
+{
+    xnd_t x;
+
+    if (PyIndex_Check(key)) {
+        PyObject *indices[1] = {key};
+        x = pyxnd_subtree(self->xnd, indices, 1);
+        return value_or_view_copy(self, x);
+    }
+    else if (is_multiindex(key)) {
+        PyObject **indices = &PyTuple_GET_ITEM(key, 0);
+        x = pyxnd_subtree(self->xnd, indices, PyTuple_GET_SIZE(key));
+        return value_or_view_copy(self, x);
+    }
+    else if (PySlice_Check(key)) {
+        PyObject *indices[1] = {key};
+        if (self->xnd.type->tag == FixedDim) {
+            x = pyxnd_multikey(self->xnd, indices, 1);
+            return value_or_view_move(self, x);
+        }
+        goto not_implemented_or_type_error;
+    }
+    else if (is_multikey(key)) {
+        PyObject **indices = &PyTuple_GET_ITEM(key, 0);
+        Py_ssize_t n = PyTuple_GET_SIZE(key);
+        if (self->xnd.type->tag == FixedDim) {
+            x = pyxnd_multikey(self->xnd, indices, n);
+            return value_or_view_move(self, x);
+        }
+        goto not_implemented_or_type_error;
+    }
+    else {
+        PyErr_SetString(PyExc_TypeError, "invalid subscript key");
+        return NULL;
+    }
+
+not_implemented_or_type_error:
+    if (self->xnd.type->tag == VarDim) {
+        PyErr_SetString(PyExc_NotImplementedError,
+            "slicing is not implemented for variable dimensions");
+        return NULL;
+    }
+
+    PyErr_SetString(PyExc_TypeError, "type does not support slicing");
+    return NULL;
+}
 
 static PyObject *
 pyxnd_type(PyObject *self, PyObject *args UNUSED)
 {
     Py_INCREF(TYPE_OWNER(self));
     return TYPE_OWNER(self);
+}
+
+static PyObject *
+pyxnd_ndim(PyObject *self, PyObject *args UNUSED)
+{
+    int ndim = XND_TYPE(self)->ndim;
+    return PyLong_FromLong(ndim);
 }
 
 static PyObject *
@@ -1655,6 +1923,7 @@ static PyGetSetDef pyxnd_getsets [] =
   { "type", (getter)pyxnd_type, NULL, NULL, NULL},
   { "value", (getter)pyxnd_value, NULL, NULL, NULL},
   { "align", (getter)pyxnd_align, NULL, NULL, NULL},
+  { "ndim", (getter)pyxnd_ndim, NULL, NULL, NULL},
   {NULL}
 };
 
@@ -1696,7 +1965,7 @@ static PyTypeObject Xnd_Type =
      Py_TPFLAGS_HAVE_GC),                   /* tp_flags */
     0,                                      /* tp_doc */
     (traverseproc)pyxnd_traverse,           /* tp_traverse */
-    (inquiry)pyxnd_clear,                   /* tp_clear */
+    NULL,                                   /* tp_clear */
     0,                                      /* tp_richcompare */
     0,                                      /* tp_weaklistoffset */
     0,                                      /* tp_iter */

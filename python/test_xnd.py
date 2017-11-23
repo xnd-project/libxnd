@@ -30,11 +30,18 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-import unittest
+import sys, unittest
+from collections import OrderedDict
+from functools import partial
 from ndtypes import ndt
 from xnd import xnd
-from collections import OrderedDict
-import sys
+from randvalue import *
+
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 
 # OrderedDict literals hack.
@@ -315,7 +322,127 @@ class IndexTest(unittest.TestCase):
         self.assertEqual(x[1].value, ["x", "y", "z"])
 
 
+class LongIndexSliceTest(unittest.TestCase):
 
-unittest.main(verbosity=2)
+    def log_err(self, lst, indices_stack, depth):
+        """Dump the error as a Python script for debugging."""
+
+        sys.stderr.write("\n\nfrom xnd import *\n")
+        sys.stderr.write("from test_xnd import NDArray\n")
+        sys.stderr.write("lst = %s\n\n" % lst)
+        sys.stderr.write("x0 = xnd(lst)\n")
+        sys.stderr.write("y0 = NDArray(lst)\n" % lst)
+
+        for i in range(depth+1):
+            sys.stderr.write("x%d = x%d[%s]\n" % (i+1, i, itos(indices_stack[i])))
+            sys.stderr.write("y%d = y%d[%s]\n" % (i+1, i, itos(indices_stack[i])))
+
+        sys.stderr.write("\n")
+
+    def compare(self, lst, x, definition, indices, indices_stack, depth):
+        """Run a single test case."""
+
+        xnd_exc = None
+        try:
+            xnd_result = x[indices]
+        except Exception as e:
+            xnd_exc =  e
+
+        definition_exc = None
+        try:
+            definition_result = definition[indices]
+        except Exception as e:
+            definition_exc = e
+
+        if xnd_exc or definition_exc:
+            if xnd_exc is None and definition_exc.__class__ is IndexError:
+                # Example: type = 0 * 0 * int64
+                if len(indices) <= x.ndim:
+                    return None, None
+
+            if xnd_exc.__class__ is not definition_exc.__class__:
+                self.log_err(lst, indices_stack, depth)
+
+            self.assertIs(xnd_exc.__class__, definition_exc.__class__)
+
+            return None, None
+
+        else:
+            try:
+                if isinstance(xnd_result, xnd):
+                    xnd_lst = xnd_result.value
+                else:
+                    xnd_lst = xnd_result
+            except Exception as e:
+                self.log_err(lst, indices_stack, depth)
+                raise e
+
+            if xnd_lst != definition_result:
+                self.log_err(lst, indices_stack, depth)
+
+            self.assertEqual(xnd_lst, definition_result)
+
+            return xnd_result, definition_result
+
+    def doit(self, array=None, tests=None, genindices=None, genlists=None):
+        indices_stack = [None] * 8
+
+        def check(lst, x, definition, depth):
+            if depth > 3: # adjust for longer tests
+                return
+
+            for indices in genindices():
+                indices_stack[depth] = indices
+                _xnd, _def = self.compare(lst, x, definition, indices,
+                                          indices_stack, depth)
+
+                if isinstance(_def, list): # possibly None or scalar
+                    check(lst, _xnd, _def, depth+1)
+
+        for lst in tests:
+            check(lst, array(lst), NDArray(lst), 0)
+
+        for max_ndim in range(1, 5):
+            for min_shape in (0, 1):
+                for max_shape in range(1, 8):
+                    for lst in genlists(max_ndim, min_shape, max_shape):
+                        check(lst, array(lst), NDArray(lst), 0)
+
+    def test_subarray(self):
+        # Multidimensional indexing
+        self.doit(xnd, FIXED_TEST_CASES, genindices, gen_fixed)
+        # self.doit(xnd, VAR_TEST_CASES, genindices, gen_var)
+
+    def test_slices(self):
+        # Multidimensional slicing
+        genindices = partial(randslices, 3)
+        self.doit(xnd, FIXED_TEST_CASES, genindices, gen_fixed)
+        # self.doit(xnd, VAR_TEST_CASES, genindices, gen_var)
+
+    def test_chained_indices_slices(self):
+        # Multidimensional indexing and slicing, chained
+        self.doit(xnd, FIXED_TEST_CASES, gen_indices_or_slices, gen_fixed)
+        # self.doit(xnd, VAR_TEST_CASES, gen_indices_or_slices, gen_var)
+
+    def test_mixed_indices_slices(self):
+        # Multidimensional indexing and slicing, mixed
+        genindices = partial(mixed_indices, 3)
+        self.doit(xnd, FIXED_TEST_CASES, genindices, gen_fixed)
+        # self.doit(xnd, VAR_TEST_CASES, genindices, gen_var)
+
+    @unittest.skipIf(np is None, "numpy not found")
+    def test_array_definition(self):
+        # Test the NDArray definition against NumPy
+        genindices = partial(mixed_indices, 3)
+        self.doit(np.array, FIXED_TEST_CASES, genindices, gen_fixed)
+
+    @unittest.skipIf(True, "very long duration")
+    def test_slices_brute_force(self):
+        # Test all possible slices for the given ndim and shape
+        genindices = partial(genslices_ndim, 3, [3,3,3])
+        self.doit(np.array, FIXED_TEST_CASES, genindices, gen_fixed)
+        # self.doit(np.array, VAR_TEST_CASES, genindices, gen_var)
 
 
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
