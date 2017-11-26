@@ -61,18 +61,17 @@ class Record(OrderedDict):
 R = Record()
 
 
-primitive = [
-  'bool',
-  'int8', 'int16', 'int32', 'int64',
-  'uint8', 'uint16', 'uint32', 'uint64',
-  'float16', 'float32', 'float64',
-  'complex32', 'complex64', 'complex128'
-]
+class TestPrimitive(unittest.TestCase):
 
+    def test_primitive(self):
+        primitive = [
+           'bool',
+           'int8', 'int16', 'int32', 'int64',
+           'uint8', 'uint16', 'uint32', 'uint64',
+           'float16', 'float32', 'float64',
+           'complex32', 'complex64', 'complex128'
+        ]
 
-class EmptyConstructionTest(unittest.TestCase):
-
-    def test_primitive_empty(self):
         test_cases = [
             '%s', '0 * %s', '1 * %s', 'var(offsets=[0, 2]) * %s',
             '10 * {a: int64, b: %s}'
@@ -85,27 +84,17 @@ class EmptyConstructionTest(unittest.TestCase):
                 x = xnd.empty(s)
                 self.assertEqual(x.type, t)
 
-    def test_fixed_string_empty(self):
-        test_cases = [
-          'fixed_string(1)',
-          'fixed_string(100)',
-          "fixed_string(1, 'ascii')",
-          "fixed_string(100, 'utf8')",
-          "fixed_string(200, 'utf16')",
-          "fixed_string(300, 'utf32')",
-        ]
 
-        for s in test_cases:
-            t = ndt(s)
-            x = xnd.empty(s)
-            self.assertEqual(x.type, t)
+class TestString(unittest.TestCase):
 
-    def test_fixed_bytes_empty(self):
+    def test_string_empty(self):
         test_cases = [
-          'fixed_bytes(size=1)',
-          'fixed_bytes(size=100)',
-          'fixed_bytes(size=1, align=2)',
-          'fixed_bytes(size=100, align=16)',
+          'string',
+          '(string)',
+          '10 * 2 * string',
+          '10 * 2 * (string, string)',
+          '10 * 2 * {a: string, b: string}',
+          'var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * {a: string, b: string}'
         ]
 
         for s in test_cases:
@@ -128,6 +117,27 @@ class EmptyConstructionTest(unittest.TestCase):
             x = xnd.empty(s)
             self.assertEqual(x.type, t)
 
+
+class TestFixedString(unittest.TestCase):
+
+    def test_fixed_string_empty(self):
+        test_cases = [
+          'fixed_string(1)',
+          'fixed_string(100)',
+          "fixed_string(1, 'ascii')",
+          "fixed_string(100, 'utf8')",
+          "fixed_string(200, 'utf16')",
+          "fixed_string(300, 'utf32')",
+        ]
+
+        for s in test_cases:
+            t = ndt(s)
+            x = xnd.empty(s)
+            self.assertEqual(x.type, t)
+
+
+class TestBytes(unittest.TestCase):
+
     def test_bytes_empty(self):
         test_cases = [
           'bytes(align=16)',
@@ -137,6 +147,22 @@ class EmptyConstructionTest(unittest.TestCase):
           '10 * 2 * {a: bytes(align=32), b: bytes(align=1)}',
           '10 * 2 * {a: bytes(align=1), b: bytes(align=32)}',
           'var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * {a: bytes(align=32), b: bytes}'
+        ]
+
+        for s in test_cases:
+            t = ndt(s)
+            x = xnd.empty(s)
+            self.assertEqual(x.type, t)
+
+
+class TestFixedBytes(unittest.TestCase):
+
+    def test_fixed_bytes_empty(self):
+        test_cases = [
+          'fixed_bytes(size=1)',
+          'fixed_bytes(size=100)',
+          'fixed_bytes(size=1, align=2)',
+          'fixed_bytes(size=100, align=16)',
         ]
 
         for s in test_cases:
@@ -322,126 +348,194 @@ class IndexTest(unittest.TestCase):
         self.assertEqual(x[1].value, ["x", "y", "z"])
 
 
-class LongIndexSliceTest(unittest.TestCase):
 
-    def log_err(self, lst, indices_stack, depth):
-        """Dump the error as a Python script for debugging."""
+class TestSpec(unittest.TestCase):
+
+    def __init__(self, *, constr,
+                 values, value_generator,
+                 indices_generator, indices_generator_args):
+        super().__init__()
+        self.constr = constr
+        self.values = values
+        self.value_generator = value_generator
+        self.indices_generator = indices_generator
+        self.indices_generator_args = indices_generator_args
+        self.indices_stack = [None] * 8
+
+    def log_err(self, value, depth):
+        """Dump an error as a Python script for debugging."""
 
         sys.stderr.write("\n\nfrom xnd import *\n")
         sys.stderr.write("from test_xnd import NDArray\n")
-        sys.stderr.write("lst = %s\n\n" % lst)
+        sys.stderr.write("lst = %s\n\n" % value)
         sys.stderr.write("x0 = xnd(lst)\n")
-        sys.stderr.write("y0 = NDArray(lst)\n" % lst)
+        sys.stderr.write("y0 = NDArray(lst)\n" % value)
 
         for i in range(depth+1):
-            sys.stderr.write("x%d = x%d[%s]\n" % (i+1, i, itos(indices_stack[i])))
-            sys.stderr.write("y%d = y%d[%s]\n" % (i+1, i, itos(indices_stack[i])))
+            sys.stderr.write("x%d = x%d[%s]\n" % (i+1, i, itos(self.indices_stack[i])))
+            sys.stderr.write("y%d = y%d[%s]\n" % (i+1, i, itos(self.indices_stack[i])))
 
         sys.stderr.write("\n")
 
-    def compare(self, lst, x, definition, indices, indices_stack, depth):
+    def run_single(self, nd, d, indices):
         """Run a single test case."""
 
-        xnd_exc = None
+        nd_exception = None
         try:
-            xnd_result = x[indices]
+            nd_result = nd[indices]
         except Exception as e:
-            xnd_exc =  e
+            nd_exception =  e
 
-        definition_exc = None
+        def_exception = None
         try:
-            definition_result = definition[indices]
+            def_result = d[indices]
         except Exception as e:
-            definition_exc = e
+            def_exception = e
 
-        if xnd_exc or definition_exc:
-            if xnd_exc is None and definition_exc.__class__ is IndexError:
+        if nd_exception or def_exception:
+            if nd_exception is None and def_exception.__class__ is IndexError:
                 # Example: type = 0 * 0 * int64
-                if len(indices) <= x.ndim:
+                if len(indices) <= nd.ndim:
                     return None, None
 
-            if xnd_exc.__class__ is not definition_exc.__class__:
-                self.log_err(lst, indices_stack, depth)
-
-            self.assertIs(xnd_exc.__class__, definition_exc.__class__)
-
+            self.assertIs(nd_exception.__class__, def_exception.__class__)
             return None, None
 
+        if isinstance(nd_result, xnd):
+            nd_value = nd_result.value
         else:
-            try:
-                if isinstance(xnd_result, xnd):
-                    xnd_lst = xnd_result.value
-                else:
-                    xnd_lst = xnd_result
-            except Exception as e:
-                self.log_err(lst, indices_stack, depth)
-                raise e
+            nd_value = nd_result
 
-            if xnd_lst != definition_result:
-                self.log_err(lst, indices_stack, depth)
+        self.assertEqual(nd_value, def_result)
+        return nd_result, def_result
 
-            self.assertEqual(xnd_lst, definition_result)
-
-            return xnd_result, definition_result
-
-    def doit(self, array=None, tests=None, genindices=None, genlists=None):
-        indices_stack = [None] * 8
-
-        def check(lst, x, definition, depth):
+    def run(self):
+        def check(nd, d, value, depth):
             if depth > 3: # adjust for longer tests
                 return
 
-            for indices in genindices():
-                indices_stack[depth] = indices
-                _xnd, _def = self.compare(lst, x, definition, indices,
-                                          indices_stack, depth)
+            g = self.indices_generator(*self.indices_generator_args)
 
-                if isinstance(_def, list): # possibly None or scalar
-                    check(lst, _xnd, _def, depth+1)
+            for indices in g:
+                self.indices_stack[depth] = indices
 
-        for lst in tests:
-            check(lst, array(lst), NDArray(lst), 0)
+                try:
+                    next_nd, next_d = self.run_single(nd, d, indices)
+                except Exception as e:
+                    self.log_err(value, depth)
+                    raise e
+
+                if isinstance(next_d, list): # possibly None or scalar
+                    check(next_nd, next_d, value, depth+1)
+
+        for value in self.values:
+            nd = self.constr(value)
+            d = NDArray(value)
+            check(nd, d, value, 0)
 
         for max_ndim in range(1, 5):
             for min_shape in (0, 1):
                 for max_shape in range(1, 8):
-                    for lst in genlists(max_ndim, min_shape, max_shape):
-                        check(lst, array(lst), NDArray(lst), 0)
+                    for value in self.value_generator(max_ndim, min_shape, max_shape):
+                        nd = self.constr(value)
+                        d = NDArray(value)
+                        check(nd, d, value, 0)
+
+class LongIndexSliceTest(unittest.TestCase):
 
     def test_subarray(self):
         # Multidimensional indexing
-        self.doit(xnd, FIXED_TEST_CASES, genindices, gen_fixed)
-        # self.doit(xnd, VAR_TEST_CASES, genindices, gen_var)
+        t = TestSpec(constr=xnd,
+                     values=FIXED_TEST_CASES,
+                     value_generator=gen_fixed,
+                     indices_generator=genindices,
+                     indices_generator_args=())
+        t.run()
+
+        t = TestSpec(constr=xnd,
+                     values=VAR_TEST_CASES,
+                     value_generator=gen_var,
+                     indices_generator=genindices,
+                     indices_generator_args=())
+        t.run()
 
     def test_slices(self):
         # Multidimensional slicing
-        genindices = partial(randslices, 3)
-        self.doit(xnd, FIXED_TEST_CASES, genindices, gen_fixed)
-        # self.doit(xnd, VAR_TEST_CASES, genindices, gen_var)
+        t = TestSpec(constr=xnd,
+                     values=FIXED_TEST_CASES,
+                     value_generator=gen_fixed,
+                     indices_generator=randslices,
+                     indices_generator_args=(3,))
+        t.run()
+
+        t = TestSpec(constr=xnd,
+                     values=VAR_TEST_CASES,
+                     value_generator=gen_var,
+                     indices_generator=randslices,
+                     indices_generator_args=(3,))
+        t.run()
 
     def test_chained_indices_slices(self):
         # Multidimensional indexing and slicing, chained
-        self.doit(xnd, FIXED_TEST_CASES, gen_indices_or_slices, gen_fixed)
-        # self.doit(xnd, VAR_TEST_CASES, gen_indices_or_slices, gen_var)
+        t = TestSpec(constr=xnd,
+                     values=FIXED_TEST_CASES,
+                     value_generator=gen_fixed,
+                     indices_generator=gen_indices_or_slices,
+                     indices_generator_args=())
+        t.run()
 
-    def test_mixed_indices_slices(self):
+
+        t = TestSpec(constr=xnd,
+                     values=VAR_TEST_CASES,
+                     value_generator=gen_var,
+                     indices_generator=gen_indices_or_slices,
+                     indices_generator_args=())
+        t.run()
+
+    def test_fixed_mixed_indices_slices(self):
         # Multidimensional indexing and slicing, mixed
-        genindices = partial(mixed_indices, 3)
-        self.doit(xnd, FIXED_TEST_CASES, genindices, gen_fixed)
-        # self.doit(xnd, VAR_TEST_CASES, genindices, gen_var)
+        t = TestSpec(constr=xnd,
+                     values=FIXED_TEST_CASES,
+                     value_generator=gen_fixed,
+                     indices_generator=mixed_indices,
+                     indices_generator_args=(3,))
+        t.run()
 
-    @unittest.skipIf(np is None, "numpy not found")
-    def test_array_definition(self):
-        # Test the NDArray definition against NumPy
-        genindices = partial(mixed_indices, 3)
-        self.doit(np.array, FIXED_TEST_CASES, genindices, gen_fixed)
+    def test_var_mixed_indices_slices(self):
+        x = xnd([[1], [2, 3], [4, 5, 6]])
+
+        indices = (0, slice(0,1,1))
+        self.assertRaises(IndexError, x.__getitem__, indices)
+
+        indices = (slice(0,1,1), 0)
+        self.assertRaises(IndexError, x.__getitem__, indices)
 
     @unittest.skipIf(True, "very long duration")
     def test_slices_brute_force(self):
         # Test all possible slices for the given ndim and shape
-        genindices = partial(genslices_ndim, 3, [3,3,3])
-        self.doit(np.array, FIXED_TEST_CASES, genindices, gen_fixed)
-        # self.doit(np.array, VAR_TEST_CASES, genindices, gen_var)
+        t = TestSpec(constr=xnd,
+                     values=FIXED_TEST_CASES,
+                     value_generator=gen_fixed,
+                     indices_generator=genslices_ndim,
+                     indices_generator_args=(3, [3,3,3]))
+        t.run()
+
+        t = TestSpec(constr=xnd,
+                     values=VAR_TEST_CASES,
+                     value_generator=gen_var,
+                     indices_generator=genslices_ndim,
+                     indices_generator_args=(3, [3,3,3]))
+        t.run()
+
+    @unittest.skipIf(np is None, "numpy not found")
+    def test_array_definition(self):
+        # Test the NDArray definition against NumPy
+        t = TestSpec(constr=np.array,
+                     values=FIXED_TEST_CASES,
+                     value_generator=gen_fixed,
+                     indices_generator=mixed_indices,
+                     indices_generator_args=(3,))
+        t.run()
 
 
 if __name__ == '__main__':

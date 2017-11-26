@@ -967,6 +967,79 @@ pyxnd_new(PyTypeObject *tp, PyObject *args, PyObject *kwds)
 /*                                 xnd methods                                */
 /******************************************************************************/
 
+/*
+ * Compute the current start index, step and shape of a var dimension.
+ * Recomputing the values avoids a potentially very large shape array
+ * per dimension (same size as the offset array).
+ */
+static Py_ssize_t
+ndt_var_indices(Py_ssize_t *res_start, Py_ssize_t *res_step, const ndt_t *t,
+                int32_t index)
+{
+    int64_t list_start, list_stop, list_shape;
+    int64_t start, stop, step;
+    int64_t res_shape;
+    const ndt_slice_t *slices;
+    int32_t i;
+
+    assert(ndt_is_concrete(t));
+    assert(t->tag == VarDim);
+    assert(0 <= index && index+1 < t->Concrete.VarDim.noffsets);
+
+    list_start = t->Concrete.VarDim.offsets[index];
+    list_stop = t->Concrete.VarDim.offsets[index+1];
+    list_shape = list_stop - list_start;
+
+    *res_start = 0;
+    *res_step = 1;
+    res_shape = list_shape;
+    slices = t->Concrete.VarDim.slices;
+
+    for (i = 0; i < t->Concrete.VarDim.nslices; i++) {
+        start = slices[i].start;
+        stop = slices[i].stop;
+        step = slices[i].step;
+        res_shape = PySlice_AdjustIndices(res_shape, &start, &stop, step);
+        *res_start += (start * *res_step);
+        *res_step *= step;
+    }
+
+    *res_start += list_start;
+
+    return res_shape;
+}
+
+static ndt_slice_t *
+ndt_var_add_slice(int32_t *nslices, const ndt_t *t, 
+                  Py_ssize_t start, Py_ssize_t stop, Py_ssize_t step,
+                  ndt_context_t *ctx)
+{
+    int n = t->Concrete.VarDim.nslices;
+    ndt_slice_t *slices;
+
+    assert(ndt_is_concrete(t));
+    assert(t->tag == VarDim);
+
+    if (n == INT_MAX) {
+        PyErr_SetString(PyExc_OverflowError, "slice stack overflow");
+        return NULL;
+    }
+
+    slices = ndt_alloc(n+1, sizeof *slices);
+    if (slices == NULL) {
+        return ndt_memory_error(ctx);
+    }
+    memcpy(slices, t->Concrete.VarDim.slices, n * (sizeof *slices));
+
+    slices[n].start = start;
+    slices[n].stop = stop;
+    slices[n].step = step;
+
+    *nslices = n+1;
+
+    return slices;
+}
+
 static int
 dict_set_item(PyObject *dict, const char *k, PyObject *value)
 {
@@ -1028,13 +1101,9 @@ _pyxnd_value(xnd_t x)
 
     case VarDim: {
         PyObject *lst, *v;
-        int32_t start, stop, shape, i;
+        Py_ssize_t start, step, shape, i;
 
-        assert(0 <= x.index && x.index+1 < t->Concrete.VarDim.noffsets);
-
-        start = t->Concrete.VarDim.offsets[x.index];
-        stop = t->Concrete.VarDim.offsets[x.index+1];
-        shape = stop - start;
+        shape = ndt_var_indices(&start, &step, t, x.index);
 
         lst = PyList_New(shape);
         if (lst == NULL) {
@@ -1045,7 +1114,7 @@ _pyxnd_value(xnd_t x)
         next.ptr = x.ptr;
 
         for (i = 0; i < shape; i++) {
-            next.index =  start + i;
+            next.index =  start + i * step;
             v = _pyxnd_value(next);
             if (v == NULL) {
                 Py_DECREF(lst);
@@ -1485,12 +1554,6 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
 
     assert(ndt_is_concrete(t));
 
-    /* Add the linear index from var dimensions. For a chain of fixed
-       dimensions, x.index is zero. */
-    if (t->ndim == 0) {
-        x.ptr += x.index * t->data_size;
-    }
-
     if (len == 0) {
         if (ndt_is_optional(t)) {
             PyErr_SetString(PyExc_NotImplementedError,
@@ -1498,6 +1561,12 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
             return xnd_error;
         }
         return x;
+    }
+
+    /* Add the linear index from var dimensions. For a chain of fixed
+       dimensions, x.index is zero. */
+    if (t->ndim == 0) {
+        x.ptr += x.index * t->data_size;
     }
 
     key = indices[0];
@@ -1517,7 +1586,7 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
     }
 
     case VarDim: {
-        int32_t start, stop, shape;
+        Py_ssize_t start, step, shape;
         Py_ssize_t i;
 
         if (ndt_is_optional(t)) {
@@ -1526,18 +1595,15 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
             return xnd_error;
         }
 
-        assert(0 <= x.index && x.index+1 < t->Concrete.VarDim.noffsets);
-
-        start = t->Concrete.VarDim.offsets[x.index];
-        stop = t->Concrete.VarDim.offsets[x.index+1];
-        shape = stop - start;
+        shape = ndt_var_indices(&start, &step, t, x.index);
 
         i = get_index(key, shape);
         if (i < 0) {
             return xnd_error;
         }
 
-        next.index = start + i;
+
+        next.index = start + i * step;
         next.type = t->VarDim.type;
         next.ptr = x.ptr;
 
@@ -1669,31 +1735,9 @@ pyxnd_index(xnd_t x, PyObject *indices[], int len)
     }
 
     case VarDim: {
-        int32_t start, stop, shape;
-        Py_ssize_t i;
-
-        if (ndt_is_optional(t)) {
-            PyErr_SetString(PyExc_NotImplementedError,
-                "optional dimensions are temporarily disabled");
-            return xnd_error;
-        }
-
-        assert(0 <= x.index && x.index+1 < t->Concrete.VarDim.noffsets);
-
-        start = t->Concrete.VarDim.offsets[x.index];
-        stop = t->Concrete.VarDim.offsets[x.index+1];
-        shape = stop - start;
-
-        i = get_index(key, shape);
-        if (i < 0) {
-            return xnd_error;
-        }
-
-        next.index = start + i;
-        next.type = t->VarDim.type;
-        next.ptr = x.ptr;
-
-        break;
+        PyErr_SetString(PyExc_IndexError,
+            "mixed indexing and slicing is not supported for var dimensions");
+        return xnd_error;
     }
 
     default:
@@ -1724,7 +1768,7 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
     case FixedDim: {
         Py_ssize_t start, stop, step, shape;
         if (PySlice_GetIndicesEx(key, t->FixedDim.shape,
-                                  &start, &stop, &step, &shape) < 0) {
+                                 &start, &stop, &step, &shape) < 0) {
             return xnd_error;
         }
 
@@ -1751,9 +1795,48 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
     }
 
     case VarDim: {
-        PyErr_SetString(PyExc_NotImplementedError,
-            "slicing var dimensions is not implemented");
-        return xnd_error;
+        Py_ssize_t start, stop, step;
+        ndt_slice_t *slices;
+        int32_t nslices;
+
+        if (ndt_is_optional(t)) {
+            PyErr_SetString(PyExc_NotImplementedError,
+                "optional dimensions are temporarily disabled");
+            return xnd_error;
+        }
+
+        if (PySlice_Unpack(key, &start, &stop, &step) < 0) {
+            return xnd_error;
+        }
+
+        next.index = x.index;
+        next.type = t->VarDim.type;
+        next.ptr = x.ptr;
+
+        next = pyxnd_multikey(next, indices+1, len-1);
+        if (next.ptr == NULL) {
+            return xnd_error;
+        }
+
+        slices = ndt_var_add_slice(&nslices, t, start, stop, step, &ctx);
+        if (slices == NULL) {
+            seterr(&ctx);
+            return xnd_error;
+        }
+
+        x.index = next.index;
+        x.type = ndt_var_dim((ndt_t *)next.type,
+                             ExternalOffsets,
+                             t->Concrete.VarDim.noffsets, t->Concrete.VarDim.offsets,
+                             nslices, slices,
+                             &ctx);
+        if (x.type == NULL) {
+            seterr(&ctx);
+            return xnd_error;
+        }
+        x.ptr = next.ptr;
+
+        return x;
     }
 
     case Tuple: {
@@ -1859,35 +1942,19 @@ pyxnd_subscript(XndObject *self, PyObject *key)
     }
     else if (PySlice_Check(key)) {
         PyObject *indices[1] = {key};
-        if (self->xnd.type->tag == FixedDim) {
-            x = pyxnd_multikey(self->xnd, indices, 1);
-            return value_or_view_move(self, x);
-        }
-        goto not_implemented_or_type_error;
+        x = pyxnd_multikey(self->xnd, indices, 1);
+        return value_or_view_move(self, x);
     }
     else if (is_multikey(key)) {
         PyObject **indices = &PyTuple_GET_ITEM(key, 0);
         Py_ssize_t n = PyTuple_GET_SIZE(key);
-        if (self->xnd.type->tag == FixedDim) {
-            x = pyxnd_multikey(self->xnd, indices, n);
-            return value_or_view_move(self, x);
-        }
-        goto not_implemented_or_type_error;
+        x = pyxnd_multikey(self->xnd, indices, n);
+        return value_or_view_move(self, x);
     }
     else {
         PyErr_SetString(PyExc_TypeError, "invalid subscript key");
         return NULL;
     }
-
-not_implemented_or_type_error:
-    if (self->xnd.type->tag == VarDim) {
-        PyErr_SetString(PyExc_NotImplementedError,
-            "slicing is not implemented for variable dimensions");
-        return NULL;
-    }
-
-    PyErr_SetString(PyExc_TypeError, "type does not support slicing");
-    return NULL;
 }
 
 static PyObject *

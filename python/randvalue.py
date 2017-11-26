@@ -178,6 +178,9 @@ def rslice(ndim):
     step = 0
     while step == 0:
         step = randrange(-ndim-1, ndim+1)
+    start = None if randrange(5) == 4 else start
+    stop = None if randrange(5) == 4 else stop
+    step = None if randrange(5) == 4 else step
     return slice(start, stop, step)
 
 def multislice(ndim):
@@ -196,17 +199,19 @@ def gen_indices_or_slices():
 
 def genslices(n):
     """Generate all possible slices for a single dimension."""
-    ret = []
-    for t in product(range(-n, n+1), range(-n, n+1), range(-n, n+1)):
+    def range_with_none():
+        yield None
+        yield from range(-n, n+1)
+
+    for t in product(range_with_none(), range_with_none(), range_with_none()):
         s = slice(*t)
         if s.step != 0:
-            ret.append(s)
-    return ret
+            yield s
 
 def genslices_ndim(ndim, shape):
     """Generate all possible slice tuples for 'shape'."""
     iterables = [genslices(shape[n]) for n in range(ndim)]
-    return product(*iterables)
+    yield from product(*iterables)
 
 def mixed_index(max_ndim):
     ndim = randrange(1, max_ndim+1)
