@@ -11,7 +11,7 @@ __all__ = ['xnd', 'typeof', '_typeof']
 # ======================================================================
 
 class xnd(_xnd):
-    def __new__(cls, value=None, type=None, levels=None):
+    def __new__(cls, value, *, type=None, levels=None):
         if type is None:
             if levels is not None:
                 args = ', '.join("'%s'" % l if l is not None else 'NA' for l in levels)
@@ -25,7 +25,7 @@ class xnd(_xnd):
                     "the 'type' and 'levels' arguments are mutually exclusive")
             elif isinstance(type, str):
                 type = ndt(type)
-        return super().__new__(cls, type, value)
+        return super().__new__(cls, value=value, type=type)
 
     @classmethod
     def empty(cls, t):

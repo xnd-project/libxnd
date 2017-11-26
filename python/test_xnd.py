@@ -102,38 +102,40 @@ class TestString(unittest.TestCase):
             x = xnd.empty(s)
             self.assertEqual(x.type, t)
 
-    def test_string_empty(self):
-        test_cases = [
-          'string',
-          '(string)',
-          '10 * 2 * string',
-          '10 * 2 * (string, string)',
-          '10 * 2 * {a: string, b: string}',
-          'var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * {a: string, b: string}'
-        ]
+        t = ndt('string')
+        x = xnd.empty(t)
+        self.assertEqual(x.type, t)
+        self.assertEqual(x.value, '')
 
-        for s in test_cases:
-            t = ndt(s)
-            x = xnd.empty(s)
-            self.assertEqual(x.type, t)
+        t = ndt('10 * string')
+        x = xnd.empty(t)
+        self.assertEqual(x.type, t)
+        for i in range(10):
+            self.assertEqual(x[i], '')
+
+    def test_string(self):
+        t = '2 * {a: complex128, b: string}'
+        x = xnd([R['a': 2+3j, 'b': "thisguy"], R['a': 1+4j, 'b': "thatguy"]], type=t)
+
+        self.assertEqual(x[0]['b'], "thisguy")
+        self.assertEqual(x[1]['b'], "thatguy")
 
 
 class TestFixedString(unittest.TestCase):
 
     def test_fixed_string_empty(self):
         test_cases = [
-          'fixed_string(1)',
-          'fixed_string(100)',
-          "fixed_string(1, 'ascii')",
-          "fixed_string(100, 'utf8')",
-          "fixed_string(200, 'utf16')",
-          "fixed_string(300, 'utf32')",
+          ('fixed_string(1)', '\x00'),
+          ('fixed_string(3)', 3 * '\x00'),
+          ("fixed_string(1, 'ascii')", '\x00'),
+          ("fixed_string(3, 'utf8')", 3 * '\x00'),
         ]
 
-        for s in test_cases:
+        for s, v in test_cases:
             t = ndt(s)
             x = xnd.empty(s)
             self.assertEqual(x.type, t)
+            self.assertEqual(x.value, v)
 
 
 class TestBytes(unittest.TestCase):
