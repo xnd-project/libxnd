@@ -1,6 +1,9 @@
 #include <Python.h>
 
 
+/* PSF copyright: Written by Jim Hugunin and Chris Chase. */
+
+
 int
 pyslice_unpack(PyObject *_r,
                Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step)
