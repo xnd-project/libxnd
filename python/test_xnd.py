@@ -129,6 +129,9 @@ class TestFixedString(unittest.TestCase):
           ('fixed_string(3)', 3 * '\x00'),
           ("fixed_string(1, 'ascii')", '\x00'),
           ("fixed_string(3, 'utf8')", 3 * '\x00'),
+          ("fixed_string(3, 'utf16')", 3 * '\x00'),
+          ("fixed_string(3, 'utf32')", 3 * '\x00'),
+          ("2 * fixed_string(3, 'utf32')", 2 * [3 * '\x00']),
         ]
 
         for s, v in test_cases:
@@ -136,6 +139,22 @@ class TestFixedString(unittest.TestCase):
             x = xnd.empty(s)
             self.assertEqual(x.type, t)
             self.assertEqual(x.value, v)
+
+    def test_fixed_string(self):
+        t = "2 * fixed_string(3, 'utf16')"
+        v = ["\u1111\u2222\u3333", "\u1112\u2223\u3334"]
+        x = xnd(v, type=t)
+
+        self.assertEqual(x[0], v[0])
+        self.assertEqual(x[1], v[1])
+
+
+        t = "2 * fixed_string(3, 'utf32')"
+        v = ["\U00011111\U00022222\U00033333", "\U00011112\U00022223\U00033334"]
+        x = xnd(v, type=t)
+
+        self.assertEqual(x[0], v[0])
+        self.assertEqual(x[1], v[1])
 
 
 class TestBytes(unittest.TestCase):

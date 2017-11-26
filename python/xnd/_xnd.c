@@ -625,9 +625,10 @@ mblock_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            if (len >= (int64_t)t->FixedString.size) {
+            if (len > (int64_t)t->FixedString.size) {
                 PyErr_Format(PyExc_ValueError,
-                    "maximum string size is %" PRIi64, t->FixedString.size);
+                    "maximum string size (in code points) is %" PRIi64,
+                    t->FixedString.size);
                 return -1;
             }
 
@@ -643,9 +644,10 @@ mblock_init(xnd_t x, PyObject *v)
             }
 
             // XXX
-            if (len >= (int64_t)t->FixedString.size) {
+            if (len > (int64_t)t->FixedString.size) {
                 PyErr_Format(PyExc_ValueError,
-                    "maximum string size is %" PRIi64, t->FixedString.size);
+                    "maximum string size (in code points) is %" PRIi64,
+                    t->FixedString.size);
                 return -1;
             }
 
@@ -660,9 +662,10 @@ mblock_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            if (len >= (int64_t)t->FixedString.size) {
+            if (len > (int64_t)t->FixedString.size) {
                 PyErr_Format(PyExc_ValueError,
-                    "maximum string size is %" PRIi64, t->FixedString.size);
+                    "maximum string size (in code points) is %" PRIi64,
+                    t->FixedString.size);
                 return -1;
             }
 
@@ -677,13 +680,14 @@ mblock_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            if (len >= (int64_t)t->FixedString.size) {
+            if (len > (int64_t)t->FixedString.size) {
                 PyErr_Format(PyExc_ValueError,
-                    "maximum string size is %" PRIi64, t->FixedString.size);
+                    "maximum string size (in code points) is %" PRIi64,
+                    t->FixedString.size);
                 return -1;
             }
 
-            memcpy(x.ptr, PyUnicode_4BYTE_DATA(v), len * sizeof(uint64_t));
+            memcpy(x.ptr, PyUnicode_4BYTE_DATA(v), len * sizeof(uint32_t));
             return 0;
         }
 
@@ -1349,11 +1353,11 @@ _pyxnd_value(xnd_t x)
 
         case Utf16:
             return PyUnicode_FromKindAndData(PyUnicode_2BYTE_KIND, x.ptr,
-                                             t->FixedString.size/2);
+                                             t->FixedString.size);
 
         case Utf32:
             return PyUnicode_FromKindAndData(PyUnicode_4BYTE_KIND, x.ptr,
-                                             t->FixedString.size/4);
+                                             t->FixedString.size);
 
         case Ucs2:
             PyErr_SetString(PyExc_NotImplementedError,
