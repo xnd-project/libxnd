@@ -41,6 +41,10 @@
 #include "pyndtypes.h"
 #include "xnd.h"
 
+#if PY_VERSION_HEX < 0x03050000
+  #include "compat.h"
+#endif
+
 
 #ifdef _MSC_VER
   #ifndef UNUSED
