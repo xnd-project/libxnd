@@ -40,10 +40,7 @@
 #include "ndtypes.h"
 #include "pyndtypes.h"
 #include "xnd.h"
-
-#if PY_VERSION_HEX < 0x03050000
-  #include "compat.h"
-#endif
+#include "compat.h"
 
 
 #ifdef _MSC_VER
@@ -1003,7 +1000,7 @@ ndt_var_indices(Py_ssize_t *res_start, Py_ssize_t *res_step, const ndt_t *t,
         start = slices[i].start;
         stop = slices[i].stop;
         step = slices[i].step;
-        res_shape = PySlice_AdjustIndices(res_shape, &start, &stop, step);
+        res_shape = pyslice_adjust_indices(res_shape, &start, &stop, step);
         *res_start += (start * *res_step);
         *res_step *= step;
     }
@@ -1809,7 +1806,7 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
             return xnd_error;
         }
 
-        if (PySlice_Unpack(key, &start, &stop, &step) < 0) {
+        if (pyslice_unpack(key, &start, &stop, &step) < 0) {
             return xnd_error;
         }
 

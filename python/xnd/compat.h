@@ -2,7 +2,7 @@
 
 
 int
-PySlice_Unpack(PyObject *_r,
+pyslice_unpack(PyObject *_r,
                Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step)
 {
     PySliceObject *r = (PySliceObject*)_r;
@@ -47,8 +47,8 @@ PySlice_Unpack(PyObject *_r,
 }
 
 Py_ssize_t
-PySlice_AdjustIndices(Py_ssize_t length,
-                      Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t step)
+pyslice_adjust_indices(Py_ssize_t length,
+                       Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t step)
 {
     /* this is harder to get right than you might think */
 
