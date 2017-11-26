@@ -1371,7 +1371,10 @@ _pyxnd_value(xnd_t x)
     }
 
     case String: {
-        return PyUnicode_FromString(XND_POINTER_DATA(x.ptr));
+        const char *s = XND_POINTER_DATA(x.ptr);
+        Py_ssize_t size = s ? strlen(s) : 0;
+
+        return PyUnicode_FromStringAndSize(s, size);
     }
 
     case Bytes: {
