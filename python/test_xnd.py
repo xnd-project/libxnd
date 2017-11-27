@@ -67,11 +67,11 @@ PRIMITIVE = [
 HALF_FLOAT_PRIMITIVE = ['float16', 'complex32']
 
 EMPTY_TEST_CASES = [
-        (0, "%s"),
-        ([], "0 * %s"),
-        ([0], "1 * %s"),
-        ([0, 0], "var(offsets=[0, 2]) * %s"),
-        (3 * [{"a": 0, "b": 0}], "3 * {a: int64, b: %s}")
+    (0, "%s"),
+    ([], "0 * %s"),
+    ([0], "1 * %s"),
+    ([0, 0], "var(offsets=[0, 2]) * %s"),
+    (3 * [{"a": 0, "b": 0}], "3 * {a: int64, b: %s}")
 ]
 
 
@@ -86,6 +86,26 @@ class TestPrimitive(unittest.TestCase):
                 x = xnd.empty(ts)
                 self.assertEqual(x.value, value)
                 self.assertEqual(x.type, ndt(ts))
+
+    def test_bool(self):
+        class mybool(object):
+            def __bool__(self):
+                raise MemoryError
+
+        x = xnd(True, type="bool")
+        self.assertIs(x.value, True)
+
+        x = xnd(False, type="bool")
+        self.assertIs(x.value, False)
+
+        x = xnd(1, type="bool")
+        self.assertIs(x.value, True)
+
+        x = xnd(0, type="bool")
+        self.assertIs(x.value, False)
+
+        b = mybool()
+        self.assertRaises(MemoryError, xnd, b, type="bool")
 
     @requires_py36
     def test_float16(self):

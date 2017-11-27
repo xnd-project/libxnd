@@ -449,7 +449,7 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case Bool: {
-        int tmp = PyObject_IsTrue(v);
+        int tmp;
         bool b;
 
         tmp = PyObject_IsTrue(v);
