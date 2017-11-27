@@ -332,6 +332,36 @@ class TestPrimitive(unittest.TestCase):
         self.assertTrue(isnan(x.value.real))
         self.assertTrue(isnan(x.value.imag))
 
+    def test_complex128(self):
+        fromhex = float.fromhex
+
+        # Test bounds.
+        DENORM_MIN = fromhex("0x0.0000000000001p-1022")
+        LOWEST = fromhex("-0x1.fffffffffffffp+1023")
+        MAX = fromhex("0x1.fffffffffffffp+1023")
+
+        v = complex(DENORM_MIN, DENORM_MIN)
+        x = xnd(v, type="complex128")
+        self.assertEqual(x.value, v)
+
+        v = complex(LOWEST, LOWEST)
+        x = xnd(v, type="complex128")
+        self.assertEqual(x.value, v)
+
+        v = complex(MAX, MAX)
+        x = xnd(v, type="complex128")
+        self.assertEqual(x.value, v)
+
+        # Test special values.
+        x = xnd(complex("inf"), type="complex128")
+        self.assertTrue(isinf(x.value.real))
+        self.assertTrue(isinf(x.value.imag))
+
+        x = xnd(complex("nan"), type="complex128")
+        self.assertTrue(isnan(x.value.real))
+        self.assertTrue(isnan(x.value.imag))
+
+
 class TestString(unittest.TestCase):
 
     def test_string_empty(self):
