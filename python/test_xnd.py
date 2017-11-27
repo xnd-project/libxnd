@@ -43,6 +43,18 @@ except ImportError:
     np = None
 
 
+SKIP_LONG = True
+SKIP_BRUTE_FORCE = True
+
+if '--long' in sys.argv:
+    SKIP_LONG = False
+    sys.argv.remove('--long')
+if '--all' in sys.argv:
+    SKIP_LONG = False
+    SKIP_BRUTE_FORCE = False
+    sys.argv.remove('--all')
+
+
 class TestPrimitive(unittest.TestCase):
 
     def test_primitive_empty(self):
@@ -447,6 +459,7 @@ class TestSpec(unittest.TestCase):
                         d = NDArray(value)
                         check(nd, d, value, 0)
 
+@unittest.skipIf(SKIP_LONG, "use --long argument to enable these tests")
 class LongIndexSliceTest(unittest.TestCase):
 
     def test_subarray(self):
@@ -516,7 +529,7 @@ class LongIndexSliceTest(unittest.TestCase):
         indices = (slice(0,1,1), 0)
         self.assertRaises(IndexError, x.__getitem__, indices)
 
-    @unittest.skipIf(True, "very long duration")
+    @unittest.skipIf(SKIP_BRUTE_FORCE, "use --all argument to enable these tests")
     def test_slices_brute_force(self):
         # Test all possible slices for the given ndim and shape
         t = TestSpec(constr=xnd,
