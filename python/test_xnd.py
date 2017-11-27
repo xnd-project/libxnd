@@ -34,7 +34,7 @@ import sys, unittest
 from math import isinf, isnan
 from ndtypes import ndt
 from xnd import xnd
-from support import R, requires_py36
+from support import *
 from randvalue import *
 
 
@@ -88,24 +88,53 @@ class TestPrimitive(unittest.TestCase):
                 self.assertEqual(x.type, ndt(ts))
 
     def test_bool(self):
-        class mybool(object):
-            def __bool__(self):
-                raise MemoryError
-
+        # From bool.
         x = xnd(True, type="bool")
         self.assertIs(x.value, True)
 
         x = xnd(False, type="bool")
         self.assertIs(x.value, False)
 
+        # From int.
         x = xnd(1, type="bool")
         self.assertIs(x.value, True)
 
         x = xnd(0, type="bool")
         self.assertIs(x.value, False)
 
-        b = mybool()
+        # Test broken input.
+        b = BoolMemoryError()
         self.assertRaises(MemoryError, xnd, b, type="bool")
+
+    def test_signed(self):
+        # Test bounds.
+        for n in (8, 16, 32, 64):
+            t = "int%d" % n
+
+            v = -2**(n-1)
+            x = xnd(v, type=t)
+            self.assertEqual(x.value, v)
+            self.assertRaises((ValueError, OverflowError), xnd, v-1, type=t)
+
+            v = 2**(n-1) - 1
+            x = xnd(v, type=t)
+            self.assertEqual(x.value, v)
+            self.assertRaises((ValueError, OverflowError), xnd, v+1, type=t)
+
+        # Test index.
+        i = Index()
+        for n in (8, 16, 32, 64):
+            t = "int%d" % n
+            x = xnd(i, type=t)
+            self.assertEqual(x.value, 10)
+
+        # Test broken input.
+        for n in (8, 16, 32, 64):
+            t = "int%d" % n
+            i = IndexMemoryError()
+            self.assertRaises(MemoryError, xnd, i, type=t)
+            i = IndexTypeError()
+            self.assertRaises(TypeError, xnd, i, type=t)
 
     @requires_py36
     def test_float16(self):

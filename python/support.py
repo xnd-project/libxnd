@@ -22,6 +22,25 @@ class Record(OrderedDict):
 
 R = Record()
 
+
+# Broken classes.
+class BoolMemoryError(object):
+    def __bool__(self):
+        raise MemoryError
+
+class Index(object):
+    def __index__(self):
+        return 10
+
+class IndexMemoryError(object):
+    def __index__(self):
+        raise MemoryError
+
+class IndexTypeError(object):
+    def __index__(self):
+        return ""
+
+
 requires_py36 = unittest.skipUnless(
     sys.version_info > (3, 6),
     "test requires Python 3.6 or greater")
