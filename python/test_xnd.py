@@ -87,13 +87,51 @@ class TestPrimitive(unittest.TestCase):
                 self.assertEqual(x.value, value)
                 self.assertEqual(x.type, ndt(ts))
 
-    def test_float32(self):
+    @requires_py36
+    def test_float16(self):
+        fromhex = float.fromhex
+
+        # Test creation and initialization of empty xnd objects.
+        for value, type_string in EMPTY_TEST_CASES:
+            for p in HALF_FLOAT_PRIMITIVE:
+                ts = type_string % p
+                x = xnd.empty(ts)
+                self.assertEqual(x.value, value)
+                self.assertEqual(x.type, ndt(ts))
 
         # Test bounds.
-        DENORM_MIN = float.fromhex("0x1p-149")
-        LOWEST = float.fromhex("-0x1.fffffep+127")
-        MAX = float.fromhex("0x1.fffffep+127")
-        INF = float.fromhex("0x1.ffffffp+127")
+        DENORM_MIN = fromhex("0x1p-24")
+        LOWEST = fromhex("-0x1.ffcp+15")
+        MAX = fromhex("0x1.ffcp+15")
+        INF = fromhex("0x1.ffep+15")
+
+        x = xnd(DENORM_MIN, type="float16")
+        self.assertEqual(x.value, DENORM_MIN)
+
+        x = xnd(LOWEST, type="float16")
+        self.assertEqual(x.value, LOWEST)
+
+        x = xnd(MAX, type="float16")
+        self.assertEqual(x.value, MAX)
+
+        self.assertRaises(OverflowError, xnd, INF, type="float16")
+        self.assertRaises(OverflowError, xnd, -INF, type="float16")
+
+        # Test special values.
+        x = xnd(float("inf"), type="float16")
+        self.assertTrue(isinf(x.value))
+
+        x = xnd(float("nan"), type="float16")
+        self.assertTrue(isnan(x.value))
+
+    def test_float32(self):
+        fromhex = float.fromhex
+
+        # Test bounds.
+        DENORM_MIN = fromhex("0x1p-149")
+        LOWEST = fromhex("-0x1.fffffep+127")
+        MAX = fromhex("0x1.fffffep+127")
+        INF = fromhex("0x1.ffffffp+127")
 
         x = xnd(DENORM_MIN, type="float32")
         self.assertEqual(x.value, DENORM_MIN)
@@ -114,41 +152,30 @@ class TestPrimitive(unittest.TestCase):
         x = xnd(float("nan"), type="float32")
         self.assertTrue(isnan(x.value))
 
-    @requires_py36
-    def test_float16(self):
-
-        # Test creation and initialization of empty xnd objects.
-        for value, type_string in EMPTY_TEST_CASES:
-            for p in HALF_FLOAT_PRIMITIVE:
-                ts = type_string % p
-                x = xnd.empty(ts)
-                self.assertEqual(x.value, value)
-                self.assertEqual(x.type, ndt(ts))
+    def test_float64(self):
+        fromhex = float.fromhex
 
         # Test bounds.
-        DENORM_MIN = float.fromhex("0x1p-24")
-        LOWEST = float.fromhex("-0x1.ffcp+15")
-        MAX = float.fromhex("0x1.ffcp+15")
-        INF = float.fromhex("0x1.ffep+15")
+        DENORM_MIN = fromhex("0x0.0000000000001p-1022")
+        LOWEST = fromhex("-0x1.fffffffffffffp+1023")
+        MAX = fromhex("0x1.fffffffffffffp+1023")
 
-        x = xnd(DENORM_MIN, type="float16")
+        x = xnd(DENORM_MIN, type="float64")
         self.assertEqual(x.value, DENORM_MIN)
 
-        x = xnd(LOWEST, type="float16")
+        x = xnd(LOWEST, type="float64")
         self.assertEqual(x.value, LOWEST)
 
-        x = xnd(MAX, type="float16")
+        x = xnd(MAX, type="float64")
         self.assertEqual(x.value, MAX)
 
-        self.assertRaises(OverflowError, xnd, INF, type="float16")
-        self.assertRaises(OverflowError, xnd, -INF, type="float16")
-
         # Test special values.
-        x = xnd(float("inf"), type="float16")
+        x = xnd(float("inf"), type="float64")
         self.assertTrue(isinf(x.value))
 
-        x = xnd(float("nan"), type="float16")
+        x = xnd(float("nan"), type="float64")
         self.assertTrue(isnan(x.value))
+
 
 class TestString(unittest.TestCase):
 
