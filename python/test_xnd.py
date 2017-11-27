@@ -136,6 +136,36 @@ class TestPrimitive(unittest.TestCase):
             i = IndexTypeError()
             self.assertRaises(TypeError, xnd, i, type=t)
 
+    def test_unsigned(self):
+        # Test bounds.
+        for n in (8, 16, 32, 64):
+            t = "uint%d" % n
+
+            v = 0
+            x = xnd(v, type=t)
+            self.assertEqual(x.value, v)
+            self.assertRaises((ValueError, OverflowError), xnd, v-1, type=t)
+
+            v = 2**n - 1
+            x = xnd(v, type=t)
+            self.assertEqual(x.value, v)
+            self.assertRaises((ValueError, OverflowError), xnd, v+1, type=t)
+
+        # Test index.
+        i = Index()
+        for n in (8, 16, 32, 64):
+            t = "uint%d" % n
+            x = xnd(i, type=t)
+            self.assertEqual(x.value, 10)
+
+        # Test broken input.
+        for n in (8, 16, 32, 64):
+            t = "uint%d" % n
+            i = IndexMemoryError()
+            self.assertRaises(MemoryError, xnd, i, type=t)
+            i = IndexTypeError()
+            self.assertRaises(TypeError, xnd, i, type=t)
+
     @requires_py36
     def test_float16(self):
         fromhex = float.fromhex
