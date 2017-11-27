@@ -31,6 +31,7 @@
 #
 
 import sys, unittest
+from math import isinf, isnan
 from ndtypes import ndt
 from xnd import xnd
 from support import R, requires_py36
@@ -77,6 +78,8 @@ EMPTY_TEST_CASES = [
 class TestPrimitive(unittest.TestCase):
 
     def test_primitive_empty(self):
+        # Test creation and initialization of empty xnd objects.
+
         for value, type_string in EMPTY_TEST_CASES:
             for p in PRIMITIVE:
                 ts = type_string % p
@@ -86,12 +89,39 @@ class TestPrimitive(unittest.TestCase):
 
     @requires_py36
     def test_half_float(self):
+        # Test creation and initialization of empty xnd objects.
         for value, type_string in EMPTY_TEST_CASES:
             for p in HALF_FLOAT_PRIMITIVE:
                 ts = type_string % p
                 x = xnd.empty(ts)
                 self.assertEqual(x.value, value)
                 self.assertEqual(x.type, ndt(ts))
+
+        # Test bounds.
+        MAX = float.fromhex('0x0.ffep+16')
+        TINY = float.fromhex('0x0.004p-14')
+
+        x = xnd(MAX, type="float16")
+        self.assertEqual(x.value, MAX)
+
+        x = xnd(-MAX, type="float16")
+        self.assertEqual(x.value, -MAX)
+
+        x = xnd(TINY, type="float16")
+        self.assertEqual(x.value, TINY)
+
+        HALF_FLOAT_INF = float.fromhex('0x0.fffp+16')
+        self.assertRaises(OverflowError, xnd, HALF_FLOAT_INF, type="float16")
+        self.assertRaises(OverflowError, xnd, -HALF_FLOAT_INF, type="float16")
+
+        # Test special values.
+        INF = float("inf")
+        x = xnd(INF, type="float16")
+        self.assertTrue(isinf(x.value))
+
+        NAN = float("nan")
+        x = xnd(NAN, type="float16")
+        self.assertTrue(isnan(x.value))
 
 class TestString(unittest.TestCase):
 
