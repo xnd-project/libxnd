@@ -87,8 +87,36 @@ class TestPrimitive(unittest.TestCase):
                 self.assertEqual(x.value, value)
                 self.assertEqual(x.type, ndt(ts))
 
+    def test_float32(self):
+
+        # Test bounds.
+        DENORM_MIN = float.fromhex("0x1p-149")
+        LOWEST = float.fromhex("-0x1.fffffep+127")
+        MAX = float.fromhex("0x1.fffffep+127")
+        INF = float.fromhex("0x1.ffffffp+127")
+
+        x = xnd(DENORM_MIN, type="float32")
+        self.assertEqual(x.value, DENORM_MIN)
+
+        x = xnd(LOWEST, type="float32")
+        self.assertEqual(x.value, LOWEST)
+
+        x = xnd(MAX, type="float32")
+        self.assertEqual(x.value, MAX)
+
+        self.assertRaises(OverflowError, xnd, INF, type="float32")
+        self.assertRaises(OverflowError, xnd, -INF, type="float32")
+
+        # Test special values.
+        x = xnd(float("inf"), type="float32")
+        self.assertTrue(isinf(x.value))
+
+        x = xnd(float("nan"), type="float32")
+        self.assertTrue(isnan(x.value))
+
     @requires_py36
-    def test_half_float(self):
+    def test_float16(self):
+
         # Test creation and initialization of empty xnd objects.
         for value, type_string in EMPTY_TEST_CASES:
             for p in HALF_FLOAT_PRIMITIVE:
@@ -98,29 +126,28 @@ class TestPrimitive(unittest.TestCase):
                 self.assertEqual(x.type, ndt(ts))
 
         # Test bounds.
-        MAX = float.fromhex('0x0.ffep+16')
-        TINY = float.fromhex('0x0.004p-14')
+        DENORM_MIN = float.fromhex("0x1p-24")
+        LOWEST = float.fromhex("-0x1.ffcp+15")
+        MAX = float.fromhex("0x1.ffcp+15")
+        INF = float.fromhex("0x1.ffep+15")
+
+        x = xnd(DENORM_MIN, type="float16")
+        self.assertEqual(x.value, DENORM_MIN)
+
+        x = xnd(LOWEST, type="float16")
+        self.assertEqual(x.value, LOWEST)
 
         x = xnd(MAX, type="float16")
         self.assertEqual(x.value, MAX)
 
-        x = xnd(-MAX, type="float16")
-        self.assertEqual(x.value, -MAX)
-
-        x = xnd(TINY, type="float16")
-        self.assertEqual(x.value, TINY)
-
-        HALF_FLOAT_INF = float.fromhex('0x0.fffp+16')
-        self.assertRaises(OverflowError, xnd, HALF_FLOAT_INF, type="float16")
-        self.assertRaises(OverflowError, xnd, -HALF_FLOAT_INF, type="float16")
+        self.assertRaises(OverflowError, xnd, INF, type="float16")
+        self.assertRaises(OverflowError, xnd, -INF, type="float16")
 
         # Test special values.
-        INF = float("inf")
-        x = xnd(INF, type="float16")
+        x = xnd(float("inf"), type="float16")
         self.assertTrue(isinf(x.value))
 
-        NAN = float("nan")
-        x = xnd(NAN, type="float16")
+        x = xnd(float("nan"), type="float16")
         self.assertTrue(isnan(x.value))
 
 class TestString(unittest.TestCase):
