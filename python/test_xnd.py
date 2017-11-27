@@ -64,8 +64,6 @@ PRIMITIVE = [
     'complex64', 'complex128'
 ]
 
-HALF_FLOAT_PRIMITIVE = ['float16', 'complex32']
-
 EMPTY_TEST_CASES = [
     (0, "%s"),
     ([], "0 * %s"),
@@ -172,11 +170,10 @@ class TestPrimitive(unittest.TestCase):
 
         # Test creation and initialization of empty xnd objects.
         for value, type_string in EMPTY_TEST_CASES:
-            for p in HALF_FLOAT_PRIMITIVE:
-                ts = type_string % p
-                x = xnd.empty(ts)
-                self.assertEqual(x.value, value)
-                self.assertEqual(x.type, ndt(ts))
+            ts = type_string % "float16"
+            x = xnd.empty(ts)
+            self.assertEqual(x.value, value)
+            self.assertEqual(x.type, ndt(ts))
 
         # Test bounds.
         DENORM_MIN = fromhex("0x1p-24")
@@ -254,6 +251,50 @@ class TestPrimitive(unittest.TestCase):
 
         x = xnd(float("nan"), type="float64")
         self.assertTrue(isnan(x.value))
+
+    @requires_py36
+    def test_complex32(self):
+        fromhex = float.fromhex
+
+        # Test creation and initialization of empty xnd objects.
+        for value, type_string in EMPTY_TEST_CASES:
+            ts = type_string % "complex32"
+            x = xnd.empty(ts)
+            self.assertEqual(x.value, value)
+            self.assertEqual(x.type, ndt(ts))
+
+        # Test bounds.
+        DENORM_MIN = fromhex("0x1p-24")
+        LOWEST = fromhex("-0x1.ffcp+15")
+        MAX = fromhex("0x1.ffcp+15")
+        INF = fromhex("0x1.ffep+15")
+
+        v = complex(DENORM_MIN, DENORM_MIN)
+        x = xnd(complex(DENORM_MIN, DENORM_MIN), type="complex32")
+        self.assertEqual(x.value, v)
+
+        v = complex(LOWEST, LOWEST)
+        x = xnd(v, type="complex32")
+        self.assertEqual(x.value, v)
+
+        v = complex(MAX, MAX)
+        x = xnd(v, type="complex32")
+        self.assertEqual(x.value, v)
+
+        v = complex(INF, INF)
+        self.assertRaises(OverflowError, xnd, v, type="complex32")
+
+        v = complex(-INF, -INF)
+        self.assertRaises(OverflowError, xnd, v, type="complex32")
+
+        # Test special values.
+        x = xnd(complex("inf"), type="complex32")
+        self.assertTrue(isinf(x.value.real))
+        self.assertTrue(isinf(x.value.imag))
+
+        x = xnd(complex("nan"), type="complex32")
+        self.assertTrue(isnan(x.value.real))
+        self.assertTrue(isnan(x.value.imag))
 
 
 class TestString(unittest.TestCase):
