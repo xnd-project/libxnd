@@ -421,35 +421,34 @@ class TestFixedString(unittest.TestCase):
         t = "2 * fixed_string(3, 'utf16')"
         v = ["\u1111\u2222\u3333", "\u1112\u2223\u3334"]
         x = xnd(v, type=t)
-
-        self.assertEqual(x[0], v[0])
-        self.assertEqual(x[1], v[1])
+        self.assertEqual(x.value, v)
 
 
         t = "2 * fixed_string(3, 'utf32')"
         v = ["\U00011111\U00022222\U00033333", "\U00011112\U00022223\U00033334"]
         x = xnd(v, type=t)
-
-        self.assertEqual(x[0], v[0])
-        self.assertEqual(x[1], v[1])
+        self.assertEqual(x.value, v)
 
 
 class TestBytes(unittest.TestCase):
 
     def test_bytes_empty(self):
+        r = R['a': b'', 'b': b'']
+
         test_cases = [
-          'bytes(align=16)',
-          '(bytes(align=32))',
-          '10 * 2 * bytes',
-          '10 * 2 * (bytes, bytes)',
-          '10 * 2 * {a: bytes(align=32), b: bytes(align=1)}',
-          '10 * 2 * {a: bytes(align=1), b: bytes(align=32)}',
-          'var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * {a: bytes(align=32), b: bytes}'
+          (b'', 'bytes(align=16)'),
+          ((b'',), '(bytes(align=32))'),
+          (3 * [2 * [b'']], '3 * 2 * bytes'),
+          (10 * [2 * [(b'', b'')]], '10 * 2 * (bytes, bytes)'),
+          (10 * [2 * [r]], '10 * 2 * {a: bytes(align=32), b: bytes(align=1)}'),
+          (10 * [2 * [r]], '10 * 2 * {a: bytes(align=1), b: bytes(align=32)}'),
+          ([2 * [r], 5 * [r], 3 * [r]], 'var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * {a: bytes(align=32), b: bytes}')
         ]
 
-        for s in test_cases:
-            t = ndt(s)
-            x = xnd.empty(s)
+        for v, ts in test_cases:
+            t = ndt(ts)
+            x = xnd.empty(ts)
+            self.assertEqual(x.value, v)
             self.assertEqual(x.type, t)
 
 
