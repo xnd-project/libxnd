@@ -33,7 +33,7 @@
 import sys, unittest
 from ndtypes import ndt
 from xnd import xnd
-from support import R
+from support import R, requires_py36
 from randvalue import *
 
 
@@ -55,32 +55,43 @@ if '--all' in sys.argv:
     sys.argv.remove('--all')
 
 
+PRIMITIVE = [
+    'bool',
+    'int8', 'int16', 'int32', 'int64',
+    'uint8', 'uint16', 'uint32', 'uint64',
+    'float32', 'float64',
+    'complex64', 'complex128'
+]
+
+HALF_FLOAT_PRIMITIVE = ['float16', 'complex32']
+
+EMPTY_TEST_CASES = [
+        (0, "%s"),
+        ([], "0 * %s"),
+        ([0], "1 * %s"),
+        ([0, 0], "var(offsets=[0, 2]) * %s"),
+        (3 * [{"a": 0, "b": 0}], "3 * {a: int64, b: %s}")
+]
+
+
 class TestPrimitive(unittest.TestCase):
 
     def test_primitive_empty(self):
-        primitive = [
-            'bool',
-            'int8', 'int16', 'int32', 'int64',
-            'uint8', 'uint16', 'uint32', 'uint64',
-            'float16', 'float32', 'float64',
-            'complex32', 'complex64', 'complex128'
-        ]
-
-        test_cases = [
-            (0, "%s"),
-            ([], "0 * %s"),
-            ([0], "1 * %s"),
-            ([0, 0], "var(offsets=[0, 2]) * %s"),
-            (3 * [{"a": 0, "b": 0}], "3 * {a: int64, b: %s}")
-        ]
-
-        for value, type_string in test_cases:
-            for p in primitive:
+        for value, type_string in EMPTY_TEST_CASES:
+            for p in PRIMITIVE:
                 ts = type_string % p
                 x = xnd.empty(ts)
                 self.assertEqual(x.value, value)
                 self.assertEqual(x.type, ndt(ts))
 
+    @requires_py36
+    def test_half_float(self):
+        for value, type_string in EMPTY_TEST_CASES:
+            for p in HALF_FLOAT_PRIMITIVE:
+                ts = type_string % p
+                x = xnd.empty(ts)
+                self.assertEqual(x.value, value)
+                self.assertEqual(x.type, ndt(ts))
 
 class TestString(unittest.TestCase):
 
