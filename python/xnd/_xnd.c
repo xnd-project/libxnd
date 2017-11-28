@@ -427,9 +427,9 @@ mblock_init(xnd_t x, PyObject *v)
         return 0;
     }
 
-    case Pointer: {
+    case Ref: {
         next.index = 0;
-        next.type = t->Pointer.type;
+        next.type = t->Ref.type;
         next.ptr = XND_POINTER_DATA(x.ptr);
         return mblock_init(next, v);
     }
@@ -1191,9 +1191,9 @@ _pyxnd_value(xnd_t x)
         return dict;
     }
 
-    case Pointer: {
+    case Ref: {
         next.index = 0;
-        next.type = t->Pointer.type;
+        next.type = t->Ref.type;
         next.ptr = XND_POINTER_DATA(x.ptr);
         return _pyxnd_value(next);
     }

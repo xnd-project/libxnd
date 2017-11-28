@@ -87,25 +87,25 @@ DTYPE_EMPTY_TEST_CASES = [
    (0+0j, "complex64"),
    (0+0j, "complex128"),
 
-   # Pointers (XXX implicitly dereferenced, consider renaming to ref)
-   (False, "pointer(bool)"),
-   (0, "pointer(bool)"),
+   # References
+   (False, "&bool"),
+   (0, "&bool"),
 
-   (0, "pointer(int8)"),
-   (0, "pointer(int16)"),
-   (0, "pointer(int32)"),
-   (0, "pointer(int64)"),
+   (0, "&int8"),
+   (0, "&int16"),
+   (0, "&int32"),
+   (0, "&int64"),
 
-   (0, "pointer(uint8)"),
-   (0, "pointer(uint16)"),
-   (0, "pointer(uint32)"),
-   (0, "pointer(uint64)"),
+   (0, "ref(uint8)"),
+   (0, "ref(uint16)"),
+   (0, "ref(uint32)"),
+   (0, "ref(uint64)"),
 
-   (0.0, "pointer(float32)"),
-   (0.0, "pointer(float64)"),
+   (0.0, "ref(float32)"),
+   (0.0, "ref(float64)"),
 
-   (0+0j, "pointer(complex64)"),
-   (0+0j, "pointer(complex128)"),
+   (0+0j, "ref(complex64)"),
+   (0+0j, "ref(complex128)"),
 
    # Constructors
    (False, "Some(bool)"),

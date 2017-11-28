@@ -92,10 +92,10 @@ xnd_new(const ndt_t *t, uint32_t flags, ndt_context_t *ctx)
 
 /*
  * Initialize typed memory. If the XND_OWN_POINTERS flag is set, allocate
- * memory for all pointer subtypes and initialize that memory. Otherwise,
- * set pointers to NULL.
+ * memory for all ref subtypes and initialize that memory. Otherwise, set
+ * refs to NULL.
  *
- * Pointer subtypes include any type of the form "Pointer(t)".
+ * Ref subtypes include any type of the form "Ref(t)".
  *
  * Never allocated are (sizes are not known):
  *   - "string" type (pointer to NUL-terminated UTF8 string)
@@ -207,10 +207,10 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
     }
 
     /*
-     * Pointer represents a pointer to an explicit type. If XND_OWN_POINTERS
+     * Ref represents a pointer to an explicit type. If XND_OWN_POINTERS
      * is set, allocate memory for that type and set the pointer.
      */
-    case Pointer: {
+    case Ref: {
         if (flags & XND_OWN_POINTERS) {
             void *pointer = ndt_aligned_calloc(t->data_align, t->data_size);
             if (pointer == NULL) {
@@ -219,7 +219,7 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
             }
 
             next.index = 0;
-            next.type = t->Pointer.type;
+            next.type = t->Ref.type;
             next.ptr = pointer;
 
             if (xnd_init(next, flags, ctx) < 0) {
@@ -383,9 +383,9 @@ xnd_empty_from_type(const ndt_t *t, uint32_t flags, ndt_context_t *ctx)
 
 /* Clear an embedded pointer. */
 static void
-xnd_clear_pointer(xnd_t *x, const uint32_t flags)
+xnd_clear_ref(xnd_t *x, const uint32_t flags)
 {
-    assert(x->type->tag == Pointer);
+    assert(x->type->tag == Ref);
 
     if (flags & XND_OWN_POINTERS) {
         ndt_aligned_free(XND_POINTER_DATA(x->ptr));
@@ -496,14 +496,14 @@ xnd_clear(xnd_t x, const uint32_t flags)
         return;
     }
 
-    case Pointer: {
+    case Ref: {
         next.index = 0;
 
         if (flags & XND_OWN_POINTERS) {
-            next.type = t->Pointer.type;
+            next.type = t->Ref.type;
             next.ptr = XND_POINTER_DATA(x.ptr);
             xnd_clear(next, flags);
-            xnd_clear_pointer(&x, flags);
+            xnd_clear_ref(&x, flags);
         }
 
         return;
