@@ -211,6 +211,8 @@ static PyTypeObject MemoryBlock_Type = {
         dest = _x;                           \
     } while (0)
 
+static Py_ssize_t ndt_var_indices(Py_ssize_t *res_start, Py_ssize_t *res_step, const ndt_t *t, int32_t index);
+
 static int64_t
 get_int(PyObject *v, int64_t min, int64_t max)
 {
@@ -316,8 +318,7 @@ mblock_init(xnd_t x, PyObject *v)
 
     case VarDim: {
         const int32_t noffsets = t->Concrete.VarDim.noffsets;
-        int32_t start, stop;
-        int64_t shape, i;
+        Py_ssize_t start, step, shape, i;
 
         if (!PyList_Check(v)) {
             PyErr_Format(PyExc_TypeError,
@@ -332,10 +333,8 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        start = t->Concrete.VarDim.offsets[x.index];
-        stop = t->Concrete.VarDim.offsets[x.index+1];
+        shape = ndt_var_indices(&start, &step, t, x.index);
 
-        shape = stop - start;
         if (PyList_GET_SIZE(v) != shape) {
             PyErr_Format(PyExc_ValueError,
                 "xnd: expected list with size %" PRIi64, shape);
@@ -346,7 +345,7 @@ mblock_init(xnd_t x, PyObject *v)
         next.ptr = x.ptr;
 
         for (i = 0; i < shape; i++) {
-            next.index =  start + i;
+            next.index =  start + i * step;
             if (mblock_init(next, PyList_GET_ITEM(v, i)) < 0) {
                 return -1;
             }

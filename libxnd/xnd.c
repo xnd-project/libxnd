@@ -115,6 +115,12 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
         return -1;
     }
 
+    /* Add the linear index from var dimensions. For a chain of fixed
+       dimensions, x.index is zero. */
+    if (t->ndim == 0) {
+        x.ptr += x.index * t->data_size;
+    }
+
     switch (t->tag) {
     case FixedDim: {
         int64_t i;

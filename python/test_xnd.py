@@ -101,6 +101,32 @@ class TestFixedDim(unittest.TestCase):
                 self.assertEqual(x.value, vv)
 
 
+class TestVarDim(unittest.TestCase):
+
+    def test_var_dim_empty(self):
+        for v, s in DTYPE_EMPTY_TEST_CASES:
+            for vv, ss in [
+               (0 * [v], "var(offsets=[0,0]) * %s" % s),
+               (1 * [v], "var(offsets=[0,1]) * %s" % s),
+               (2 * [v], "var(offsets=[0,2]) * %s" % s),
+               (1000 * [v], "var(offsets=[0,1000]) * %s" % s),
+
+               (0 * [0 * [v]], "var(offsets=[0,0]) * var(offsets=[0]) * %s" % s),
+               (0 * [1 * [v]], "var(offsets=[0,0]) * var(offsets=[1]) * %s" % s),
+               (1 * [0 * [v]], "var(offsets=[0,1]) * var(offsets=[0,0]) * %s" % s),
+
+               ([[v], []], "var(offsets=[0,2]) * var(offsets=[0,1,1]) * %s" % s),
+               ([[], [v]], "var(offsets=[0,2]) * var(offsets=[0,0,1]) * %s" % s),
+
+               ([[v], [v]], "var(offsets=[0,2]) * var(offsets=[0,1,2]) * %s" % s),
+               ([[v], 2 * [v], 5 * [v]], "var(offsets=[0,3]) * var(offsets=[0,1,3,8]) * %s" % s)]:
+
+                t = ndt(ss)
+                x = xnd.empty(ss)
+                self.assertEqual(x.type, t)
+                self.assertEqual(x.value, vv)
+
+
 class TestPrimitive(unittest.TestCase):
 
     def test_primitive_empty(self):
