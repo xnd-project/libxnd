@@ -466,6 +466,31 @@ class TestFixedBytes(unittest.TestCase):
           (2 * [3 * [r]], '2 * 3 * {a: fixed_bytes(size=3), b: fixed_bytes(size=10)}')
         ]
 
+        for v, s in test_cases:
+            t = ndt(s)
+            x = xnd.empty(s)
+            self.assertEqual(x.type, t)
+            self.assertEqual(x.value, v)
+
+
+class TestCategorical(unittest.TestCase):
+
+    def test_categorical_empty(self):
+        # Categorical values are stored as indices into the type's categories.
+        # Since empty xnd objects are initialized to zero, the value of an
+        # empty categorical entry is always the value of the first category.
+        # This is safe, since categorical types must have at least one entry.
+        r = R['a': "", 'b': 1.2]
+        rt = "{a: string, b: categorical(1.2, 10.0, NA)}"
+
+        test_cases = [
+          ("January", "categorical('January')"),
+          ((None,), "(categorical(NA, 'January', 'August'))"),
+          (10 * [2 * [1.2]], "10 * 2 * categorical(1.2, 10.0, NA)"),
+          (10 * [2 * [100]], "10 * 2 * categorical(100, 'mixed')"),
+          (10 * [2 * [r]], "10 * 2 * %s" % rt),
+          ([2 * [r], 5 * [r], 3 * [r]], "var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * %s" % rt)
+        ]
 
         for v, s in test_cases:
             t = ndt(s)
