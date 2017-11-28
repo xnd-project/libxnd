@@ -34,6 +34,99 @@
 
 from itertools import accumulate, count, product
 from random import randrange
+from support import R
+
+
+# ======================================================================
+#                             Typed values
+# ======================================================================
+
+DTYPE_EMPTY_TEST_CASES = [
+   # Tuples
+   ((), "()"),
+   ((0,), "(int8)"),
+   ((0, 0), "(int8, int64)"),
+   ((0, (0+0j,)), "(uint16, (complex64))"),
+   ((0, (0+0j,)), "(uint16, (complex64), pack=1)"),
+   ((0, (0+0j,)), "(uint16, (complex64), pack=2)"),
+   ((0, (0+0j,)), "(uint16, (complex64), pack=4)"),
+   ((0, (0+0j,)), "(uint16, (complex64), pack=8)"),
+   ((0, (0+0j,)), "(uint16, (complex64), align=16)"),
+
+   # Records
+   ({}, "{}"),
+   (R['x': 0], "{x: int8}"),
+   (R['x': 0, 'y': 0], "{x: int8, y: int64}"),
+   (R['x': 0, 'y': R['z': 0+0j]], "{x: uint16, y: {z: complex64}}"),
+   (R['x': 0, 'y': R['z': 0+0j]], "{x: uint16, y: {z: complex64}, pack=1}"),
+   (R['x': 0, 'y': R['z': 0+0j]], "{x: uint16, y: {z: complex64}, pack=2}"),
+   (R['x': 0, 'y': R['z': 0+0j]], "{x: uint16, y: {z: complex64}, pack=4}"),
+   (R['x': 0, 'y': R['z': 0+0j]], "{x: uint16, y: {z: complex64}, pack=8}"),
+   (R['x': 0, 'y': R['z': 0+0j]], "{x: uint16, y: {z: complex64}, align=16}"),
+
+   # Primitive types
+   (False, "bool"),
+   (0, "bool"),
+
+   (0, "int8"),
+   (0, "int16"),
+   (0, "int32"),
+   (0, "int64"),
+
+   (0, "uint8"),
+   (0, "uint16"),
+   (0, "uint32"),
+   (0, "uint64"),
+
+   (0.0, "float32"),
+   (0.0, "float64"),
+
+   (0+0j, "complex64"),
+   (0+0j, "complex128"),
+
+   (0+0j, "complex64"),
+   (0+0j, "complex128"),
+
+   # Pointers (XXX implicitly dereferenced, consider renaming to ref)
+   (False, "pointer(bool)"),
+   (0, "pointer(bool)"),
+
+   (0, "pointer(int8)"),
+   (0, "pointer(int16)"),
+   (0, "pointer(int32)"),
+   (0, "pointer(int64)"),
+
+   (0, "pointer(uint8)"),
+   (0, "pointer(uint16)"),
+   (0, "pointer(uint32)"),
+   (0, "pointer(uint64)"),
+
+   (0.0, "pointer(float32)"),
+   (0.0, "pointer(float64)"),
+
+   (0+0j, "pointer(complex64)"),
+   (0+0j, "pointer(complex128)"),
+
+   # Constructors
+   (False, "Some(bool)"),
+   (0, "Some(bool)"),
+
+   (0, "Some(int8)"),
+   (0, "Some(int16)"),
+   (0, "Some(int32)"),
+   (0, "Some(int64)"),
+
+   (0, "Some(uint8)"),
+   (0, "Some(uint16)"),
+   (0, "Some(uint32)"),
+   (0, "Some(uint64)"),
+
+   (0.0, "Some(float32)"),
+   (0.0, "Some(float64)"),
+
+   (0+0j, "Some(complex64)"),
+   (0+0j, "Some(complex128)")
+]
 
 
 # ======================================================================

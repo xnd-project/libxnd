@@ -73,6 +73,34 @@ EMPTY_TEST_CASES = [
 ]
 
 
+class TestFixedDim(unittest.TestCase):
+
+    def test_fixed_dim_empty(self):
+        for v, s in DTYPE_EMPTY_TEST_CASES:
+            for vv, ss in [
+               (0 * [v], "0 * %s" % s),
+               (1 * [v], "1 * %s" % s),
+               (2 * [v], "2 * %s" % s),
+               (1000 * [v], "1000 * %s" % s),
+
+               (0 * [0 * [v]], "0 * 0 * %s" % s),
+               (0 * [1 * [v]], "0 * 1 * %s" % s),
+               (1 * [0 * [v]], "1 * 0 * %s" % s),
+
+               (1 * [1 * [v]], "1 * 1 * %s" % s),
+               (1 * [2 * [v]], "1 * 2 * %s" % s),
+               (2 * [1 * [v]], "2 * 1 * %s" % s),
+               (2 * [2 * [v]], "2 * 2 * %s" % s),
+               (2 * [3 * [v]], "2 * 3 * %s" % s),
+               (3 * [2 * [v]], "3 * 2 * %s" % s),
+               (3 * [40 * [v]], "3 * 40 * %s" % s) ]:
+
+                t = ndt(ss)
+                x = xnd.empty(ss)
+                self.assertEqual(x.type, t)
+                self.assertEqual(x.value, vv)
+
+
 class TestPrimitive(unittest.TestCase):
 
     def test_primitive_empty(self):
