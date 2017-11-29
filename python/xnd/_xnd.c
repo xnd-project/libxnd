@@ -1791,7 +1791,7 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
         x.index = next.index;
         x.type = ndt_fixed_dim((ndt_t *)next.type, shape,
                                t->Concrete.FixedDim.stride * step,
-                               ndt_order(t), &ctx);
+                               &ctx);
         if (x.type == NULL) {
             seterr(&ctx);
             return xnd_error;
