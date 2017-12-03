@@ -111,8 +111,6 @@ class TestVarDim(unittest.TestCase):
                (2 * [v], "var(offsets=[0,2]) * %s" % s),
                (1000 * [v], "var(offsets=[0,1000]) * %s" % s),
 
-               (0 * [0 * [v]], "var(offsets=[0,0]) * var(offsets=[0]) * %s" % s),
-               (0 * [1 * [v]], "var(offsets=[0,0]) * var(offsets=[1]) * %s" % s),
                (1 * [0 * [v]], "var(offsets=[0,1]) * var(offsets=[0,0]) * %s" % s),
 
                ([[v], []], "var(offsets=[0,2]) * var(offsets=[0,1,1]) * %s" % s),
