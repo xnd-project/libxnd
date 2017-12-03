@@ -130,7 +130,7 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
         next.type = t->FixedDim.type;
 
         for (i = 0; i < t->FixedDim.shape; i++) {
-            next.ptr = x.ptr + i * t->Concrete.FixedDim.itemsize;
+            next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
             if (xnd_init(next, flags, ctx) < 0) {
                 return -1;
             }
@@ -442,7 +442,7 @@ xnd_clear(xnd_t x, const uint32_t flags)
         next.type = t->FixedDim.type;
 
         for (i = 0; i < t->FixedDim.shape; i++) {
-            next.ptr = x.ptr + i * t->Concrete.FixedDim.itemsize;
+            next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
             xnd_clear(next, flags);
         }
 
