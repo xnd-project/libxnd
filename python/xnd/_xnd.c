@@ -282,7 +282,7 @@ mblock_init(xnd_t x, PyObject *v)
     /* Add the linear index from var dimensions. For a chain of fixed
        dimensions, x.index is zero. */
     if (t->ndim == 0) {
-        x.ptr += x.index * t->data_size;
+        x.ptr += x.index * t->datasize;
     }
 
     switch (t->tag) {
@@ -1072,7 +1072,7 @@ _pyxnd_value(xnd_t x)
     /* Add the linear index from var dimensions. For a chain of fixed
        dimensions, x.index is zero. */
     if (t->ndim == 0) {
-        x.ptr += x.index * t->data_size;
+        x.ptr += x.index * t->datasize;
     }
 
     switch (t->tag) {
@@ -1573,7 +1573,7 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
     /* Add the linear index from var dimensions. For a chain of fixed
        dimensions, x.index is zero. */
     if (t->ndim == 0) {
-        x.ptr += x.index * t->data_size;
+        x.ptr += x.index * t->datasize;
     }
 
     key = indices[0];
@@ -1722,7 +1722,7 @@ pyxnd_index(xnd_t x, PyObject *indices[], int len)
     /* Add the linear index from var dimensions. For a chain of fixed
        dimensions, x.index is zero. */
     if (t->ndim == 0) {
-        x.ptr += x.index * t->data_size;
+        x.ptr += x.index * t->datasize;
     }
 
     key = indices[0];
@@ -1987,7 +1987,7 @@ pyxnd_value(PyObject *self, PyObject *args UNUSED)
 static PyObject *
 pyxnd_align(PyObject *self, PyObject *args UNUSED)
 {
-    uint16_t align = XND_TYPE(self)->data_align;
+    uint16_t align = XND_TYPE(self)->align;
     return PyLong_FromUnsignedLong(align);
 }
 

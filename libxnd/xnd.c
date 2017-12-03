@@ -76,7 +76,7 @@ xnd_new(const ndt_t *t, uint32_t flags, ndt_context_t *ctx)
     x.index = 0;
     x.type = t;
 
-    x.ptr = ndt_aligned_calloc(t->data_align, t->data_size);
+    x.ptr = ndt_aligned_calloc(t->align, t->datasize);
     if (x.ptr == NULL) {
         ndt_memory_error(ctx);
         return NULL;
@@ -118,7 +118,7 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
     /* Add the linear index from var dimensions. For a chain of fixed
        dimensions, x.index is zero. */
     if (t->ndim == 0) {
-        x.ptr += x.index * t->data_size;
+        x.ptr += x.index * t->datasize;
     }
 
     switch (t->tag) {
@@ -212,7 +212,7 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
      */
     case Ref: {
         if (flags & XND_OWN_POINTERS) {
-            void *pointer = ndt_aligned_calloc(t->data_align, t->data_size);
+            void *pointer = ndt_aligned_calloc(t->align, t->datasize);
             if (pointer == NULL) {
                 ndt_err_format(ctx, NDT_MemoryError, "out of memory");
                 return -1;
@@ -430,7 +430,7 @@ xnd_clear(xnd_t x, const uint32_t flags)
     /* Add the linear index from var dimensions. For a chain of fixed
        dimensions, x.index is zero. */
     if (t->ndim == 0) {
-        x.ptr += x.index * t->data_size;
+        x.ptr += x.index * t->datasize;
     }
 
     switch (t->tag) {
@@ -601,7 +601,7 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
     assert(ndt_is_concrete(t));
 
     if (t->ndim == 0) {
-        x.ptr += x.index * t->data_size;
+        x.ptr += x.index * t->datasize;
     }
 
     if (len == 0) {
