@@ -783,6 +783,8 @@ class TestSpec(unittest.TestCase):
 
         if isinstance(nd_result, xnd):
             nd_value = nd_result.value
+        elif isinstance(nd_result, np.ndarray):
+            nd_value = nd_result.tolist()
         else:
             nd_value = nd_result
 
