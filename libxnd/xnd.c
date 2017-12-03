@@ -271,6 +271,10 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
     case Categorical:
         return 0;
 
+    case Module:
+        ndt_err_format(ctx, NDT_NotImplementedError, "modules not implemented");
+        return -1;
+
     /* Primitive types are already initialized by calloc(). */
     case Bool:
     case Int8: case Int16: case Int32: case Int64:
@@ -283,10 +287,7 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
 
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
     case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
-    case ComplexKind: case FixedStringKind: case FixedBytesKind: case Field:
-    case Module:
-        ndt_err_format(ctx, NDT_NotImplementedError, "modules not implemented");
-        return -1;
+    case ComplexKind: case FixedStringKind: case FixedBytesKind:
     case Void: case Function:
         /* NOT REACHED: intercepted by ndt_is_abstract(). */
         ndt_err_format(ctx, NDT_RuntimeError, "unexpected abstract type");
@@ -556,7 +557,7 @@ xnd_clear(xnd_t x, const uint32_t flags)
     /* NOT REACHED: intercepted by ndt_is_abstract(). */
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
     case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
-    case ComplexKind: case FixedStringKind: case FixedBytesKind: case Field:
+    case ComplexKind: case FixedStringKind: case FixedBytesKind:
     case Void: case Function:
         return;
     }

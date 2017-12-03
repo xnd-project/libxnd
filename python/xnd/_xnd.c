@@ -861,7 +861,7 @@ mblock_init(xnd_t x, PyObject *v)
     /* NOT REACHED: intercepted by ndt_is_abstract(). */
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
     case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
-    case ComplexKind: case FixedStringKind: case FixedBytesKind: case Field:
+    case ComplexKind: case FixedStringKind: case FixedBytesKind:
     case Void: case Function:
         PyErr_SetString(PyExc_RuntimeError, "unexpected abstract type");
         return -1;
@@ -1439,7 +1439,7 @@ _pyxnd_value(xnd_t x)
     /* NOT REACHED: intercepted by ndt_is_abstract(). */
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
     case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
-    case ComplexKind: case FixedStringKind: case FixedBytesKind: case Field:
+    case ComplexKind: case FixedStringKind: case FixedBytesKind:
     case Void: case Function:
         PyErr_SetString(PyExc_RuntimeError, "unexpected abstract type");
         return NULL;
