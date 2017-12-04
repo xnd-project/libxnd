@@ -107,6 +107,11 @@ DTYPE_EMPTY_TEST_CASES = [
    (0+0j, "ref(complex64)"),
    (0+0j, "ref(complex128)"),
 
+   ([], "ref(0 * bool)"),
+   ([0], "ref(1 * int16)"),
+   ([0, 0], "ref(2 * int32)"),
+   ([[0, 0, 0], [0, 0, 0]], "ref(2 * 3 * int8)"),
+
    # Constructors
    (False, "Some(bool)"),
    (0, "Some(bool)"),
@@ -125,7 +130,11 @@ DTYPE_EMPTY_TEST_CASES = [
    (0.0, "Some(float64)"),
 
    (0+0j, "Some(complex64)"),
-   (0+0j, "Some(complex128)")
+   (0+0j, "Some(complex128)"),
+
+   ([0], "ThisGuy(1 * int16)"),
+   ([0, 0], "ThisGuy(2 * int32)"),
+   ([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], "ThisGuy(2 * 3 * float32)"),
 ]
 
 
