@@ -123,6 +123,20 @@ class TestVarDim(unittest.TestCase):
                 self.assertEqual(x.value, vv)
 
 
+class TestSymbolicDim(unittest.TestCase):
+
+    def test_symbolic_dim_raise(self):
+        for _, s in DTYPE_EMPTY_TEST_CASES:
+            for err, ss in [
+               (ValueError, "N * %s" % s),
+               (ValueError, "10 * N * %s" % s),
+               (ValueError, "N * 10 * N * %s" % s),
+               (ValueError, "X * 10 * N * %s" % s)]:
+
+                t = ndt(ss)
+                self.assertRaises(err, xnd.empty, t)
+
+
 class TestTuple(unittest.TestCase):
 
     def test_tuple_empty(self):
