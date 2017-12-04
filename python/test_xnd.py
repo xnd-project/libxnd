@@ -38,10 +38,8 @@ from support import *
 from randvalue import *
 
 
-try:
-    import numpy as np
-except ImportError:
-    np = None
+# NumPy tests disabled: importing numpy causes memory leaks in 3.6.3.
+np = None
 
 
 SKIP_LONG = True
