@@ -239,6 +239,143 @@ class TestConstr(unittest.TestCase):
                 self.assertEqual(x.value, vv)
 
 
+class TestCategorical(unittest.TestCase):
+
+    def test_categorical_empty(self):
+        # Categorical values are stored as indices into the type's categories.
+        # Since empty xnd objects are initialized to zero, the value of an
+        # empty categorical entry is always the value of the first category.
+        # This is safe, since categorical types must have at least one entry.
+        r = R['a': "", 'b': 1.2]
+        rt = "{a: string, b: categorical(1.2, 10.0, NA)}"
+
+        test_cases = [
+          ("January", "categorical('January')"),
+          ((None,), "(categorical(NA, 'January', 'August'))"),
+          (10 * [2 * [1.2]], "10 * 2 * categorical(1.2, 10.0, NA)"),
+          (10 * [2 * [100]], "10 * 2 * categorical(100, 'mixed')"),
+          (10 * [2 * [r]], "10 * 2 * %s" % rt),
+          ([2 * [r], 5 * [r], 3 * [r]], "var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * %s" % rt)
+        ]
+
+        for v, s in test_cases:
+            t = ndt(s)
+            x = xnd.empty(s)
+            self.assertEqual(x.type, t)
+            self.assertEqual(x.value, v)
+
+
+class TestFixedString(unittest.TestCase):
+
+    def test_fixed_string_empty(self):
+        test_cases = [
+          ('fixed_string(1)', '\x00'),
+          ('fixed_string(3)', 3 * '\x00'),
+          ("fixed_string(1, 'ascii')", '\x00'),
+          ("fixed_string(3, 'utf8')", 3 * '\x00'),
+          ("fixed_string(3, 'utf16')", 3 * '\x00'),
+          ("fixed_string(3, 'utf32')", 3 * '\x00'),
+          ("2 * fixed_string(3, 'utf32')", 2 * [3 * '\x00']),
+        ]
+
+        for s, v in test_cases:
+            t = ndt(s)
+            x = xnd.empty(s)
+            self.assertEqual(x.type, t)
+            self.assertEqual(x.value, v)
+
+    def test_fixed_string(self):
+        t = "2 * fixed_string(3, 'utf16')"
+        v = ["\u1111\u2222\u3333", "\u1112\u2223\u3334"]
+        x = xnd(v, type=t)
+        self.assertEqual(x.value, v)
+
+
+        t = "2 * fixed_string(3, 'utf32')"
+        v = ["\U00011111\U00022222\U00033333", "\U00011112\U00022223\U00033334"]
+        x = xnd(v, type=t)
+        self.assertEqual(x.value, v)
+
+
+class TestString(unittest.TestCase):
+
+    def test_string_empty(self):
+        test_cases = [
+          'string',
+          '(string)',
+          '10 * 2 * string',
+          '10 * 2 * (string, string)',
+          '10 * 2 * {a: string, b: string}',
+          'var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * {a: string, b: string}'
+        ]
+
+        for s in test_cases:
+            t = ndt(s)
+            x = xnd.empty(s)
+            self.assertEqual(x.type, t)
+
+        t = ndt('string')
+        x = xnd.empty(t)
+        self.assertEqual(x.type, t)
+        self.assertEqual(x.value, '')
+
+        t = ndt('10 * string')
+        x = xnd.empty(t)
+        self.assertEqual(x.type, t)
+        for i in range(10):
+            self.assertEqual(x[i], '')
+
+    def test_string(self):
+        t = '2 * {a: complex128, b: string}'
+        x = xnd([R['a': 2+3j, 'b': "thisguy"], R['a': 1+4j, 'b': "thatguy"]], type=t)
+
+        self.assertEqual(x[0]['b'], "thisguy")
+        self.assertEqual(x[1]['b'], "thatguy")
+
+
+class TestBytes(unittest.TestCase):
+
+    def test_bytes_empty(self):
+        r = R['a': b'', 'b': b'']
+
+        test_cases = [
+          (b'', 'bytes(align=16)'),
+          ((b'',), '(bytes(align=32))'),
+          (3 * [2 * [b'']], '3 * 2 * bytes'),
+          (10 * [2 * [(b'', b'')]], '10 * 2 * (bytes, bytes)'),
+          (10 * [2 * [r]], '10 * 2 * {a: bytes(align=32), b: bytes(align=1)}'),
+          (10 * [2 * [r]], '10 * 2 * {a: bytes(align=1), b: bytes(align=32)}'),
+          ([2 * [r], 5 * [r], 3 * [r]], 'var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * {a: bytes(align=32), b: bytes}')
+        ]
+
+        for v, s in test_cases:
+            t = ndt(s)
+            x = xnd.empty(s)
+            self.assertEqual(x.type, t)
+            self.assertEqual(x.value, v)
+
+
+class TestFixedBytes(unittest.TestCase):
+
+    def test_fixed_bytes_empty(self):
+        r = R['a': 3 * b'\x00', 'b': 10 * b'\x00']
+
+        test_cases = [
+          (b'\x00', 'fixed_bytes(size=1)'),
+          (100 * b'\x00', 'fixed_bytes(size=100)'),
+          (b'\x00', 'fixed_bytes(size=1, align=2)'),
+          (100 * b'\x00', 'fixed_bytes(size=100, align=16)'),
+          (r, '{a: fixed_bytes(size=3), b: fixed_bytes(size=10)}'),
+          (2 * [3 * [r]], '2 * 3 * {a: fixed_bytes(size=3), b: fixed_bytes(size=10)}')
+        ]
+
+        for v, s in test_cases:
+            t = ndt(s)
+            x = xnd.empty(s)
+            self.assertEqual(x.type, t)
+            self.assertEqual(x.value, v)
+
+
 class TestPrimitive(unittest.TestCase):
 
     def test_primitive_empty(self):
@@ -528,143 +665,6 @@ class TestPrimitive(unittest.TestCase):
         self.assertTrue(isnan(x.value.imag))
 
 
-class TestString(unittest.TestCase):
-
-    def test_string_empty(self):
-        test_cases = [
-          'string',
-          '(string)',
-          '10 * 2 * string',
-          '10 * 2 * (string, string)',
-          '10 * 2 * {a: string, b: string}',
-          'var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * {a: string, b: string}'
-        ]
-
-        for s in test_cases:
-            t = ndt(s)
-            x = xnd.empty(s)
-            self.assertEqual(x.type, t)
-
-        t = ndt('string')
-        x = xnd.empty(t)
-        self.assertEqual(x.type, t)
-        self.assertEqual(x.value, '')
-
-        t = ndt('10 * string')
-        x = xnd.empty(t)
-        self.assertEqual(x.type, t)
-        for i in range(10):
-            self.assertEqual(x[i], '')
-
-    def test_string(self):
-        t = '2 * {a: complex128, b: string}'
-        x = xnd([R['a': 2+3j, 'b': "thisguy"], R['a': 1+4j, 'b': "thatguy"]], type=t)
-
-        self.assertEqual(x[0]['b'], "thisguy")
-        self.assertEqual(x[1]['b'], "thatguy")
-
-
-class TestFixedString(unittest.TestCase):
-
-    def test_fixed_string_empty(self):
-        test_cases = [
-          ('fixed_string(1)', '\x00'),
-          ('fixed_string(3)', 3 * '\x00'),
-          ("fixed_string(1, 'ascii')", '\x00'),
-          ("fixed_string(3, 'utf8')", 3 * '\x00'),
-          ("fixed_string(3, 'utf16')", 3 * '\x00'),
-          ("fixed_string(3, 'utf32')", 3 * '\x00'),
-          ("2 * fixed_string(3, 'utf32')", 2 * [3 * '\x00']),
-        ]
-
-        for s, v in test_cases:
-            t = ndt(s)
-            x = xnd.empty(s)
-            self.assertEqual(x.type, t)
-            self.assertEqual(x.value, v)
-
-    def test_fixed_string(self):
-        t = "2 * fixed_string(3, 'utf16')"
-        v = ["\u1111\u2222\u3333", "\u1112\u2223\u3334"]
-        x = xnd(v, type=t)
-        self.assertEqual(x.value, v)
-
-
-        t = "2 * fixed_string(3, 'utf32')"
-        v = ["\U00011111\U00022222\U00033333", "\U00011112\U00022223\U00033334"]
-        x = xnd(v, type=t)
-        self.assertEqual(x.value, v)
-
-
-class TestBytes(unittest.TestCase):
-
-    def test_bytes_empty(self):
-        r = R['a': b'', 'b': b'']
-
-        test_cases = [
-          (b'', 'bytes(align=16)'),
-          ((b'',), '(bytes(align=32))'),
-          (3 * [2 * [b'']], '3 * 2 * bytes'),
-          (10 * [2 * [(b'', b'')]], '10 * 2 * (bytes, bytes)'),
-          (10 * [2 * [r]], '10 * 2 * {a: bytes(align=32), b: bytes(align=1)}'),
-          (10 * [2 * [r]], '10 * 2 * {a: bytes(align=1), b: bytes(align=32)}'),
-          ([2 * [r], 5 * [r], 3 * [r]], 'var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * {a: bytes(align=32), b: bytes}')
-        ]
-
-        for v, s in test_cases:
-            t = ndt(s)
-            x = xnd.empty(s)
-            self.assertEqual(x.type, t)
-            self.assertEqual(x.value, v)
-
-
-class TestFixedBytes(unittest.TestCase):
-
-    def test_fixed_bytes_empty(self):
-        r = R['a': 3 * b'\x00', 'b': 10 * b'\x00']
-
-        test_cases = [
-          (b'\x00', 'fixed_bytes(size=1)'),
-          (100 * b'\x00', 'fixed_bytes(size=100)'),
-          (b'\x00', 'fixed_bytes(size=1, align=2)'),
-          (100 * b'\x00', 'fixed_bytes(size=100, align=16)'),
-          (r, '{a: fixed_bytes(size=3), b: fixed_bytes(size=10)}'),
-          (2 * [3 * [r]], '2 * 3 * {a: fixed_bytes(size=3), b: fixed_bytes(size=10)}')
-        ]
-
-        for v, s in test_cases:
-            t = ndt(s)
-            x = xnd.empty(s)
-            self.assertEqual(x.type, t)
-            self.assertEqual(x.value, v)
-
-
-class TestCategorical(unittest.TestCase):
-
-    def test_categorical_empty(self):
-        # Categorical values are stored as indices into the type's categories.
-        # Since empty xnd objects are initialized to zero, the value of an
-        # empty categorical entry is always the value of the first category.
-        # This is safe, since categorical types must have at least one entry.
-        r = R['a': "", 'b': 1.2]
-        rt = "{a: string, b: categorical(1.2, 10.0, NA)}"
-
-        test_cases = [
-          ("January", "categorical('January')"),
-          ((None,), "(categorical(NA, 'January', 'August'))"),
-          (10 * [2 * [1.2]], "10 * 2 * categorical(1.2, 10.0, NA)"),
-          (10 * [2 * [100]], "10 * 2 * categorical(100, 'mixed')"),
-          (10 * [2 * [r]], "10 * 2 * %s" % rt),
-          ([2 * [r], 5 * [r], 3 * [r]], "var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * %s" % rt)
-        ]
-
-        for v, s in test_cases:
-            t = ndt(s)
-            x = xnd.empty(s)
-            self.assertEqual(x.type, t)
-            self.assertEqual(x.value, v)
-
-
 class TypeInferenceTest(unittest.TestCase):
 
     def test_tuple(self):
@@ -842,7 +842,6 @@ class IndexTest(unittest.TestCase):
         self.assertEqual(x[1].value, ["x", "y", "z"])
 
 
-
 class TestSpec(unittest.TestCase):
 
     def __init__(self, *, constr,
@@ -936,6 +935,7 @@ class TestSpec(unittest.TestCase):
                         nd = self.constr(value)
                         d = NDArray(value)
                         check(nd, d, value, 0)
+
 
 @unittest.skipIf(SKIP_LONG, "use --long argument to enable these tests")
 class LongIndexSliceTest(unittest.TestCase):
