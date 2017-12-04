@@ -123,6 +123,32 @@ class TestVarDim(unittest.TestCase):
                 self.assertEqual(x.value, vv)
 
 
+
+class TestRef(unittest.TestCase):
+
+    def test_ref_empty(self):
+        for v, s in DTYPE_EMPTY_TEST_CASES:
+            for vv, ss in [
+               (v, "ref(%s)" % s),
+               (v, "ref(ref(%s))" % s),
+               (v, "ref(ref(ref(%s)))" % s),
+
+               (0 * [v], "ref(0 * %s)" % s),
+               (0 * [v], "ref(ref(0 * %s))" % s),
+               (0 * [v], "ref(ref(ref(0 * %s)))" % s),
+               (1 * [v], "ref(1 * %s)" % s),
+               (1 * [v], "ref(ref(1 * %s))" % s),
+               (1 * [v], "ref(ref(ref(1 * %s)))" % s),
+               (3 * [v], "ref(3 * %s)" % s),
+               (3 * [v], "ref(ref(3 * %s))" % s),
+               (3 * [v], "ref(ref(ref(3 * %s)))" % s)]:
+
+                t = ndt(ss)
+                x = xnd.empty(ss)
+                self.assertEqual(x.type, t)
+                self.assertEqual(x.value, vv)
+
+
 class TestConstr(unittest.TestCase):
 
     def test_constr_empty(self):

@@ -101,6 +101,11 @@ DTYPE_EMPTY_TEST_CASES = [
    (0, "ref(uint32)"),
    (0, "ref(uint64)"),
 
+   (0, "ref(ref(uint8))"),
+   (0, "ref(ref(uint16))"),
+   (0, "ref(ref(uint32))"),
+   (0, "ref(ref(uint64))"),
+
    (0.0, "ref(float32)"),
    (0.0, "ref(float64)"),
 
@@ -111,6 +116,12 @@ DTYPE_EMPTY_TEST_CASES = [
    ([0], "ref(1 * int16)"),
    ([0, 0], "ref(2 * int32)"),
    ([[0, 0, 0], [0, 0, 0]], "ref(2 * 3 * int8)"),
+
+   ([], "ref(ref(0 * bool))"),
+   ([0], "ref(ref(1 * int16))"),
+   ([0, 0], "ref(ref(2 * int32))"),
+   ([[0, 0, 0], [0, 0, 0]], "ref(ref(2 * 3 * int8))"),
+
 
    # Constructors
    (False, "Some(bool)"),

@@ -212,22 +212,25 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
      */
     case Ref: {
         if (flags & XND_OWN_POINTERS) {
-            void *pointer = ndt_aligned_calloc(t->align, t->datasize);
-            if (pointer == NULL) {
+            ndt_t *u = t->Ref.type;
+            void *ref;
+
+            ref = ndt_aligned_calloc(u->align, u->datasize);
+            if (ref == NULL) {
                 ndt_err_format(ctx, NDT_MemoryError, "out of memory");
                 return -1;
             }
 
             next.index = 0;
-            next.type = t->Ref.type;
-            next.ptr = pointer;
+            next.type = u;
+            next.ptr = ref;
 
             if (xnd_init(next, flags, ctx) < 0) {
                 xnd_clear(next, flags);
                 return -1;
             }
 
-            XND_POINTER_DATA(x.ptr) = pointer;
+            XND_POINTER_DATA(x.ptr) = ref;
         }
 
         return 0;
