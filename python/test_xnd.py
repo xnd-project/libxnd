@@ -38,7 +38,7 @@ from support import *
 from randvalue import *
 
 
-# NumPy tests disabled: importing numpy causes memory leaks in 3.6.3.
+# NumPy tests disabled: importing numpy causes memory leaks in Python3.
 np = None
 
 
