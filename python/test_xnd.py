@@ -123,6 +123,24 @@ class TestVarDim(unittest.TestCase):
                 self.assertEqual(x.value, vv)
 
 
+class TestConstr(unittest.TestCase):
+
+    def test_constr_empty(self):
+        for v, s in DTYPE_EMPTY_TEST_CASES:
+            for vv, ss in [
+               (v, "SomeConstr(%s)" % s),
+               (v, "Just(Some(%s))" % s),
+
+               (0 * [v], "Some(0 * %s)" % s),
+               (1 * [v], "Some(1 * %s)" % s),
+               (3 * [v], "Maybe(3 * %s)" % s)]:
+
+                t = ndt(ss)
+                x = xnd.empty(ss)
+                self.assertEqual(x.type, t)
+                self.assertEqual(x.value, vv)
+
+
 class TestPrimitive(unittest.TestCase):
 
     def test_primitive_empty(self):
