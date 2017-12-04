@@ -123,6 +123,46 @@ class TestVarDim(unittest.TestCase):
                 self.assertEqual(x.value, vv)
 
 
+class TestTuple(unittest.TestCase):
+
+    def test_tuple_empty(self):
+        for v, s in DTYPE_EMPTY_TEST_CASES:
+            for vv, ss in [
+               ((v,), "(%s)" % s),
+               (((v,),), "((%s))" % s),
+               ((((v,),),), "(((%s)))" % s),
+
+               ((0 * [v],), "(0 * %s)" % s),
+               (((0 * [v],),), "((0 * %s))" % s),
+               ((1 * [v],), "(1 * %s)" % s),
+               (((1 * [v],),), "((1 * %s))" % s),
+               ((3 * [v],), "(3 * %s)" % s),
+               (((3 * [v],),), "((3 * %s))" % s)]:
+
+                t = ndt(ss)
+                x = xnd.empty(ss)
+                self.assertEqual(x.type, t)
+                self.assertEqual(x.value, vv)
+
+
+class TestRecord(unittest.TestCase):
+
+    def test_record_empty(self):
+        for v, s in DTYPE_EMPTY_TEST_CASES:
+            for vv, ss in [
+               ({'x': v}, "{x: %s}" % s),
+               ({'x': {'y': v}}, "{x: {y: %s}}" % s),
+
+               ({'x': 0 * [v]}, "{x: 0 * %s}" % s),
+               ({'x': {'y': 0 * [v]}}, "{x: {y: 0 * %s}}" % s),
+               ({'x': 1 * [v]}, "{x: 1 * %s}" % s),
+               ({'x': 3 * [v]}, "{x: 3 * %s}" % s)]:
+
+                t = ndt(ss)
+                x = xnd.empty(ss)
+                self.assertEqual(x.type, t)
+                self.assertEqual(x.value, vv)
+
 
 class TestRef(unittest.TestCase):
 
