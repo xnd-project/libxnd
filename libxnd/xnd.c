@@ -250,20 +250,6 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
         return 0;
     }
 
-    /* Optional dtypes inside containers using validity bitmaps. */
-    case OptionItem:
-        return 0;
-
-    /* The standalone option is represented as a tuple: (type, byte).
-     * 'byte' is the flag that indicates whether an element is present
-     * and is initialized to 0 (undefined, NA).
-     */
-    case Option:
-        ndt_err_format(ctx, NDT_NotImplementedError,
-                       "option semantics currently only defined for dimensions "
-                       "and array members");
-        return -1;
-
     /* Nominal represents an opaque piece of memory that just has a size
        and an alignment. If it represents a pointer, the pointer needs to
        be externally initialized and does not belong to the memory block. */
@@ -547,10 +533,6 @@ xnd_clear(xnd_t x, const uint32_t flags)
 
     case Char:
         /* Just a scalar. */
-        return;
-
-    case Option: case OptionItem:
-        /* XXX Not implemented. */
         return;
 
     case Module:

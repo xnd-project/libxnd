@@ -848,11 +848,6 @@ mblock_init(xnd_t x, PyObject *v)
             "'Char' type semantics need to be defined");
         return -1;
 
-    case Option: case OptionItem:
-        PyErr_SetString(PyExc_NotImplementedError,
-            "'Option' type not implemented");
-        return -1;
-
     case Module:
         PyErr_SetString(PyExc_NotImplementedError,
             "'Module' type not implemented");
@@ -1424,11 +1419,6 @@ _pyxnd_value(xnd_t x)
     case Char:
         PyErr_SetString(PyExc_NotImplementedError,
             "'Char' type semantics need to be defined");
-        return NULL;
-
-    case Option: case OptionItem:
-        PyErr_SetString(PyExc_NotImplementedError,
-            "'Option' type not implemented");
         return NULL;
 
     case Module:
