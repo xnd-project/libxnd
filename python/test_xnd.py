@@ -220,6 +220,20 @@ class TestRef(unittest.TestCase):
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
 
+    def test_ref_empty_view(self):
+        # If a ref is a dtype but contains an array itself, indexing should
+        # return a view and not a Python value.
+        inner = 4 * [5 * [0+0j]]
+        x = xnd.empty("2 * 3 * ref(4 * 5 * complex128)")
+
+        y = x[1][2]
+        self.assertIsInstance(y, xnd)
+        self.assertEqual(y.value, inner)
+
+        y = x[1, 2]
+        self.assertIsInstance(y, xnd)
+        self.assertEqual(y.value, inner)
+
 
 class TestConstr(unittest.TestCase):
 
@@ -237,6 +251,20 @@ class TestConstr(unittest.TestCase):
                 x = xnd.empty(ss)
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
+
+    def test_constr_empty_view(self):
+        # If a constr is a dtype but contains an array itself, indexing should
+        # return a view and not a Python value.
+        inner = 4 * [5 * [""]]
+        x = xnd.empty("2 * 3 * InnerArray(4 * 5 * string)")
+
+        y = x[1][2]
+        self.assertIsInstance(y, xnd)
+        self.assertEqual(y.value, inner)
+
+        y = x[1, 2]
+        self.assertIsInstance(y, xnd)
+        self.assertEqual(y.value, inner)
 
 
 class TestCategorical(unittest.TestCase):
