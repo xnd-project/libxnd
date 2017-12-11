@@ -21,9 +21,9 @@ default: $(LIBSTATIC) $(LIBSHARED)
 	copy /y $(LIBSHARED) ..\python\xnd
 
 
-OBJS = xnd.obj
+OBJS = bitmaps.obj xnd.obj
 
-SHARED_OBJS = .objs\xnd.obj
+SHARED_OBJS = .objs\bitmaps.obj .objs\xnd.obj
 
 
 $(LIBSTATIC):\
@@ -36,6 +36,14 @@ Makefile $(SHARED_OBJS)
 	-@if exist $@ del $(LIBSHARED)
 	link /nologo /DLL /MANIFEST /out:$(LIBSHARED) /implib:$(LIBIMPORT) $(SHARED_OBJS) $(LIBNDTYPESIMPORT)
 	mt /nologo -manifest $(LIBSHARED).manifest -outputresource:$(LIBSHARED);2
+
+bitmaps.obj:\
+Makefile bitmaps.c xnd.h
+	$(CC) -I $(LIBNDTYPESDIR) $(CFLAGS) -c bitmaps.c
+
+.objs\bitmaps.obj:\
+Makefile bitmaps.c xnd.h
+	$(CC) -I $(LIBNDTYPESDIR) $(CFLAGS_SHARED) -c bitmaps.c
 
 xnd.obj:\
 Makefile xnd.c xnd.h

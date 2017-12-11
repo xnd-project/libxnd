@@ -74,11 +74,22 @@
 #define XND_BYTES_DATA(ptr) (((ndt_bytes_t *)ptr)->data)
 
 
+/* Bitmap tree. */
+typedef struct xnd_bitmap xnd_bitmap_t;
+
+struct xnd_bitmap {
+    int64_t index;      /* linear index for the bitmap at ndim==0 */
+    uint8_t *data;      /* bitmap */
+    int64_t size;       /* number of subtree bitmaps in the "next" array */
+    xnd_bitmap_t *next; /* array of bitmaps for subtrees */
+};
+
 /* Typed memory block, usually a view. */
 typedef struct xnd {
-    int64_t index;      /* linear index for var dims */
-    const ndt_t *type;  /* type of the data */
-    char *ptr;          /* data */
+    xnd_bitmap_t bitmap; /* bitmap tree */
+    int64_t index;       /* linear index for var dims */
+    const ndt_t *type;   /* type of the data */
+    char *ptr;           /* data */
 } xnd_t;
 
 /* Master memory block. */
@@ -102,6 +113,17 @@ XND_API void xnd_del(xnd_master_t *x);
 /*****************************************************************************/
 
 XND_API xnd_t xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx);
+
+
+/*****************************************************************************/
+/*                                  Bitmaps                                  */
+/*****************************************************************************/
+
+XND_API int xnd_bitmap_init(xnd_bitmap_t *b, const ndt_t *t, ndt_context_t *ctx);
+XND_API void xnd_bitmap_clear(xnd_bitmap_t *b);
+XND_API void xnd_set_valid(xnd_t *x);
+XND_API int xnd_is_valid(const xnd_t *x);
+XND_API int xnd_is_na(const xnd_t *x);
 
 
 /*****************************************************************************/

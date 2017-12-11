@@ -48,7 +48,12 @@ static void xnd_clear(xnd_t xu, const uint32_t flags);
 /*****************************************************************************/
 
 /* error return value */
-const xnd_t xnd_error = {.index=0, .type=NULL, .ptr=NULL};
+const xnd_t xnd_error = {
+  .bitmap = {.index=0, .data=NULL, .size=0, .next=NULL},
+  .index = 0,
+  .type = NULL,
+  .ptr = NULL
+};
 
 int
 xnd_err_occurred(const xnd_t *x)
@@ -295,6 +300,7 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
 xnd_master_t *
 xnd_empty_from_string(const char *datashape, uint32_t flags, ndt_context_t *ctx)
 {
+    xnd_bitmap_t b = {.index=0, .data=NULL, .size=0, .next=NULL};
     xnd_master_t *x;
     ndt_t *t;
     char *ptr;
@@ -316,14 +322,29 @@ xnd_empty_from_string(const char *datashape, uint32_t flags, ndt_context_t *ctx)
         return NULL;
     }
 
+    if (!ndt_is_concrete(t)) {
+        ndt_err_format(ctx, NDT_ValueError, "type must be concrete");
+        ndt_del(t);
+        ndt_free(x);
+        return NULL;
+    }
+
+    if (xnd_bitmap_init(&b, t,ctx) < 0) {
+        ndt_del(t);
+        ndt_free(x);
+        return NULL;
+    }
+
     ptr = xnd_new(t, flags, ctx);
     if (ptr == NULL) {
+        xnd_bitmap_clear(&b);
         ndt_del(t);
         ndt_free(x);
         return NULL;
     }
 
     x->flags = flags;
+    x->master.bitmap = b;
     x->master.index = 0;
     x->master.type = t;
     x->master.ptr = ptr;
@@ -338,6 +359,7 @@ xnd_empty_from_string(const char *datashape, uint32_t flags, ndt_context_t *ctx)
 xnd_master_t *
 xnd_empty_from_type(const ndt_t *t, uint32_t flags, ndt_context_t *ctx)
 {
+    xnd_bitmap_t b = {.index=0, .data=NULL, .size=0, .next=NULL};
     xnd_master_t *x;
     char *ptr;
 
@@ -347,18 +369,30 @@ xnd_empty_from_type(const ndt_t *t, uint32_t flags, ndt_context_t *ctx)
         return NULL;
     }
 
+    if (!ndt_is_concrete(t)) {
+        ndt_err_format(ctx, NDT_ValueError, "type must be concrete");
+        return NULL;
+    }
+
     x = ndt_alloc(1, sizeof *x);
     if (x == NULL) {
         return ndt_memory_error(ctx);
     }
 
+    if (xnd_bitmap_init(&b, t, ctx) < 0) {
+        ndt_free(x);
+        return NULL;
+    }
+
     ptr = xnd_new(t, flags, ctx);
     if (ptr == NULL) {
+        xnd_bitmap_clear(&b);
         ndt_free(x);
         return NULL;
     }
 
     x->flags = flags;
+    x->master.bitmap = b;
     x->master.index = 0;
     x->master.type = t;
     x->master.ptr = ptr;
@@ -566,6 +600,7 @@ xnd_del(xnd_master_t *x)
             ndt_aligned_free(x->master.ptr);
         }
 
+        xnd_bitmap_clear(&x->master.bitmap);
         ndt_free(x);
     }
 }
