@@ -268,7 +268,19 @@ xnd_set_valid(xnd_t *x)
     assert(ndt_is_optional(t));
     assert(0 <= n);
 
-    x->bitmap.data[n / 8] |= (1 << (n % 8));
+    x->bitmap.data[n / 8] |= ((uint8_t)1 << (n % 8));
+}
+
+void
+xnd_set_na(xnd_t *x)
+{
+    const ndt_t *t = x->type;
+    int64_t n = x->index;
+
+    assert(ndt_is_optional(t));
+    assert(0 <= n);
+
+    x->bitmap.data[n / 8] &= ~((uint8_t)1 << (n % 8));
 }
 
 static int
@@ -280,7 +292,7 @@ _xnd_is_valid(const xnd_t *x)
     assert(ndt_is_optional(t));
     assert(0 <= n);
 
-    return x->bitmap.data[n / 8] & (1 << (n % 8));
+    return x->bitmap.data[n / 8] & ((uint8_t)1 << (n % 8));
 }
 
 int
