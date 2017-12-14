@@ -42,6 +42,12 @@ class xnd(_xnd):
 def typeof(value):
     return ndt(_typeof(value))
 
+def _choose_dtype(lst):
+    for x in lst:
+        if x is not None:
+            return _typeof(x)
+    return "float64"
+
 def _typeof(value):
     """Infer the type of a Python value.  Only a subset of Datashape is
        supported.  In general, types need to be explicitly specified when
@@ -54,11 +60,12 @@ def _typeof(value):
         if not data:
             dtype = 'float64'
         else:
-            dtype = _typeof(data[0])
-            for x in data[1:]:
-                t = _typeof(x)
-                if t != dtype:
-                    raise ValueError("dtype mismatch: have %s and %s" % (dtype, t))
+            dtype = _choose_dtype(data)
+            for x in data:
+                if x is not None:
+                    t = _typeof(x)
+                    if t != dtype:
+                        raise ValueError("dtype mismatch: have %s and %s" % (dtype, t))
 
         if opt:
             dtype = '?' + dtype
@@ -80,17 +87,24 @@ def _typeof(value):
             return "{" + ", ".join(["%s: %s" % (k, _typeof(v)) for k, v in value.items()]) + "}"
         raise ValueError("all dict keys must be strings")
 
-    elif isinstance(value, int):
-        return 'int64'
+    elif value is None:
+        return '?float64'
 
     elif isinstance(value, float):
         return 'float64'
+
+    elif isinstance(value, int):
+        return 'int64'
 
     elif isinstance(value, str):
         return 'string'
 
     elif isinstance(value, bytes):
         return 'bytes'
+
+    else:
+        raise ValueError("cannot infer type for %r" % value)
+
 
 def add_dim(*, opt=False, shapes=None, typ=None, use_var=False):
     """Construct a new dimension type based on the list of 'shapes' that

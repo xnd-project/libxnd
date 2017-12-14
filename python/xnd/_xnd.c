@@ -293,10 +293,17 @@ mblock_init(xnd_t x, PyObject *v)
 
     /* Set missing value. */
     if (ndt_is_optional(t)) {
+        if (t->ndim > 0) {
+            PyErr_SetString(PyExc_NotImplementedError,
+                "optional dimensions are not implemented");
+            return -1;
+        }
+
         if (v == Py_None) {
             xnd_set_na(&x);
             return 0;
         }
+
         xnd_set_valid(&x);
     }
 
