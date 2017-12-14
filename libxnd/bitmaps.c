@@ -75,7 +75,6 @@ static int
 bitmap_init(xnd_bitmap_t *b, const ndt_t *t, int64_t nitems, ndt_context_t *ctx)
 {
     xnd_bitmap_t *next;
-    const ndt_t *dtype;
     int64_t shape, i, k;
     int64_t n;
 
@@ -102,12 +101,15 @@ bitmap_init(xnd_bitmap_t *b, const ndt_t *t, int64_t nitems, ndt_context_t *ctx)
     }
 
     case VarDim: {
-        int32_t noffsets = t->Concrete.VarDim.noffsets;
+        assert(nitems == 1);
+        n = nitems;
 
-        dtype = ndt_dtype(t);
-        n = t->Concrete.VarDim.offsets[noffsets-1];
+        if (t->ndim == 1) {
+            int32_t noffsets = t->Concrete.VarDim.noffsets;
+            n = t->Concrete.VarDim.offsets[noffsets-1];
+        }
 
-        return bitmap_init(b, dtype, n, ctx);
+        return bitmap_init(b, t->VarDim.type, n, ctx);
     }
 
     case Tuple: {
