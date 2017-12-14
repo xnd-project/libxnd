@@ -300,6 +300,7 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
+        next.bitmap = x.bitmap;
         next.type = t->FixedDim.type;
         next.ptr = x.ptr;
 
@@ -338,6 +339,7 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
+        next.bitmap = x.bitmap;
         next.type = t->VarDim.type;
         next.ptr = x.ptr;
 
@@ -370,6 +372,12 @@ mblock_init(xnd_t x, PyObject *v)
         next.index = 0;
 
         for (i = 0; i < shape; i++) {
+            next.bitmap = xnd_bitmap_next(&x, i, &ctx);
+            if (ndt_err_occurred(&ctx)) {
+                (void)seterr(&ctx);
+                return -1;
+            }
+
             next.type = t->Tuple.types[i];
             next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
 
@@ -402,6 +410,12 @@ mblock_init(xnd_t x, PyObject *v)
         next.index = 0;
 
         for (i = 0; i < shape; i++) {
+            next.bitmap = xnd_bitmap_next(&x, i, &ctx);
+            if (ndt_err_occurred(&ctx)) {
+                (void)seterr(&ctx);
+                return -1;
+            }
+
             next.type = t->Record.types[i];
             next.ptr = x.ptr + t->Concrete.Record.offset[i];
 

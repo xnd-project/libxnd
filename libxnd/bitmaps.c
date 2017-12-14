@@ -187,6 +187,44 @@ xnd_bitmap_clear(xnd_bitmap_t *b)
     }
 }
 
+xnd_bitmap_t
+xnd_bitmap_next(const xnd_t *x, int64_t i, ndt_context_t *ctx)
+{
+    const ndt_t *t = x->type;
+    xnd_bitmap_t next = {.data=NULL, .size=0, .next=NULL};
+    int64_t shape;
+
+    if (!ndt_subtree_is_optional(t)) {
+         return next;
+    }
+
+    if (x->bitmap.next == NULL) {
+        ndt_err_format(ctx, NDT_RuntimeError, "missing bitmap");
+        return next;
+    }
+
+    switch (t->tag) {
+    case Tuple:
+        shape = t->Tuple.shape;
+        break;
+    case Record:
+        shape = t->Record.shape;
+        break;
+    case Ref: case Constr:
+        shape = 1;
+    default:
+        ndt_err_format(ctx, NDT_RuntimeError, "type has no subtree bitmaps");
+        return next;
+    }
+
+    if (i < 0 || i >= shape) {
+        ndt_err_format(ctx, NDT_ValueError, "invalid index");
+        return next;
+    }
+
+    return x->bitmap.next[x->index * shape + i];
+}
+
 void
 xnd_set_valid(xnd_t *x)
 {

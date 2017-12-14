@@ -120,6 +120,7 @@ XND_API xnd_t xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_
 
 XND_API int xnd_bitmap_init(xnd_bitmap_t *b, const ndt_t *t, ndt_context_t *ctx);
 XND_API void xnd_bitmap_clear(xnd_bitmap_t *b);
+XND_API xnd_bitmap_t xnd_bitmap_next(const xnd_t *x, int64_t i, ndt_context_t *ctx);
 XND_API void xnd_set_valid(xnd_t *x);
 XND_API int xnd_is_valid(const xnd_t *x);
 XND_API int xnd_is_na(const xnd_t *x);
