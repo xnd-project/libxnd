@@ -136,13 +136,13 @@ DTYPE_EMPTY_TEST_CASES = [
 
    ([], "ref(0 * bool)"),
    ([0], "ref(1 * int16)"),
-   ([0, 0], "ref(2 * int32)"),
-   ([[0, 0, 0], [0, 0, 0]], "ref(2 * 3 * int8)"),
+   (2 * [0], "ref(2 * int32)"),
+   (2 * [3 * [0]], "ref(2 * 3 * int8)"),
 
    ([], "ref(ref(0 * bool))"),
    ([0], "ref(ref(1 * int16))"),
-   ([0, 0], "ref(ref(2 * int32))"),
-   ([[0, 0, 0], [0, 0, 0]], "ref(ref(2 * 3 * int8))"),
+   (2 * [0], "ref(ref(2 * int32))"),
+   (2 * [3 * [0]], "ref(ref(2 * 3 * int8))"),
 
    # Optional references
    (None, "?&bool"),
@@ -236,8 +236,8 @@ DTYPE_EMPTY_TEST_CASES = [
    (0+0j, "Some(complex128)"),
 
    ([0], "ThisGuy(1 * int16)"),
-   ([0, 0], "ThisGuy(2 * int32)"),
-   ([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], "ThisGuy(2 * 3 * float32)"),
+   (2 * [0], "ThisGuy(2 * int32)"),
+   (2 * [3 * [0.0]], "ThisGuy(2 * 3 * float32)"),
 ]
 
 
