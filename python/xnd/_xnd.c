@@ -72,6 +72,20 @@ seterr(ndt_context_t *ctx)
     return Ndt_SetError(ctx);
 }
 
+static int
+seterr_int(ndt_context_t *ctx)
+{
+    (void)Ndt_SetError(ctx);
+    return -1;
+}
+
+static xnd_t
+seterr_xnd(ndt_context_t *ctx)
+{
+    (void)Ndt_SetError(ctx);
+    return xnd_error;
+}
+
 
 /****************************************************************************/
 /*                           MemoryBlock Object                             */
@@ -150,8 +164,7 @@ mblock_from_typed_value(PyObject *type, PyObject *value)
     self->xnd = xnd_empty_from_type(CONST_NDT(type), XND_OWN_EMBEDDED, &ctx);
     if (self->xnd == NULL) {
         Py_DECREF(self);
-        seterr(&ctx);
-        return NULL;
+        return (MemoryBlockObject *)seterr(&ctx);
     }
     Py_INCREF(type);
     self->type = type;
@@ -374,8 +387,7 @@ mblock_init(xnd_t x, PyObject *v)
         for (i = 0; i < shape; i++) {
             next.bitmap = xnd_bitmap_next(&x, i, &ctx);
             if (ndt_err_occurred(&ctx)) {
-                (void)seterr(&ctx);
-                return -1;
+                return seterr_int(&ctx);
             }
 
             next.type = t->Tuple.types[i];
@@ -412,8 +424,7 @@ mblock_init(xnd_t x, PyObject *v)
         for (i = 0; i < shape; i++) {
             next.bitmap = xnd_bitmap_next(&x, i, &ctx);
             if (ndt_err_occurred(&ctx)) {
-                (void)seterr(&ctx);
-                return -1;
+                return seterr_int(&ctx);
             }
 
             next.type = t->Record.types[i];
@@ -744,8 +755,7 @@ mblock_init(xnd_t x, PyObject *v)
 
         s = ndt_strdup(cp, &ctx);
         if (s == NULL) {
-            (void)seterr(&ctx);
-            return -1;
+            return seterr_int(&ctx);
         }
 
         XND_POINTER_DATA(x.ptr) = s;
@@ -1605,8 +1615,7 @@ pyxnd_multikey(xnd_t x, PyObject *indices[], int len)
         next.index = x.index;
         next.type = ndt_copy(t, &ctx);
         if (next.type == NULL) {
-            seterr(&ctx);
-            return xnd_error;
+            return seterr_xnd(&ctx);
         }
         next.ptr = x.ptr;
 
@@ -1717,8 +1726,7 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
                                t->Concrete.FixedDim.step * step,
                                &ctx);
         if (x.type == NULL) {
-            seterr(&ctx);
-            return xnd_error;
+            return seterr_xnd(&ctx);
         }
         x.ptr = next.ptr;
 
@@ -1751,8 +1759,7 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
 
         slices = ndt_var_add_slice(&nslices, t, start, stop, step, &ctx);
         if (slices == NULL) {
-            seterr(&ctx);
-            return xnd_error;
+            return seterr_xnd(&ctx);
         }
 
         x.index = next.index;
@@ -1762,8 +1769,7 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
                              nslices, slices,
                              &ctx);
         if (x.type == NULL) {
-            seterr(&ctx);
-            return xnd_error;
+            return seterr_xnd(&ctx);
         }
         x.ptr = next.ptr;
 
