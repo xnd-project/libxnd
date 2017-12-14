@@ -173,6 +173,8 @@ bitmap_init(xnd_bitmap_t *b, const ndt_t *t, int64_t nitems, ndt_context_t *ctx)
                 return -1;
             }
         }
+
+        return 0;
     }
 
     case Constr: {
@@ -190,6 +192,8 @@ bitmap_init(xnd_bitmap_t *b, const ndt_t *t, int64_t nitems, ndt_context_t *ctx)
                 return -1;
             }
         }
+
+        return 0;
     }
 
     default:
@@ -246,6 +250,7 @@ xnd_bitmap_next(const xnd_t *x, int64_t i, ndt_context_t *ctx)
         break;
     case Ref: case Constr:
         shape = 1;
+        break;
     default:
         ndt_err_format(ctx, NDT_RuntimeError, "type has no subtree bitmaps");
         return next;

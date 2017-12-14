@@ -87,6 +87,28 @@ DTYPE_EMPTY_TEST_CASES = [
    (0+0j, "complex64"),
    (0+0j, "complex128"),
 
+   # Optional primitive types
+   (None, "?bool"),
+
+   (None, "?int8"),
+   (None, "?int16"),
+   (None, "?int32"),
+   (None, "?int64"),
+
+   (None, "?uint8"),
+   (None, "?uint16"),
+   (None, "?uint32"),
+   (None, "?uint64"),
+
+   (None, "?float32"),
+   (None, "?float64"),
+
+   (None, "?complex64"),
+   (None, "?complex128"),
+
+   (None, "?complex64"),
+   (None, "?complex128"),
+
    # References
    (False, "&bool"),
    (0, "&bool"),

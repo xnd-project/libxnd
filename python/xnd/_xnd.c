@@ -291,6 +291,15 @@ mblock_init(xnd_t x, PyObject *v)
         return -1;
     }
 
+    /* Set missing value. */
+    if (ndt_is_optional(t)) {
+        if (v == Py_None) {
+            xnd_set_na(&x);
+            return 0;
+        }
+        xnd_set_valid(&x);
+    }
+
     /* Add the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
@@ -313,9 +322,8 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        next.bitmap = x.bitmap;
+        next = x;
         next.type = t->FixedDim.type;
-        next.ptr = x.ptr;
 
         for (i = 0; i < shape; i++) {
             next.index = x.index + i * t->Concrete.FixedDim.step;
@@ -352,9 +360,8 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        next.bitmap = x.bitmap;
+        next = x;
         next.type = t->VarDim.type;
-        next.ptr = x.ptr;
 
         for (i = 0; i < shape; i++) {
             next.index =  start + i * step;
@@ -450,7 +457,7 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case Ref: {
-        next.bitmap = xnd_bitmap_next(&x, 1, &ctx);
+        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
         if (ndt_err_occurred(&ctx)) {
             return seterr_int(&ctx);
         }
@@ -462,7 +469,7 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case Constr: {
-        next.bitmap = xnd_bitmap_next(&x, 1, &ctx);
+        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
         if (ndt_err_occurred(&ctx)) {
             return seterr_int(&ctx);
         }
@@ -933,6 +940,9 @@ pyxnd_alloc(PyTypeObject *type)
  
     self->mblock = NULL;
     self->type = NULL;
+    self->xnd.bitmap.data = NULL;
+    self->xnd.bitmap.size = 0;
+    self->xnd.bitmap.next = NULL;
     self->xnd.index = 0;
     self->xnd.type  = NULL;
     self->xnd.ptr = NULL;
@@ -985,6 +995,7 @@ pyxnd_new(PyTypeObject *tp, PyObject *args, PyObject *kwds)
     self->mblock = mblock;
     self->type = mblock->type;
 
+    self->xnd.bitmap = mblock->xnd->master.bitmap;
     self->xnd.index = 0;
     self->xnd.type = mblock->xnd->master.type;
     self->xnd.ptr = mblock->xnd->master.ptr;
@@ -1017,10 +1028,15 @@ dict_set_item(PyObject *dict, const char *k, PyObject *value)
 static PyObject *
 _pyxnd_value(xnd_t x)
 {
+    NDT_STATIC_CONTEXT(ctx);
     const ndt_t *t = x.type;
     xnd_t next;
 
     assert(ndt_is_concrete(t));
+
+    if (xnd_is_na(&x)) {
+        Py_RETURN_NONE;
+    }
 
     /* Add the linear index. */
     if (t->ndim == 0) {
@@ -1038,8 +1054,8 @@ _pyxnd_value(xnd_t x)
             return NULL;
         }
 
+        next = x;
         next.type = t->FixedDim.type;
-        next.ptr = x.ptr;
 
         for (i = 0; i < shape; i++) {
             next.index = x.index + i * t->Concrete.FixedDim.step;
@@ -1065,8 +1081,8 @@ _pyxnd_value(xnd_t x)
             return NULL;
         }
 
+        next = x;
         next.type = t->VarDim.type;
-        next.ptr = x.ptr;
 
         for (i = 0; i < shape; i++) {
             next.index = start + i * step;
@@ -1094,6 +1110,11 @@ _pyxnd_value(xnd_t x)
         next.index = 0;
 
         for (i = 0; i < shape; i++) {
+            next.bitmap = xnd_bitmap_next(&x, i, &ctx);
+            if (ndt_err_occurred(&ctx)) {
+                return seterr(&ctx);
+            }
+
             next.type = t->Tuple.types[i];
             next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
 
@@ -1122,6 +1143,11 @@ _pyxnd_value(xnd_t x)
         next.index = 0;
 
         for (i = 0; i < shape; i++) {
+            next.bitmap = xnd_bitmap_next(&x, i, &ctx);
+            if (ndt_err_occurred(&ctx)) {
+                return seterr(&ctx);
+            }
+
             next.type = t->Record.types[i];
             next.ptr = x.ptr + t->Concrete.Record.offset[i];
 
@@ -1143,6 +1169,11 @@ _pyxnd_value(xnd_t x)
     }
 
     case Ref: {
+        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
+        if (ndt_err_occurred(&ctx)) {
+            return seterr(&ctx);
+        }
+
         next.index = 0;
         next.type = t->Ref.type;
         next.ptr = XND_POINTER_DATA(x.ptr);
@@ -1150,6 +1181,11 @@ _pyxnd_value(xnd_t x)
     }
 
     case Constr: {
+        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
+        if (ndt_err_occurred(&ctx)) {
+            return seterr(&ctx);
+        }
+
         next.index = 0;
         next.type = t->Constr.type;
         next.ptr = x.ptr;
@@ -1501,18 +1537,20 @@ get_index_record(const ndt_t *t, PyObject *key)
 static xnd_t
 pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
 {
+    NDT_STATIC_CONTEXT(ctx);
     const ndt_t *t = x.type;
     xnd_t next;
     PyObject *key;
 
     assert(ndt_is_concrete(t));
 
+    if (t->ndim > 0 && ndt_is_optional(t)) {
+        PyErr_SetString(PyExc_NotImplementedError,
+            "optional dimensions are not supported");
+        return xnd_error;
+    }
+
     if (len == 0) {
-        if (ndt_is_optional(t)) {
-            PyErr_SetString(PyExc_NotImplementedError,
-                "option type is temporarily disabled");
-            return xnd_error;
-        }
         return x;
     }
 
@@ -1530,9 +1568,9 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
             return xnd_error;
         }
 
+        next = x;
         next.index = x.index + i * t->Concrete.FixedDim.step;
         next.type = t->FixedDim.type;
-        next.ptr = x.ptr;
 
         break;
     }
@@ -1541,11 +1579,6 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
         Py_ssize_t start, step, shape;
         Py_ssize_t i;
 
-        if (ndt_is_optional(t)) {
-            PyErr_SetString(PyExc_NotImplementedError,
-                "optional dimensions are temporarily disabled");
-            return xnd_error;
-        }
 
         shape = ndt_var_indices(&start, &step, t, x.index);
 
@@ -1554,10 +1587,9 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
             return xnd_error;
         }
 
-
+        next = x;
         next.index = start + i * step;
         next.type = t->VarDim.type;
-        next.ptr = x.ptr;
 
         break;
     }
@@ -1566,6 +1598,11 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
         Py_ssize_t i = get_index(key, t->Tuple.shape);
         if (i < 0) {
             return xnd_error;
+        }
+
+        next.bitmap = xnd_bitmap_next(&x, i, &ctx);
+        if (ndt_err_occurred(&ctx)) {
+            return seterr_xnd(&ctx);
         }
 
         next.index = 0;
@@ -1579,6 +1616,11 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
         Py_ssize_t i = get_index_record(t, key);
         if (i < 0) {
             return xnd_error;
+        }
+
+        next.bitmap = xnd_bitmap_next(&x, i, &ctx);
+        if (ndt_err_occurred(&ctx)) {
+            return seterr_xnd(&ctx);
         }
 
         next.index = 0;
@@ -1622,12 +1664,11 @@ pyxnd_multikey(xnd_t x, PyObject *indices[], int len)
                 "option type is temporarily disabled");
             return xnd_error;
         }
-        next.index = x.index;
+        next = x;
         next.type = ndt_copy(t, &ctx);
         if (next.type == NULL) {
             return seterr_xnd(&ctx);
         }
-        next.ptr = x.ptr;
 
         return next;
     }
@@ -1677,9 +1718,9 @@ pyxnd_index(xnd_t x, PyObject *indices[], int len)
             return xnd_error;
         }
 
+        next = x;
         next.index = x.index + i * t->Concrete.FixedDim.step;
         next.type = t->FixedDim.type;
-        next.ptr = x.ptr;
 
         break;
     }
@@ -1691,8 +1732,7 @@ pyxnd_index(xnd_t x, PyObject *indices[], int len)
     }
 
     default:
-        PyErr_SetString(PyExc_IndexError,
-            "cannot index the dtype or a non-indexable type");
+        PyErr_SetString(PyExc_IndexError, "type is not indexable");
         return xnd_error;
     }
 
@@ -1722,9 +1762,9 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
             return xnd_error;
         }
 
+        next = x;
         next.index = x.index + start * t->Concrete.FixedDim.step;
         next.type = t->FixedDim.type;
-        next.ptr = x.ptr;
 
         next = pyxnd_multikey(next, indices+1, len-1);
         if (next.ptr == NULL) {
@@ -1758,9 +1798,8 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
             return xnd_error;
         }
 
-        next.index = x.index;
+        next = x;
         next.type = t->VarDim.type;
-        next.ptr = x.ptr;
 
         next = pyxnd_multikey(next, indices+1, len-1);
         if (next.ptr == NULL) {
