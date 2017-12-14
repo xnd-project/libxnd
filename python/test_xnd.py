@@ -817,6 +817,32 @@ class TypeInferenceTest(unittest.TestCase):
             self.assertEqual(x.type, ndt(t))
             self.assertEqual(x.value, v)
 
+    def test_optional(self):
+        test_cases = [
+          (None, "?float64"),
+          ([None], "1 * ?float64"),
+          ([None, None], "2 * ?float64"),
+          ([None, 10], "2 * ?int64"),
+          ([None, b'abc'], "2 * ?bytes"),
+          ([None, 'abc'], "2 * ?string")
+        ]
+
+        for v, t in test_cases:
+            x = xnd(v)
+            self.assertEqual(x.type, ndt(t))
+            self.assertEqual(x.value, v)
+
+
+        not_implemented = [
+          [None, []],
+          [[], None],
+          [None, [10]],
+          [[None, [0, 1]], [[2, 3]]]
+        ]
+
+        for v in not_implemented:
+            self.assertRaises(NotImplementedError, xnd, v)
+
 
 class IndexTest(unittest.TestCase):
 
