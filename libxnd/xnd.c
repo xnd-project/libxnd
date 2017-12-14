@@ -129,13 +129,11 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
     switch (t->tag) {
     case FixedDim: {
         int64_t i;
-
-        assert(x.index == 0);
-        next.index = x.index;
         next.type = t->FixedDim.type;
+        next.ptr = x.ptr;
 
         for (i = 0; i < t->FixedDim.shape; i++) {
-            next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
+            next.index = x.index + i * t->Concrete.FixedDim.step;
             if (xnd_init(next, flags, ctx) < 0) {
                 return -1;
             }
@@ -460,12 +458,11 @@ xnd_clear(xnd_t x, const uint32_t flags)
     case FixedDim: {
         int64_t i;
 
-        assert(x.index == 0);
-        next.index = x.index;
         next.type = t->FixedDim.type;
+        next.ptr = x.ptr;
 
         for (i = 0; i < t->FixedDim.shape; i++) {
-            next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
+            next.index = x.index + i * t->Concrete.FixedDim.step;
             xnd_clear(next, flags);
         }
 
@@ -643,10 +640,9 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
-        assert(x.index == 0);
-        next.index = x.index;
+        next.index = x.index + i * t->Concrete.FixedDim.step;
         next.type = t->FixedDim.type;
-        next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
+        next.ptr = x.ptr;
 
         break;
     }

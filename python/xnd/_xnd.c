@@ -301,12 +301,11 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        assert(x.index == 0);
-        next.index = x.index;
         next.type = t->FixedDim.type;
+        next.ptr = x.ptr;
 
         for (i = 0; i < shape; i++) {
-            next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
+            next.index = x.index + i * t->Concrete.FixedDim.step;
             if (mblock_init(next, PyList_GET_ITEM(v, i)) < 0) {
                 return -1;
             }
@@ -1007,12 +1006,11 @@ _pyxnd_value(xnd_t x)
             return NULL;
         }
 
-        assert(x.index == 0);
-        next.index = x.index;
         next.type = t->FixedDim.type;
+        next.ptr = x.ptr;
 
         for (i = 0; i < shape; i++) {
-            next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
+            next.index = x.index + i * t->Concrete.FixedDim.step;
             v = _pyxnd_value(next);
             if (v == NULL) {
                 Py_DECREF(lst);
@@ -1039,7 +1037,7 @@ _pyxnd_value(xnd_t x)
         next.ptr = x.ptr;
 
         for (i = 0; i < shape; i++) {
-            next.index =  start + i * step;
+            next.index = start + i * step;
             v = _pyxnd_value(next);
             if (v == NULL) {
                 Py_DECREF(lst);
@@ -1501,9 +1499,9 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
             return xnd_error;
         }
 
-        next.index = x.index;
+        next.index = x.index + i * t->Concrete.FixedDim.step;
         next.type = t->FixedDim.type;
-        next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
+        next.ptr = x.ptr;
 
         break;
     }
@@ -1650,9 +1648,9 @@ pyxnd_index(xnd_t x, PyObject *indices[], int len)
             return xnd_error;
         }
 
-        next.index = x.index;
+        next.index = x.index + i * t->Concrete.FixedDim.step;
         next.type = t->FixedDim.type;
-        next.ptr = x.ptr + i * t->Concrete.FixedDim.stride;
+        next.ptr = x.ptr;
 
         break;
     }
@@ -1695,9 +1693,9 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
             return xnd_error;
         }
 
-        next.index = x.index;
+        next.index = x.index + start * t->Concrete.FixedDim.step;
         next.type = t->FixedDim.type;
-        next.ptr = x.ptr + start * t->Concrete.FixedDim.stride;
+        next.ptr = x.ptr;
 
         next = pyxnd_multikey(next, indices+1, len-1);
         if (next.ptr == NULL) {
@@ -1706,7 +1704,7 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
 
         x.index = next.index;
         x.type = ndt_fixed_dim((ndt_t *)next.type, shape,
-                               t->Concrete.FixedDim.stride * step,
+                               t->Concrete.FixedDim.step * step,
                                &ctx);
         if (x.type == NULL) {
             seterr(&ctx);
