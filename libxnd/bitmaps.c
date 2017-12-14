@@ -158,6 +158,40 @@ bitmap_init(xnd_bitmap_t *b, const ndt_t *t, int64_t nitems, ndt_context_t *ctx)
         return 0;
     }
 
+    case Ref: {
+        b->next = bitmap_array_new(nitems, ctx);
+        if (b->next == NULL) {
+            xnd_bitmap_clear(b);
+            return -1;
+        }
+        b->size = nitems;
+
+        for (i = 0; i < nitems; i++) {
+            next = b->next + i;
+            if (bitmap_init(next, t->Ref.type, 1, ctx) < 0) {
+                xnd_bitmap_clear(b);
+                return -1;
+            }
+        }
+    }
+
+    case Constr: {
+        b->next = bitmap_array_new(nitems, ctx);
+        if (b->next == NULL) {
+            xnd_bitmap_clear(b);
+            return -1;
+        }
+        b->size = nitems;
+
+        for (i = 0; i < nitems; i++) {
+            next = b->next + i;
+            if (bitmap_init(next, t->Constr.type, 1, ctx) < 0) {
+                xnd_bitmap_clear(b);
+                return -1;
+            }
+        }
+    }
+
     default:
         return 0;
     }

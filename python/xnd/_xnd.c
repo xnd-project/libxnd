@@ -450,6 +450,11 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case Ref: {
+        next.bitmap = xnd_bitmap_next(&x, 1, &ctx);
+        if (ndt_err_occurred(&ctx)) {
+            return seterr_int(&ctx);
+        }
+
         next.index = 0;
         next.type = t->Ref.type;
         next.ptr = XND_POINTER_DATA(x.ptr);
@@ -457,6 +462,11 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case Constr: {
+        next.bitmap = xnd_bitmap_next(&x, 1, &ctx);
+        if (ndt_err_occurred(&ctx)) {
+            return seterr_int(&ctx);
+        }
+
         next.index = 0;
         next.type = t->Constr.type;
         next.ptr = x.ptr;
