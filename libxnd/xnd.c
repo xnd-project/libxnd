@@ -120,8 +120,7 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
         return -1;
     }
 
-    /* Add the linear index from var dimensions. For a chain of fixed
-       dimensions, x.index is zero. */
+    /* Add the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
     }
@@ -448,8 +447,7 @@ xnd_clear(xnd_t x, const uint32_t flags)
 
     assert(ndt_is_concrete(t));
 
-    /* Add the linear index from var dimensions. For a chain of fixed
-       dimensions, x.index is zero. */
+    /* Add the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
     }

@@ -278,8 +278,7 @@ mblock_init(xnd_t x, PyObject *v)
         return -1;
     }
 
-    /* Add the linear index from var dimensions. For a chain of fixed
-       dimensions, x.index is zero. */
+    /* Add the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
     }
@@ -989,8 +988,7 @@ _pyxnd_value(xnd_t x)
 
     assert(ndt_is_concrete(t));
 
-    /* Add the linear index from var dimensions. For a chain of fixed
-       dimensions, x.index is zero. */
+    /* Add the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
     }
@@ -1484,8 +1482,7 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
         return x;
     }
 
-    /* Add the linear index from var dimensions. For a chain of fixed
-       dimensions, x.index is zero. */
+    /* Add the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
     }
@@ -1633,8 +1630,7 @@ pyxnd_index(xnd_t x, PyObject *indices[], int len)
     assert(ndt_is_concrete(t));
     assert(x.ptr != NULL);
 
-    /* Add the linear index from var dimensions. For a chain of fixed
-       dimensions, x.index is zero. */
+    /* Add the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
     }
