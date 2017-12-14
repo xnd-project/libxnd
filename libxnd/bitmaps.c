@@ -191,7 +191,7 @@ void
 xnd_set_valid(xnd_t *x)
 {
     const ndt_t *t = x->type;
-    int64_t n = x->bitmap.index;
+    int64_t n = x->index;
 
     assert(ndt_is_optional(t));
     assert(0 <= n);
@@ -203,7 +203,7 @@ static int
 _xnd_is_valid(const xnd_t *x)
 {
     const ndt_t *t = x->type;
-    int64_t n = x->bitmap.index;
+    int64_t n = x->index;
 
     assert(ndt_is_optional(t));
     assert(0 <= n);

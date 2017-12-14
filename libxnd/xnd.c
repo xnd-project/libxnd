@@ -49,7 +49,7 @@ static void xnd_clear(xnd_t xu, const uint32_t flags);
 
 /* error return value */
 const xnd_t xnd_error = {
-  .bitmap = {.index=0, .data=NULL, .size=0, .next=NULL},
+  .bitmap = {.data=NULL, .size=0, .next=NULL},
   .index = 0,
   .type = NULL,
   .ptr = NULL
@@ -298,7 +298,7 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
 xnd_master_t *
 xnd_empty_from_string(const char *datashape, uint32_t flags, ndt_context_t *ctx)
 {
-    xnd_bitmap_t b = {.index=0, .data=NULL, .size=0, .next=NULL};
+    xnd_bitmap_t b = {.data=NULL, .size=0, .next=NULL};
     xnd_master_t *x;
     ndt_t *t;
     char *ptr;
@@ -357,7 +357,7 @@ xnd_empty_from_string(const char *datashape, uint32_t flags, ndt_context_t *ctx)
 xnd_master_t *
 xnd_empty_from_type(const ndt_t *t, uint32_t flags, ndt_context_t *ctx)
 {
-    xnd_bitmap_t b = {.index=0, .data=NULL, .size=0, .next=NULL};
+    xnd_bitmap_t b = {.data=NULL, .size=0, .next=NULL};
     xnd_master_t *x;
     char *ptr;
 

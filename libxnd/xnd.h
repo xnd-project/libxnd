@@ -78,7 +78,6 @@
 typedef struct xnd_bitmap xnd_bitmap_t;
 
 struct xnd_bitmap {
-    int64_t index;      /* linear index for the bitmap at ndim==0 */
     uint8_t *data;      /* bitmap */
     int64_t size;       /* number of subtree bitmaps in the "next" array */
     xnd_bitmap_t *next; /* array of bitmaps for subtrees */
