@@ -238,6 +238,29 @@ DTYPE_EMPTY_TEST_CASES = [
    ([0], "ThisGuy(1 * int16)"),
    (2 * [0], "ThisGuy(2 * int32)"),
    (2 * [3 * [0.0]], "ThisGuy(2 * 3 * float32)"),
+
+   # Optional constructors
+   (None, "?Some(bool)"),
+
+   (None, "?Some(int8)"),
+   (None, "?Some(int16)"),
+   (None, "?Some(int32)"),
+   (None, "?Some(int64)"),
+
+   (None, "?Some(uint8)"),
+   (None, "?Some(uint16)"),
+   (None, "?Some(uint32)"),
+   (None, "?Some(uint64)"),
+
+   (None, "?Some(float32)"),
+   (None, "?Some(float64)"),
+
+   (None, "?Some(complex64)"),
+   (None, "?Some(complex128)"),
+
+   (None, "?ThisGuy(1 * int16)"),
+   (None, "?ThisGuy(2 * int32)"),
+   (None, "?ThisGuy(2 * 3 * float32)"),
 ]
 
 
