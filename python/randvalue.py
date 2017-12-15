@@ -602,5 +602,5 @@ def mixed_indices(max_ndim):
         yield mixed_index(max_ndim)
 
 def itos(indices):
-    return ", ".join(str(i) if isinstance(i, int) else "%d:%d:%d" %
+    return ", ".join(str(i) if isinstance(i, int) else "%s:%s:%s" %
                      (i.start, i.stop, i.step) for i in indices)
