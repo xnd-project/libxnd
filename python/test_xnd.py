@@ -997,14 +997,14 @@ class LongIndexSliceTest(unittest.TestCase):
     def test_subarray(self):
         # Multidimensional indexing
         t = TestSpec(constr=xnd,
-                     values=FIXED_TEST_CASES,
+                     values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
                      indices_generator=genindices,
                      indices_generator_args=())
         t.run()
 
         t = TestSpec(constr=xnd,
-                     values=VAR_TEST_CASES,
+                     values=SUBSCRIPT_VAR_TEST_CASES,
                      value_generator=gen_var,
                      indices_generator=genindices,
                      indices_generator_args=())
@@ -1013,14 +1013,14 @@ class LongIndexSliceTest(unittest.TestCase):
     def test_slices(self):
         # Multidimensional slicing
         t = TestSpec(constr=xnd,
-                     values=FIXED_TEST_CASES,
+                     values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
                      indices_generator=randslices,
                      indices_generator_args=(3,))
         t.run()
 
         t = TestSpec(constr=xnd,
-                     values=VAR_TEST_CASES,
+                     values=SUBSCRIPT_VAR_TEST_CASES,
                      value_generator=gen_var,
                      indices_generator=randslices,
                      indices_generator_args=(3,))
@@ -1029,7 +1029,7 @@ class LongIndexSliceTest(unittest.TestCase):
     def test_chained_indices_slices(self):
         # Multidimensional indexing and slicing, chained
         t = TestSpec(constr=xnd,
-                     values=FIXED_TEST_CASES,
+                     values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
                      indices_generator=gen_indices_or_slices,
                      indices_generator_args=())
@@ -1037,7 +1037,7 @@ class LongIndexSliceTest(unittest.TestCase):
 
 
         t = TestSpec(constr=xnd,
-                     values=VAR_TEST_CASES,
+                     values=SUBSCRIPT_VAR_TEST_CASES,
                      value_generator=gen_var,
                      indices_generator=gen_indices_or_slices,
                      indices_generator_args=())
@@ -1046,7 +1046,7 @@ class LongIndexSliceTest(unittest.TestCase):
     def test_fixed_mixed_indices_slices(self):
         # Multidimensional indexing and slicing, mixed
         t = TestSpec(constr=xnd,
-                     values=FIXED_TEST_CASES,
+                     values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
                      indices_generator=mixed_indices,
                      indices_generator_args=(3,))
@@ -1065,14 +1065,14 @@ class LongIndexSliceTest(unittest.TestCase):
     def test_slices_brute_force(self):
         # Test all possible slices for the given ndim and shape
         t = TestSpec(constr=xnd,
-                     values=FIXED_TEST_CASES,
+                     values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
                      indices_generator=genslices_ndim,
                      indices_generator_args=(3, [3,3,3]))
         t.run()
 
         t = TestSpec(constr=xnd,
-                     values=VAR_TEST_CASES,
+                     values=SUBSCRIPT_VAR_TEST_CASES,
                      value_generator=gen_var,
                      indices_generator=genslices_ndim,
                      indices_generator_args=(3, [3,3,3]))
@@ -1082,7 +1082,7 @@ class LongIndexSliceTest(unittest.TestCase):
     def test_array_definition(self):
         # Test the NDArray definition against NumPy
         t = TestSpec(constr=np.array,
-                     values=FIXED_TEST_CASES,
+                     values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
                      indices_generator=mixed_indices,
                      indices_generator_args=(3,))
