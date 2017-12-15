@@ -1666,11 +1666,6 @@ pyxnd_multikey(xnd_t x, PyObject *indices[], int len)
     }
 
     if (len == 0) {
-        if (ndt_is_optional(t)) {
-            PyErr_SetString(PyExc_NotImplementedError,
-                "option type is temporarily disabled");
-            return xnd_error;
-        }
         next = x;
         next.type = ndt_copy(t, &ctx);
         if (next.type == NULL) {
