@@ -87,6 +87,21 @@ DTYPE_EMPTY_TEST_CASES = [
    (R['x': [b''], 'y': 2 * [0.0j], 'z': 3 * [""]], "{x: 1 * bytes, y: 2 * complex128, z: 3 * string}"),
    (R['x': [b''], 'y': 2 * [R['a': 0.0j, 'b': 10 * [2 * [""]]]], 'z': 3 * [""]], "{x: 1 * bytes, y: 2 * {a: complex128, b: 10 * 2 * string}, z: 3 * string}"),
 
+   # Optional records
+   (None, "?{}"),
+   (None, "?{x: int8}"),
+   (None, "?{x: int8, y: int64}"),
+   (None, "?{x: uint16, y: {z: complex64}}"),
+   (None, "?{x: uint16, y: {z: complex64}, pack=1}"),
+   (None, "?{x: uint16, y: {z: complex64}, pack=2}"),
+   (None, "?{x: uint16, y: {z: complex64}, pack=4}"),
+   (None, "?{x: uint16, y: {z: complex64}, pack=8}"),
+   (None, "?{x: uint16, y: {z: complex64}, align=16}"),
+   (None, "?{x: 0 * bytes}"),
+   (None, "?{x: 0 * bytes, y: 0 * string}"),
+   (None, "?{x: 1 * bytes, y: 2 * complex128, z: 3 * string}"),
+   (None, "?{x: 1 * bytes, y: 2 * {a: complex128, b: 10 * 2 * string}, z: 3 * string}"),
+
    # Primitive types
    (False, "bool"),
    (0, "bool"),
