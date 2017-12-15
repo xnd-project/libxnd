@@ -324,6 +324,32 @@ class TestTuple(unittest.TestCase):
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
 
+    def test_tuple_assign(self):
+        ### Regular data ###
+        x = xnd.empty("(complex64, bytes, string)")
+        v = (1+20j, b"abc", "any")
+
+        x[0] = v[0]
+        x[1] = v[1]
+        x[2] = v[2]
+
+        self.assertEqual(x.value, v)
+
+        ### Optional data ###
+        x = xnd.empty("(complex64, ?bytes, ?string)")
+        v = (1+20j, None, "Some")
+
+        x[0] = v[0]
+        x[1] = v[1]
+        x[2] = v[2]
+        self.assertEqual(x.value, v)
+
+        v = (-2.5+125j, None, None)
+        x[0] = v[0]
+        x[1] = v[1]
+        x[2] = v[2]
+        self.assertEqual(x.value, v)
+
 
 class TestRecord(unittest.TestCase):
 
