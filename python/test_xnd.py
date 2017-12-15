@@ -795,6 +795,26 @@ class TypeInferenceTest(unittest.TestCase):
             self.assertEqual(x.type, ndt(t))
             self.assertEqual(x.value, v)
 
+    def test_complex128(self):
+        d = R['a': 3.123+10j, 'b': complex('inf')]
+        typeof_d = "{a: complex128, b: complex128}"
+
+        test_cases = [
+          ([1+3e300j], "1 * complex128"),
+          ([-2.2-5j, 1.2-10j], "2 * complex128"),
+          ([-2.2-5j, 1.2-10j, None], "3 * ?complex128"),
+          ([[-1+3j], [-3+5j]], "2 * 1 * complex128"),
+
+          (d, typeof_d),
+          ([d] * 2, "2 * %s" % typeof_d),
+          ([[d] * 2] * 10, "10 * 2 * %s" % typeof_d)
+        ]
+
+        for v, t in test_cases:
+            x = xnd(v)
+            self.assertEqual(x.type, ndt(t))
+            self.assertEqual(x.value, v)
+
     def test_int64(self):
         t = (1, -2, -3)
         typeof_t = "(int64, int64, int64)"

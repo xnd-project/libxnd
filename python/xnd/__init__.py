@@ -93,6 +93,9 @@ def _typeof(value):
     elif isinstance(value, float):
         return 'float64'
 
+    elif isinstance(value, complex):
+        return 'complex128'
+
     elif isinstance(value, int):
         return 'int64'
 
