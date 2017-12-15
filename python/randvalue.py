@@ -111,6 +111,9 @@ DTYPE_EMPTY_TEST_CASES = [
    (([None], 2 * [(None, 10 * [2 * [None]])], 3 * [""]), "(1 * ?bytes, 2 * (?complex128, 10 * 2 * ?string), 3 * string)"),
    (([b''], 2 * [(None, 10 * [2 * [None]])], 3 * [None]), "(1 * bytes, 2 * (?complex128, 10 * 2 * ?string), 3 * ?string)"),
 
+   ((0, 2 * [3 * [4 * [5 * [None]]]]), "(int64, 2 * 3 * Some(4 * 5 * ?float64))"),
+   ((0, 2 * [3 * [4 * [5 * [None]]]]), "(int64, 2 * 3 * ref(4 * 5 * ?float64))"),
+
    # Records
    ({}, "{}"),
    (R['x': 0], "{x: int8}"),
