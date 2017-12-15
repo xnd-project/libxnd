@@ -57,6 +57,21 @@ DTYPE_EMPTY_TEST_CASES = [
    (([b''], 2 * [0.0j], 3 * [""]), "(1 * bytes, 2 * complex128, 3 * string)"),
    (([b''], 2 * [(0.0j, 10 * [2 * [""]])], 3 * [""]), "(1 * bytes, 2 * (complex128, 10 * 2 * string), 3 * string)"),
 
+   # Optional tuples
+   (None, "?()"),
+   (None, "?(int8)"),
+   (None, "?(int8, int64)"),
+   (None, "?(uint16, (complex64))"),
+   (None, "?(uint16, (complex64), pack=1)"),
+   (None, "?(uint16, (complex64), pack=2)"),
+   (None, "?(uint16, (complex64), pack=4)"),
+   (None, "?(uint16, (complex64), pack=8)"),
+   (None, "?(uint16, (complex64), align=16)"),
+   (None, "?(0 * bytes)"),
+   (None, "?(0 * bytes, 0 * string)"),
+   (None, "?(1 * bytes, 2 * complex128, 3 * string)"),
+   (None, "?(1 * bytes, 2 * (complex128, 10 * 2 * string), 3 * string)"),
+
    # Records
    ({}, "{}"),
    (R['x': 0], "{x: int8}"),
