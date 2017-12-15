@@ -52,6 +52,10 @@ DTYPE_EMPTY_TEST_CASES = [
    ((0, (0+0j,)), "(uint16, (complex64), pack=4)"),
    ((0, (0+0j,)), "(uint16, (complex64), pack=8)"),
    ((0, (0+0j,)), "(uint16, (complex64), align=16)"),
+   (([],), "(0 * bytes)"),
+   (([], []), "(0 * bytes, 0 * string)"),
+   (([b''], 2 * [0.0j], 3 * [""]), "(1 * bytes, 2 * complex128, 3 * string)"),
+   (([b''], 2 * [(0.0j, 10 * [2 * [""]])], 3 * [""]), "(1 * bytes, 2 * (complex128, 10 * 2 * string), 3 * string)"),
 
    # Records
    ({}, "{}"),

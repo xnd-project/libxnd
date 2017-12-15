@@ -832,7 +832,7 @@ class TypeInferenceTest(unittest.TestCase):
             self.assertEqual(x.type, ndt(t))
             self.assertEqual(x.value, v)
 
-
+        # Optional dimensions are not implemented.
         not_implemented = [
           [None, []],
           [[], None],
