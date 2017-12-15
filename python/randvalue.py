@@ -143,6 +143,42 @@ DTYPE_EMPTY_TEST_CASES = [
    (None, "?{x: 1 * bytes, y: 2 * complex128, z: 3 * string}"),
    (None, "?{x: 1 * bytes, y: 2 * {a: complex128, b: 10 * 2 * string}, z: 3 * string}"),
 
+   # Records with optional elements
+   (R['x': None], "{x: ?int8}"),
+   (R['x': None, 'y': 0], "{x: ?int8, y: int64}"),
+   (R['x': 0, 'y': None], "{x: int8, y: ?int64}"),
+   (R['x': None, 'y': None], "{x: ?int8, y: ?int64}"),
+   (None, "?{x: ?int8, y: ?int64}"),
+
+   (R['x': 0, 'y': None], " {x: uint16, y: ?{z: complex64}}"),
+   (R['x': 0, 'y': R['z': None]], "{x: uint16, y: {z: ?complex64}}"),
+   (R['x': 0, 'y': None], "{x: uint16, y: ?{z: ?complex64}}"),
+
+   (R['x': None, 'y': R['z': 0+0j]], "{x: ?uint16, y: {z: complex64}, pack=1}"),
+   (R['x': 0, 'y': None], "{x: uint16, y: ?{z: complex64}, pack=1}"),
+   (R['x': 0, 'y': R['z': None]], "{x: uint16, y: {z: ?complex64}, pack=1}"),
+
+   (R['x': []], "{x: 0 * ?bytes}"),
+   (R['x': 1 * [None]], "{x: 1 * ?bytes}"),
+   (R['x': 10 * [None]], "{x: 10 * ?bytes}"),
+   (R['x': [], 'y': []], "{x: 0 * ?bytes, y: 0 * ?string}"),
+   (R['x': 5 * [None], 'y': 2 * [""]], "{x: 5 * ?bytes, y: 2 * string}"),
+   (R['x': 5 * [b''], 'y': 2 * [None]], "{x: 5 * bytes, y: 2 * ?string}"),
+   (R['x': 5 * [None], 'y': 2 * [None]], "{x: 5 * ?bytes, y: 2 * ?string}"),
+
+   (R['x': [None], 'y': 2 * [None], 'z': 3 * [None]], "{x: 1 * ?bytes, y: 2 * ?complex128, z: 3 * ?string}"),
+   (R['x': [None], 'y': 2 * [R['a': 0.0j, 'b': 10 * [2 * [""]]]], 'z': 3 * [""]], "{x: 1 * ?bytes, y: 2 * {a: complex128, b: 10 * 2 * string}, z: 3 * string}"),
+   (R['x': [b''], 'y': 2 * [None], 'z': 3 * [""]], "{x: 1 * bytes, y: 2 * ?{a: complex128, b: 10 * 2 * string}, z: 3 * string}"),
+   (R['x': [b''], 'y': 2 * [R['a': 0.0j, 'b': 10 * [2 * [""]]]], 'z': 3 * [None]], "{x: 1 * bytes, y: 2 * {a: complex128, b: 10 * 2 * string}, z: 3 * ?string}"),
+   (R['x': [None], 'y': 2 * [None], 'z': 3 * [""]], "{x: 1 * ?bytes, y: 2 * ?{a: complex128, b: 10 * 2 * string}, z: 3 * string}"),
+   (R['x': [None], 'y': 2 * [R['a': 0.0j, 'b': 10 * [2 * [""]]]], 'z': 3 * [None]], "{x: 1 * ?bytes, y: 2 * {a: complex128, b: 10 * 2 * string}, z: 3 * ?string}"),
+   (R['x': [None], 'y': 2 * [None], 'z': 3 * [None]], "{x: 1 * ?bytes, y: 2 * ?{a: complex128, b: 10 * 2 * string}, z: 3 * ?string}"),
+
+   (R['x': [b''], 'y': 2 * [R['a': 0.0j, 'b': 10 * [2 * [None]]]], 'z': 3 * [""]], "{x: 1 * bytes, y: 2 * {a: complex128, b: 10 * 2 * ?string}, z: 3 * string}"),
+   (R['x': [None], 'y': 2 * [R['a': 0.0j, 'b': 10 * [2 * [None]]]], 'z': 3 * [""]], "{x: 1 * ?bytes, y: 2 * {a: complex128, b: 10 * 2 * ?string}, z: 3 * string}"),
+   (R['x': [None], 'y': 2 * [R['a': None, 'b': 10 * [2 * [None]]]], 'z': 3 * [""]], "{x: 1 * ?bytes, y: 2 * {a: ?complex128, b: 10 * 2 * ?string}, z: 3 * string}"),
+   (R['x': [b''], 'y': 2 * [R['a': None, 'b': 10 * [2 * [None]]]], 'z': 3 * [None]], "{x: 1 * bytes, y: 2 * {a: ?complex128, b: 10 * 2 * ?string}, z: 3 * ?string}"),
+
    # Primitive types
    (False, "bool"),
    (0, "bool"),
