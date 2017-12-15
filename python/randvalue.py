@@ -125,6 +125,8 @@ DTYPE_EMPTY_TEST_CASES = [
    (R['x': [], 'y': []], "{x: 0 * bytes, y: 0 * string}"),
    (R['x': [b''], 'y': 2 * [0.0j], 'z': 3 * [""]], "{x: 1 * bytes, y: 2 * complex128, z: 3 * string}"),
    (R['x': [b''], 'y': 2 * [R['a': 0.0j, 'b': 10 * [2 * [""]]]], 'z': 3 * [""]], "{x: 1 * bytes, y: 2 * {a: complex128, b: 10 * 2 * string}, z: 3 * string}"),
+   (R['x': 0, 'y': 2 * [3 * [4 * [5 * [0.0]]]]], "{x: int64, y: 2 * 3 * Some(4 * 5 * float64)}"),
+   (R['x': 0, 'y': 2 * [3 * [4 * [5 * [0.0]]]]], "{x: int64, y: 2 * 3 * ref(4 * 5 * float64)}"),
 
    # Optional records
    (None, "?{}"),
