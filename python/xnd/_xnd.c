@@ -1958,7 +1958,7 @@ pyxnd_subscript(XndObject *self, PyObject *key)
 {
     xnd_t x;
 
-    if (PyIndex_Check(key)) {
+    if (PyIndex_Check(key) || PyUnicode_Check(key)) {
         PyObject *indices[1] = {key};
         x = pyxnd_subtree(self->xnd, indices, 1);
         return value_or_view_copy(self, x);
@@ -1997,7 +1997,7 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
         return -1;
     }
 
-    if (PyIndex_Check(key)) {
+    if (PyIndex_Check(key) || PyUnicode_Check(key)) {
         PyObject *indices[1] = {key};
         x = pyxnd_subtree(self->xnd, indices, 1);
     }

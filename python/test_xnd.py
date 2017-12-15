@@ -369,6 +369,32 @@ class TestRecord(unittest.TestCase):
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
 
+    def test_record_assign(self):
+        ### Regular data ###
+        x = xnd.empty("{x: complex64, y: bytes, z: string}")
+        v = R['x': 1+20j, 'y': b"abc", 'z': "any"]
+
+        x['x'] = v['x']
+        x['y'] = v['y']
+        x['z'] = v['z']
+
+        self.assertEqual(x.value, v)
+
+        ### Optional data ###
+        x = xnd.empty("{x: complex64, y: ?bytes, z: ?string}")
+        v = R['x': 1+20j, 'y': None, 'z': "Some"]
+
+        x['x'] = v['x']
+        x['y'] = v['y']
+        x['z'] = v['z']
+        self.assertEqual(x.value, v)
+
+        v = R['x': -2.5+125j, 'y': None, 'z': None]
+        x['x'] = v['x']
+        x['y'] = v['y']
+        x['z'] = v['z']
+        self.assertEqual(x.value, v)
+
 
 class TestRef(unittest.TestCase):
 
