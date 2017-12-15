@@ -1942,9 +1942,9 @@ value_or_view_move(XndObject *self, xnd_t x)
     if (x.type->ndim == 0) {
         switch (x.type->tag) {
         case Ref:
-            return pyxnd_view_copy_type(self, x);
+            return pyxnd_view_move_type(self, x);
         case Constr:
-            return pyxnd_view_copy_type(self, x);
+            return pyxnd_view_move_type(self, x);
         default:
             return _pyxnd_value(x);
         }
@@ -1983,6 +1983,54 @@ pyxnd_subscript(XndObject *self, PyObject *key)
         PyErr_SetString(PyExc_TypeError, "invalid subscript key");
         return NULL;
     }
+}
+
+static int
+pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
+{
+    int free_type = 0;
+    xnd_t x;
+    int ret;
+
+    if (value == NULL) {
+        PyErr_SetString(PyExc_TypeError, "cannot delete memory blocks");
+        return -1;
+    }
+
+    if (PyIndex_Check(key)) {
+        PyObject *indices[1] = {key};
+        x = pyxnd_subtree(self->xnd, indices, 1);
+    }
+    else if (is_multiindex(key)) {
+        PyObject **indices = &PyTuple_GET_ITEM(key, 0);
+        x = pyxnd_subtree(self->xnd, indices, PyTuple_GET_SIZE(key));
+    }
+    else if (PySlice_Check(key)) {
+        PyObject *indices[1] = {key};
+        x = pyxnd_multikey(self->xnd, indices, 1);
+        free_type = 1;
+    }
+    else if (is_multikey(key)) {
+        PyObject **indices = &PyTuple_GET_ITEM(key, 0);
+        Py_ssize_t n = PyTuple_GET_SIZE(key);
+        x = pyxnd_multikey(self->xnd, indices, n);
+        free_type = 1;
+    }
+    else {
+        PyErr_SetString(PyExc_TypeError, "invalid subscript key");
+        return -1;
+    }
+
+    if (x.ptr == NULL) {
+        return -1;
+    }
+
+    ret = mblock_init(x, value);
+    if (free_type) {
+        ndt_del((ndt_t *)x.type);
+    }
+
+    return ret;
 }
 
 static PyObject *
@@ -2025,7 +2073,7 @@ static PyGetSetDef pyxnd_getsets [] =
 static PyMappingMethods pyxnd_as_mapping = {
     (lenfunc)NULL,                 /* mp_length */
     (binaryfunc)pyxnd_subscript,   /* mp_subscript */
-    (objobjargproc)NULL,           /* mp_ass_subscript */
+    (objobjargproc)pyxnd_assign,   /* mp_ass_subscript */
 };
 
 static PyMethodDef pyxnd_methods [] =

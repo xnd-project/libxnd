@@ -99,7 +99,6 @@ class TestFixedDim(unittest.TestCase):
                 self.assertEqual(x.value, vv)
 
     def test_fixed_dim_subscript(self):
-        # Regular array
         test_cases = [
             ([[11.12-2.3j, -1222+20e8j],
               [complex("inf"), -0.00002j],
@@ -133,6 +132,62 @@ class TestFixedDim(unittest.TestCase):
             self.assertEqual(x[:, 0].value, nd[:, 0])
             self.assertEqual(x[:, 1].value, nd[:, 1])
 
+    def test_fixed_dim_assign(self):
+        ### Regular data ###
+        x = xnd.empty("2 * 4 * float64")
+        v = [[0.0, 1.0, 2.0, 3.0], [4.0, 5.0, 6.0, 7.0]]
+
+        # Full slice
+        x[:] = v
+        self.assertEqual(x.value, v)
+
+        # Subarray
+        x[0] = v[0] = [1.2, -3e45, float("inf"), -322.25]
+        self.assertEqual(x.value, v)
+
+        x[1] = v[1] = [-11.25, 3.355e301, -0.000002, -5000.2]
+        self.assertEqual(x.value, v)
+
+        # Single values
+        for i in range(2):
+            for j in range(4):
+                x[i][j] = v[i][j] = 3.22 * i + j
+        self.assertEqual(x.value, v)
+
+        # Tuple indexing
+        for i in range(2):
+            for j in range(4):
+                x[i, j] = v[i][j] = -3.002e1 * i + j
+        self.assertEqual(x.value, v)
+
+
+        ### Optional data ###
+        x = xnd.empty("2 * 4 * ?float64")
+        v = [[10.0, None, 2.0, 100.12], [None, None, 6.0, 7.0]]
+
+        # Full slice
+        x[:] = v
+        self.assertEqual(x.value, v)
+
+        # Subarray
+        x[0] = v[0] = [None, 3e45, float("inf"), None]
+        self.assertEqual(x.value, v)
+
+        x[1] = v[1] = [-11.25, 3.355e301, -0.000002, None]
+        self.assertEqual(x.value, v)
+
+        # Single values
+        for i in range(2):
+            for j in range(4):
+                x[i][j] = v[i][j] = -325.99 * i + j
+        self.assertEqual(x.value, v)
+
+        # Tuple indexing
+        for i in range(2):
+            for j in range(4):
+                x[i, j] = v[i][j] = -8.33e1 * i + j
+        self.assertEqual(x.value, v)
+
 
 class TestVarDim(unittest.TestCase):
 
@@ -156,6 +211,64 @@ class TestVarDim(unittest.TestCase):
                 x = xnd.empty(ss)
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
+
+    def test_var_dim_assign(self):
+        ### Regular data ###
+        x = xnd.empty("var(offsets=[0,2]) * var(offsets=[0,2,5]) * float64")
+        v = [[0.0, 1.0], [2.0, 3.0, 4.0]]
+
+        # Full slice assignment
+        x[:] = v
+        self.assertEqual(x.value, v)
+
+        # Subarray assignment
+        x[0] = v[0] = [1.2, 2.5]
+        self.assertEqual(x.value, v)
+
+        x[1] = v[1] = [1.2, 2.5, 3.99]
+        self.assertEqual(x.value, v)
+
+        # Individual value assignment
+        for i in range(2):
+            x[0][i] = v[0][i] = 100.0 * i
+        for i in range(3):
+            x[1][i] = v[1][i] = 200.0 * i
+        self.assertEqual(x.value, v)
+
+        # Tuple indexing assignment
+        for i in range(2):
+            x[0, i] = v[0][i] = 300.0 * i + 1.222
+        for i in range(3):
+            x[1, i] = v[1][i] = 400.0 * i + 1.333
+
+        # Optional data
+        x = xnd.empty("var(offsets=[0,2]) * var(offsets=[0,2,5]) * ?float64")
+        v = [[0.0, None], [None, 3.0, 4.0]]
+
+        # Full slice assignment
+        x[:] = v
+        self.assertEqual(x.value, v)
+
+        # Subarray assignment
+        x[0] = v[0] = [None, 2.0]
+        self.assertEqual(x.value, v)
+
+        x[1] = v[1] = [1.22214, None, 10.0]
+        self.assertEqual(x.value, v)
+
+        # Individual value assignment
+        for i in range(2):
+            x[0][i] = v[0][i] = 3.14 * i + 1.222
+        for i in range(3):
+            x[1][i] = v[1][i] = 23.333 * i
+        self.assertEqual(x.value, v)
+
+        # Tuple indexing assignment
+        for i in range(2):
+            x[0, i] = v[0][i] = -122.5 * i + 1.222
+        for i in range(3):
+            x[1, i] = v[1][i] = -3e22 * i
+        self.assertEqual(x.value, v)
 
 
 class TestSymbolicDim(unittest.TestCase):
