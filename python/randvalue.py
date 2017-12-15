@@ -72,6 +72,43 @@ DTYPE_EMPTY_TEST_CASES = [
    (None, "?(1 * bytes, 2 * complex128, 3 * string)"),
    (None, "?(1 * bytes, 2 * (complex128, 10 * 2 * string), 3 * string)"),
 
+   # Tuples with optional elements
+   ((None,), "(?int8)"),
+   ((None, 0), "(?int8, int64)"),
+   ((0, None), "(int8, ?int64)"),
+   ((None, None), "(?int8, ?int64)"),
+   (None, "?(?int8, ?int64)"),
+
+   ((0, None), "(uint16, ?(complex64))"),
+   ((0, (None,)), "(uint16, (?complex64))"),
+   ((0, None), "(uint16, ?(?complex64))"),
+
+   ((None, (0+0j,)), "(?uint16, (complex64), pack=1)"),
+   ((0, None), "(uint16, ?(complex64), pack=1)"),
+   ((0, (None,)), "(uint16, (?complex64), pack=1)"),
+
+   (([],), "(0 * ?bytes)"),
+   (([None],), "(1 * ?bytes)"),
+   ((10 * [None],), "(10 * ?bytes)"),
+   (([], []), "(0 * ?bytes, 0 * ?string)"),
+   ((5 * [None], 2 * [""]), "(5 * ?bytes, 2 * string)"),
+   ((5 * [b''], 2 * [None]), "(5 * bytes, 2 * ?string)"),
+   ((5 * [None], 2 * [None]), "(5 * ?bytes, 2 * ?string)"),
+
+   (([None], 2 * [None], 3 * [None]), "(1 * ?bytes, 2 * ?complex128, 3 * ?string)"),
+
+   (([None], 2 * [(0.0j, 10 * [2 * [""]])], 3 * [""]), "(1 * ?bytes, 2 * (complex128, 10 * 2 * string), 3 * string)"),
+   (([b''], 2 * [None], 3 * [""]), "(1 * bytes, 2 * ?(complex128, 10 * 2 * string), 3 * string)"),
+   (([b''], 2 * [(0.0j, 10 * [2 * [""]])], 3 * [None]), "(1 * bytes, 2 * (complex128, 10 * 2 * string), 3 * ?string)"),
+   (([None], 2 * [None], 3 * [""]), "(1 * ?bytes, 2 * ?(complex128, 10 * 2 * string), 3 * string)"),
+   (([None], 2 * [(0.0j, 10 * [2 * [""]])], 3 * [None]), "(1 * ?bytes, 2 * (complex128, 10 * 2 * string), 3 * ?string)"),
+   (([None], 2 * [None], 3 * [None]), "(1 * ?bytes, 2 * ?(complex128, 10 * 2 * string), 3 * ?string)"),
+
+   (([b''], 2 * [(0.0j, 10 * [2 * [None]])], 3 * [""]), "(1 * bytes, 2 * (complex128, 10 * 2 * ?string), 3 * string)"),
+   (([None], 2 * [(0.0j, 10 * [2 * [None]])], 3 * [""]), "(1 * ?bytes, 2 * (complex128, 10 * 2 * ?string), 3 * string)"),
+   (([None], 2 * [(None, 10 * [2 * [None]])], 3 * [""]), "(1 * ?bytes, 2 * (?complex128, 10 * 2 * ?string), 3 * string)"),
+   (([b''], 2 * [(None, 10 * [2 * [None]])], 3 * [None]), "(1 * bytes, 2 * (?complex128, 10 * 2 * ?string), 3 * ?string)"),
+
    # Records
    ({}, "{}"),
    (R['x': 0], "{x: int8}"),
