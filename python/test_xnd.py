@@ -98,6 +98,31 @@ class TestFixedDim(unittest.TestCase):
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
 
+    def test_fixed_dim_index(self):
+        v = [[11.12-2.3j, -1222+20e8j],
+             [complex("inf"), -0.00002j],
+             [0.201+1j, -1+1e301j]]
+
+        t = ndt("3 * 2 * complex128")
+
+        x = xnd(v, type=t)
+
+        for i in range(3):
+            self.assertEqual(x[i].value, v[i])
+
+        for i in range(3):
+            for k in range(2):
+                self.assertEqual(x[i][k], v[i][k])
+                self.assertEqual(x[i, k], v[i][k])
+
+        self.assertEqual(x[:].value, v[:])
+
+        for start in list(range(-3, 4)) + [None]:
+            for stop in list(range(-3, 4)) + [None]:
+                for step in list(range(-3, 0)) + list(range(1, 4)) + [None]:
+                    s = slice(start, stop, step)
+                    self.assertEqual(x[s].value, v[s])
+
 
 class TestVarDim(unittest.TestCase):
 
@@ -601,7 +626,7 @@ class TestPrimitive(unittest.TestCase):
         INF = fromhex("0x1.ffep+15")
 
         v = complex(DENORM_MIN, DENORM_MIN)
-        x = xnd(complex(DENORM_MIN, DENORM_MIN), type="complex32")
+        x = xnd(v, type="complex32")
         self.assertEqual(x.value, v)
 
         v = complex(LOWEST, LOWEST)
@@ -621,11 +646,11 @@ class TestPrimitive(unittest.TestCase):
         # Test special values.
         x = xnd(complex("inf"), type="complex32")
         self.assertTrue(isinf(x.value.real))
-        self.assertTrue(isinf(x.value.imag))
+        self.assertEqual(x.value.imag, 0.0)
 
         x = xnd(complex("nan"), type="complex32")
         self.assertTrue(isnan(x.value.real))
-        self.assertTrue(isnan(x.value.imag))
+        self.assertEqual(x.value.imag, 0.0)
 
     def test_complex64(self):
         fromhex = float.fromhex
@@ -637,7 +662,7 @@ class TestPrimitive(unittest.TestCase):
         INF = fromhex("0x1.ffffffp+127")
 
         v = complex(DENORM_MIN, DENORM_MIN)
-        x = xnd(DENORM_MIN, type="complex64")
+        x = xnd(v, type="complex64")
         self.assertEqual(x.value, v)
 
         v = complex(LOWEST, LOWEST)
@@ -657,11 +682,11 @@ class TestPrimitive(unittest.TestCase):
         # Test special values.
         x = xnd(complex("inf"), type="complex64")
         self.assertTrue(isinf(x.value.real))
-        self.assertTrue(isinf(x.value.imag))
+        self.assertEqual(x.value.imag, 0.0)
 
         x = xnd(complex("nan"), type="complex64")
         self.assertTrue(isnan(x.value.real))
-        self.assertTrue(isnan(x.value.imag))
+        self.assertEqual(x.value.imag, 0.0)
 
     def test_complex128(self):
         fromhex = float.fromhex
@@ -686,11 +711,11 @@ class TestPrimitive(unittest.TestCase):
         # Test special values.
         x = xnd(complex("inf"), type="complex128")
         self.assertTrue(isinf(x.value.real))
-        self.assertTrue(isinf(x.value.imag))
+        self.assertEqual(x.value.imag, 0.0)
 
         x = xnd(complex("nan"), type="complex128")
         self.assertTrue(isnan(x.value.real))
-        self.assertTrue(isnan(x.value.imag))
+        self.assertEqual(x.value.imag, 0.0)
 
 
 class TypeInferenceTest(unittest.TestCase):

@@ -1296,7 +1296,7 @@ _pyxnd_value(xnd_t x)
         if (c.real == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
-        c.imag = _PyFloat_Unpack2((unsigned char *)x.ptr, little_endian);
+        c.imag = _PyFloat_Unpack2((unsigned char *)x.ptr+2, little_endian);
         if (c.imag == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
@@ -1314,7 +1314,7 @@ _pyxnd_value(xnd_t x)
         if (c.real == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
-        c.imag = _PyFloat_Unpack4((unsigned char *)x.ptr, little_endian);
+        c.imag = _PyFloat_Unpack4((unsigned char *)x.ptr+4, little_endian);
         if (c.imag == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
@@ -1327,7 +1327,7 @@ _pyxnd_value(xnd_t x)
         if (c.real == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
-        c.imag = _PyFloat_Unpack8((unsigned char *)x.ptr, little_endian);
+        c.imag = _PyFloat_Unpack8((unsigned char *)x.ptr+8, little_endian);
         if (c.imag == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
