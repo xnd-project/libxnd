@@ -98,7 +98,7 @@ class TestFixedDim(unittest.TestCase):
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
 
-    def test_fixed_dim_index(self):
+    def test_fixed_dim_subscript(self):
         v = [[11.12-2.3j, -1222+20e8j],
              [complex("inf"), -0.00002j],
              [0.201+1j, -1+1e301j]]
@@ -123,6 +123,8 @@ class TestFixedDim(unittest.TestCase):
                     s = slice(start, stop, step)
                     self.assertEqual(x[s].value, v[s])
 
+        self.assertEqual(x[:, 0].value, [11.12-2.3j, complex("inf"), 0.201+1j])
+        self.assertEqual(x[:, 1].value, [-1222+20e8j, -0.00002j, -1+1e301j])
 
 class TestVarDim(unittest.TestCase):
 
