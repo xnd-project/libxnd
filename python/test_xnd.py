@@ -99,32 +99,40 @@ class TestFixedDim(unittest.TestCase):
                 self.assertEqual(x.value, vv)
 
     def test_fixed_dim_subscript(self):
-        v = [[11.12-2.3j, -1222+20e8j],
-             [complex("inf"), -0.00002j],
-             [0.201+1j, -1+1e301j]]
+        # Regular array
+        test_cases = [
+            ([[11.12-2.3j, -1222+20e8j],
+              [complex("inf"), -0.00002j],
+              [0.201+1j, -1+1e301j]], "3 * 2 * complex128"),
+            ([[11.12-2.3j, None],
+              [complex("inf"), None],
+              [0.201+1j, -1+1e301j]], "3 * 2 * ?complex128")
+        ]
 
-        t = ndt("3 * 2 * complex128")
+        for v, s in test_cases:
+            nd = NDArray(v)
+            t = ndt(s)
+            x = xnd(v, type=t)
 
-        x = xnd(v, type=t)
+            for i in range(3):
+                self.assertEqual(x[i].value, nd[i])
 
-        for i in range(3):
-            self.assertEqual(x[i].value, v[i])
+            for i in range(3):
+                for k in range(2):
+                    self.assertEqual(x[i][k], nd[i][k])
+                    self.assertEqual(x[i, k], nd[i][k])
 
-        for i in range(3):
-            for k in range(2):
-                self.assertEqual(x[i][k], v[i][k])
-                self.assertEqual(x[i, k], v[i][k])
+            self.assertEqual(x[:].value, nd[:])
 
-        self.assertEqual(x[:].value, v[:])
+            for start in list(range(-3, 4)) + [None]:
+                for stop in list(range(-3, 4)) + [None]:
+                    for step in list(range(-3, 0)) + list(range(1, 4)) + [None]:
+                        s = slice(start, stop, step)
+                        self.assertEqual(x[s].value, nd[s])
 
-        for start in list(range(-3, 4)) + [None]:
-            for stop in list(range(-3, 4)) + [None]:
-                for step in list(range(-3, 0)) + list(range(1, 4)) + [None]:
-                    s = slice(start, stop, step)
-                    self.assertEqual(x[s].value, v[s])
+            self.assertEqual(x[:, 0].value, nd[:, 0])
+            self.assertEqual(x[:, 1].value, nd[:, 1])
 
-        self.assertEqual(x[:, 0].value, [11.12-2.3j, complex("inf"), 0.201+1j])
-        self.assertEqual(x[:, 1].value, [-1222+20e8j, -0.00002j, -1+1e301j])
 
 class TestVarDim(unittest.TestCase):
 
