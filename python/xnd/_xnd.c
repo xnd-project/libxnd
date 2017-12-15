@@ -1637,6 +1637,32 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
         break;
     }
 
+    case Ref: {
+        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
+        if (ndt_err_occurred(&ctx)) {
+            return seterr_xnd(&ctx);
+        }
+
+        next.index = 0;
+        next.type = t->Ref.type;
+        next.ptr = XND_POINTER_DATA(x.ptr);
+
+        return pyxnd_subtree(next, indices, len);
+    }
+
+    case Constr: {
+        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
+        if (ndt_err_occurred(&ctx)) {
+            return seterr_xnd(&ctx);
+        }
+
+        next.index = 0;
+        next.type = t->Constr.type;
+        next.ptr = x.ptr;
+
+        return pyxnd_subtree(next, indices, len);
+    }
+
     default:
         PyErr_SetString(PyExc_IndexError, "type not indexable");
         return xnd_error;

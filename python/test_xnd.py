@@ -269,6 +269,25 @@ class TestRef(unittest.TestCase):
         self.assertIsInstance(y, xnd)
         self.assertEqual(y.value, inner)
 
+    def test_ref_indexing(self):
+        # If a ref is a dtype but contains an array itself, indexing through
+        # the ref should work transparently.
+        inner = [['a', 'b', 'c', 'd', 'e'],
+                 ['f', 'g', 'h', 'i', 'j'],
+                 ['k', 'l', 'm', 'n', 'o'],
+                 ['p', 'q', 'r', 's', 't']]
+
+        v = 2 * [3 * [inner]]
+
+        x = xnd(v, type="2 * 3 * ref(4 * 5 * string)")
+
+        for i in range(2):
+            for j in range(3):
+                for k in range(4):
+                    for l in range(5):
+                        self.assertEqual(x[i][j][k][l], inner[k][l])
+                        self.assertEqual(x[i, j, k, l], inner[k][l])
+
 
 class TestConstr(unittest.TestCase):
 
@@ -300,6 +319,25 @@ class TestConstr(unittest.TestCase):
         y = x[1, 2]
         self.assertIsInstance(y, xnd)
         self.assertEqual(y.value, inner)
+
+    def test_constr_indexing(self):
+        # If a constr is a dtype but contains an array itself, indexing through
+        # the constructor should work transparently.
+        inner = [['a', 'b', 'c', 'd', 'e'],
+                 ['f', 'g', 'h', 'i', 'j'],
+                 ['k', 'l', 'm', 'n', 'o'],
+                 ['p', 'q', 'r', 's', 't']]
+
+        v = 2 * [3 * [inner]]
+
+        x = xnd(v, type="2 * 3 * InnerArray(4 * 5 * string)")
+
+        for i in range(2):
+            for j in range(3):
+                for k in range(4):
+                    for l in range(5):
+                        self.assertEqual(x[i][j][k][l], inner[k][l])
+                        self.assertEqual(x[i, j, k, l], inner[k][l])
 
 
 class TestCategorical(unittest.TestCase):
