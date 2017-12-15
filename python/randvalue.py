@@ -56,6 +56,8 @@ DTYPE_EMPTY_TEST_CASES = [
    (([], []), "(0 * bytes, 0 * string)"),
    (([b''], 2 * [0.0j], 3 * [""]), "(1 * bytes, 2 * complex128, 3 * string)"),
    (([b''], 2 * [(0.0j, 10 * [2 * [""]])], 3 * [""]), "(1 * bytes, 2 * (complex128, 10 * 2 * string), 3 * string)"),
+   ((0, 2 * [3 * [4 * [5 * [0.0]]]]), "(int64, 2 * 3 * Some(4 * 5 * float64))"),
+   ((0, 2 * [3 * [4 * [5 * [0.0]]]]), "(int64, 2 * 3 * ref(4 * 5 * float64))"),
 
    # Optional tuples
    (None, "?()"),
