@@ -182,6 +182,9 @@ DTYPE_EMPTY_TEST_CASES = [
    (R['x': [None], 'y': 2 * [R['a': None, 'b': 10 * [2 * [None]]]], 'z': 3 * [""]], "{x: 1 * ?bytes, y: 2 * {a: ?complex128, b: 10 * 2 * ?string}, z: 3 * string}"),
    (R['x': [b''], 'y': 2 * [R['a': None, 'b': 10 * [2 * [None]]]], 'z': 3 * [None]], "{x: 1 * bytes, y: 2 * {a: ?complex128, b: 10 * 2 * ?string}, z: 3 * ?string}"),
 
+   (R['x': 0, 'y': 2 * [3 * [4 * [5 * [None]]]]], "{x: int64, y: 2 * 3 * Some(4 * 5 * ?float64)}"),
+   (R['x': 0, 'y': 2 * [3 * [4 * [5 * [None]]]]], "{x: int64, y: 2 * 3 * ref(4 * 5 * ?float64)}"),
+
    # Primitive types
    (False, "bool"),
    (0, "bool"),
