@@ -585,6 +585,22 @@ class TestCategorical(unittest.TestCase):
             self.assertEqual(x.type, t)
             self.assertEqual(x.value, v)
 
+    def test_categorical_assign(self):
+        s = """2 * categorical(
+                     NA, 'January', 'February', 'March', 'April', 'May', 'June',
+                    'July', 'August', 'September', 'October', 'November', 'December'
+               )
+            """
+
+        x = xnd([None, None], type=s)
+        x[0] = 'August'
+        x[1] = 'December'
+
+        self.assertEqual(x.value, ['August', 'December'])
+
+        x[0] = None
+        self.assertEqual(x.value, [None, 'December'])
+
 
 class TestFixedString(unittest.TestCase):
 
