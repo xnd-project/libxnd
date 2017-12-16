@@ -683,6 +683,14 @@ class TestString(unittest.TestCase):
         self.assertEqual(x[0]['b'], "thisguy")
         self.assertEqual(x[1]['b'], "thatguy")
 
+    def test_string_assign(self):
+        t = '2 * {a: complex128, b: string}'
+        x = xnd([R['a': 2+3j, 'b': "thisguy"], R['a': 1+4j, 'b': "thatguy"]], type=t)
+
+        x[0] = R['a': 220j, 'b': 'y']
+        x[1] = R['a': -12j, 'b': 'z']
+        self.assertEqual(x.value, [R['a': 220j, 'b': 'y'], R['a': -12j, 'b': 'z']])
+
 
 class TestBytes(unittest.TestCase):
 
