@@ -606,13 +606,13 @@ class TestFixedString(unittest.TestCase):
 
     def test_fixed_string_empty(self):
         test_cases = [
-          ('fixed_string(1)', '\x00'),
-          ('fixed_string(3)', 3 * '\x00'),
-          ("fixed_string(1, 'ascii')", '\x00'),
-          ("fixed_string(3, 'utf8')", 3 * '\x00'),
-          ("fixed_string(3, 'utf16')", 3 * '\x00'),
-          ("fixed_string(3, 'utf32')", 3 * '\x00'),
-          ("2 * fixed_string(3, 'utf32')", 2 * [3 * '\x00']),
+          ("fixed_string(1)", ""),
+          ("fixed_string(3)", 3 * ""),
+          ("fixed_string(1, 'ascii')", ""),
+          ("fixed_string(3, 'utf8')", 3 * ""),
+          ("fixed_string(3, 'utf16')", 3 * ""),
+          ("fixed_string(3, 'utf32')", 3 * ""),
+          ("2 * fixed_string(3, 'utf32')", 2 * [3 * ""]),
         ]
 
         for s, v in test_cases:
@@ -632,6 +632,20 @@ class TestFixedString(unittest.TestCase):
         v = ["\U00011111\U00022222\U00033333", "\U00011112\U00022223\U00033334"]
         x = xnd(v, type=t)
         self.assertEqual(x.value, v)
+
+    def test_fixed_string_assign(self):
+        t = "2 * fixed_string(3, 'utf32')"
+        v = ["\U00011111\U00022222\U00033333", "\U00011112\U00022223\U00033334"]
+        x = xnd(v, type=t)
+
+        x[0] = "a"
+        self.assertEqual(x.value, ["a", "\U00011112\U00022223\U00033334"])
+
+        x[0] = "a\x00\x00"
+        self.assertEqual(x.value, ["a", "\U00011112\U00022223\U00033334"])
+
+        x[1] = "b\x00c"
+        self.assertEqual(x.value, ["a", "b\x00c"])
 
 
 class TestString(unittest.TestCase):

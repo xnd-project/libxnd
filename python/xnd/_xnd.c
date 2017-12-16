@@ -224,6 +224,49 @@ static PyTypeObject MemoryBlock_Type = {
         dest = _x;                           \
     } while (0)
 
+static void
+_strncpy(char *dest, const void *src, size_t len, size_t size)
+{
+    assert (len <= size);
+    memcpy(dest, src, len);
+    memset(dest+len, '\0', size-len);
+}
+
+static int64_t
+u8_skip_trailing_zero(const uint8_t *ptr, int64_t codepoints)
+{
+    int64_t i;
+
+    for (i=codepoints-1; i >= 0; i--)
+        if (ptr[i] != 0)
+            return i+1;
+
+    return 0;
+}
+
+static int64_t
+u16_skip_trailing_zero(const uint16_t *ptr, int64_t codepoints)
+{
+    int64_t i;
+
+    for (i=codepoints-1; i >= 0; i--)
+        if (ptr[i] != 0)
+            return i+1;
+
+    return 0;
+}
+
+static int64_t
+u32_skip_trailing_zero(const uint32_t *ptr, int64_t codepoints)
+{
+    int64_t i;
+
+    for (i=codepoints-1; i >= 0; i--)
+        if (ptr[i] != 0)
+            return i+1;
+
+    return 0;
+}
 
 static int64_t
 get_int(PyObject *v, int64_t min, int64_t max)
@@ -649,6 +692,7 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case FixedString: {
+        int64_t codepoints = (int64_t)t->FixedString.size; /* XXX */
         int64_t len;
 
         if (!PyUnicode_Check(v)) {
@@ -660,8 +704,6 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        len = PyUnicode_GET_LENGTH(v);
-
         switch (t->FixedString.encoding) {
         case Ascii: {
             if (!PyUnicode_IS_ASCII(v)) {
@@ -670,14 +712,15 @@ mblock_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            if (len > (int64_t)t->FixedString.size) {
+            len = PyUnicode_GET_LENGTH(v);
+
+            if (len > t->datasize) {
                 PyErr_Format(PyExc_ValueError,
-                    "maximum string size (in code points) is %" PRIi64,
-                    t->FixedString.size);
+                    "maximum string size (in bytes) is %" PRIi64, codepoints);
                 return -1;
             }
 
-            memcpy(x.ptr, PyUnicode_1BYTE_DATA(v), len);
+            _strncpy(x.ptr, PyUnicode_1BYTE_DATA(v), len, t->datasize);
             return 0;
         }
 
@@ -688,51 +731,60 @@ mblock_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            // XXX
-            if (len > (int64_t)t->FixedString.size) {
+            len = PyUnicode_GET_LENGTH(v);
+            if (len > t->datasize) {
                 PyErr_Format(PyExc_ValueError,
-                    "maximum string size (in code points) is %" PRIi64,
-                    t->FixedString.size);
+                    "maximum string size (in UTF-8 code points) is %" PRIi64, codepoints);
                 return -1;
             }
 
-            memcpy(x.ptr, PyUnicode_1BYTE_DATA(v), len);
+            _strncpy(x.ptr, PyUnicode_1BYTE_DATA(v), len, t->datasize);
             return 0;
         }
 
         case Utf16: {
-            if (PyUnicode_KIND(v) != PyUnicode_2BYTE_KIND) {
-                PyErr_SetString(PyExc_ValueError,
-                    "expected utf16 string");
+            PyObject *b = PyUnicode_AsUTF16String(v);
+            if (b == NULL) {
                 return -1;
             }
 
-            if (len > (int64_t)t->FixedString.size) {
+            len = PyBytes_GET_SIZE(b);
+
+            if (len-2 > t->datasize) {
                 PyErr_Format(PyExc_ValueError,
-                    "maximum string size (in code points) is %" PRIi64,
-                    t->FixedString.size);
+                    "maximum string size (in UTF-16 code points) is %" PRIi64, codepoints);
                 return -1;
             }
 
-            memcpy(x.ptr, PyUnicode_2BYTE_DATA(v), len * sizeof(uint16_t));
+            /* skip byte order mark */
+            assert(len >= 2);
+
+            _strncpy(x.ptr, PyBytes_AS_STRING(b)+2, len-2, t->datasize);
+            Py_DECREF(b);
+
             return 0;
         }
 
         case Utf32: {
-            if (PyUnicode_KIND(v) != PyUnicode_4BYTE_KIND) {
-                PyErr_SetString(PyExc_ValueError,
-                    "expected utf32 string");
+            PyObject *b = PyUnicode_AsUTF32String(v);
+            if (b == NULL) {
                 return -1;
             }
 
-            if (len > (int64_t)t->FixedString.size) {
+            len = PyBytes_GET_SIZE(b);
+
+            if (len-4 > t->datasize) {
                 PyErr_Format(PyExc_ValueError,
-                    "maximum string size (in code points) is %" PRIi64,
-                    t->FixedString.size);
+                    "maximum string size (in UTF-32 code points) is %" PRIi64, codepoints);
                 return -1;
             }
 
-            memcpy(x.ptr, PyUnicode_4BYTE_DATA(v), len * sizeof(uint32_t));
+            /* skip byte order mark */
+            assert(len >= 4);
+
+            _strncpy(x.ptr, PyBytes_AS_STRING(b)+4, len-4, t->datasize);
+            Py_DECREF(b);
+
             return 0;
         }
 
@@ -748,6 +800,7 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case FixedBytes: {
+        int64_t size = (int64_t)t->FixedBytes.size; /* XXX */
         int64_t len;
 
         if (!PyBytes_Check(v)) {
@@ -757,13 +810,14 @@ mblock_init(xnd_t x, PyObject *v)
 
         len = PyBytes_GET_SIZE(v);
 
-        if (len >= (int64_t)t->FixedBytes.size) {
+        if (len > size) {
             PyErr_Format(PyExc_ValueError,
-                "maximum bytes size is %" PRIi64, t->FixedBytes.size);
+                "maximum bytes size is %" PRIi64, size);
             return -1;
         }
 
-        memcpy(x.ptr, PyBytes_AS_STRING(v), len);
+        _strncpy(x.ptr, PyBytes_AS_STRING(v), len, size);
+
         return 0;
     }
 
@@ -1343,22 +1397,24 @@ _pyxnd_value(xnd_t x)
     }
 
     case FixedString: {
+        int64_t codepoints = (int64_t)t->FixedString.size;
+
         switch (t->FixedString.encoding) {
         case Ascii:
-            return PyUnicode_FromKindAndData(PyUnicode_1BYTE_KIND, x.ptr,
-                                             t->FixedString.size);
+            codepoints = u8_skip_trailing_zero((uint8_t *)x.ptr, codepoints);
+            return PyUnicode_FromKindAndData(PyUnicode_1BYTE_KIND, x.ptr, codepoints);
 
         case Utf8:
-            return PyUnicode_FromKindAndData(PyUnicode_1BYTE_KIND, x.ptr,
-                                             t->FixedString.size);
+            codepoints = u8_skip_trailing_zero((uint8_t *)x.ptr, codepoints);
+            return PyUnicode_FromKindAndData(PyUnicode_1BYTE_KIND, x.ptr, codepoints);
 
         case Utf16:
-            return PyUnicode_FromKindAndData(PyUnicode_2BYTE_KIND, x.ptr,
-                                             t->FixedString.size);
+            codepoints = u16_skip_trailing_zero((uint16_t *)x.ptr, codepoints);
+            return PyUnicode_FromKindAndData(PyUnicode_2BYTE_KIND, x.ptr, codepoints);
 
         case Utf32:
-            return PyUnicode_FromKindAndData(PyUnicode_4BYTE_KIND, x.ptr,
-                                             t->FixedString.size);
+            codepoints = u32_skip_trailing_zero((uint32_t *)x.ptr, codepoints);
+            return PyUnicode_FromKindAndData(PyUnicode_4BYTE_KIND, x.ptr, codepoints);
 
         case Ucs2:
             PyErr_SetString(PyExc_NotImplementedError,
