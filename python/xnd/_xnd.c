@@ -782,6 +782,10 @@ mblock_init(xnd_t x, PyObject *v)
             return seterr_int(&ctx);
         }
 
+        if (XND_POINTER_DATA(x.ptr)) {
+            ndt_free(XND_POINTER_DATA(x.ptr));
+        }
+
         XND_POINTER_DATA(x.ptr) = s;
         return 0;
     }
@@ -802,6 +806,10 @@ mblock_init(xnd_t x, PyObject *v)
         }
 
         memcpy(s, cp, size);
+
+        if (XND_BYTES_DATA(x.ptr)) {
+            ndt_free(XND_BYTES_DATA(x.ptr));
+        }
 
         XND_BYTES_SIZE(x.ptr) = size;
         XND_BYTES_DATA(x.ptr) = (uint8_t *)s;
