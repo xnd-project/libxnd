@@ -453,6 +453,33 @@ class TestRef(unittest.TestCase):
                         self.assertEqual(x[i][j][k][l], inner[k][l])
                         self.assertEqual(x[i, j, k, l], inner[k][l])
 
+    def test_ref_assign(self):
+        # If a ref is a dtype but contains an array itself, assigning through
+        # the ref should work transparently.
+        inner = [['a', 'b', 'c', 'd', 'e'],
+                 ['f', 'g', 'h', 'i', 'j'],
+                 ['k', 'l', 'm', 'n', 'o'],
+                 ['p', 'q', 'r', 's', 't']]
+
+        v = 2 * [3 * [inner]]
+
+        x = xnd(v, type="2 * 3 * ref(4 * 5 * string)")
+        for i in range(2):
+            for j in range(3):
+                for k in range(4):
+                    for l in range(5):
+                        x[i][j][k][l] = inner[k][l] = "%d" % (k * 5 + l)
+
+        self.assertEqual(x.value, v)
+
+        for i in range(2):
+            for j in range(3):
+                for k in range(4):
+                    for l in range(5):
+                        x[i, j, k, l] = inner[k][l] = "%d" % (k * 5 + l + 1)
+
+        self.assertEqual(x.value, v)
+
 
 class TestConstr(unittest.TestCase):
 
