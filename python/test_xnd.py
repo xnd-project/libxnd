@@ -648,6 +648,27 @@ class TestFixedString(unittest.TestCase):
         self.assertEqual(x.value, ["a", "b\x00c"])
 
 
+class TestFixedBytes(unittest.TestCase):
+
+    def test_fixed_bytes_empty(self):
+        r = R['a': 3 * b'\x00', 'b': 10 * b'\x00']
+
+        test_cases = [
+          (b'\x00', 'fixed_bytes(size=1)'),
+          (100 * b'\x00', 'fixed_bytes(size=100)'),
+          (b'\x00', 'fixed_bytes(size=1, align=2)'),
+          (100 * b'\x00', 'fixed_bytes(size=100, align=16)'),
+          (r, '{a: fixed_bytes(size=3), b: fixed_bytes(size=10)}'),
+          (2 * [3 * [r]], '2 * 3 * {a: fixed_bytes(size=3), b: fixed_bytes(size=10)}')
+        ]
+
+        for v, s in test_cases:
+            t = ndt(s)
+            x = xnd.empty(s)
+            self.assertEqual(x.type, t)
+            self.assertEqual(x.value, v)
+
+
 class TestString(unittest.TestCase):
 
     def test_string_empty(self):
@@ -705,27 +726,6 @@ class TestBytes(unittest.TestCase):
           (10 * [2 * [r]], '10 * 2 * {a: bytes(align=32), b: bytes(align=1)}'),
           (10 * [2 * [r]], '10 * 2 * {a: bytes(align=1), b: bytes(align=32)}'),
           ([2 * [r], 5 * [r], 3 * [r]], 'var(offsets=[0,3]) * var(offsets=[0,2,7,10]) * {a: bytes(align=32), b: bytes}')
-        ]
-
-        for v, s in test_cases:
-            t = ndt(s)
-            x = xnd.empty(s)
-            self.assertEqual(x.type, t)
-            self.assertEqual(x.value, v)
-
-
-class TestFixedBytes(unittest.TestCase):
-
-    def test_fixed_bytes_empty(self):
-        r = R['a': 3 * b'\x00', 'b': 10 * b'\x00']
-
-        test_cases = [
-          (b'\x00', 'fixed_bytes(size=1)'),
-          (100 * b'\x00', 'fixed_bytes(size=100)'),
-          (b'\x00', 'fixed_bytes(size=1, align=2)'),
-          (100 * b'\x00', 'fixed_bytes(size=100, align=16)'),
-          (r, '{a: fixed_bytes(size=3), b: fixed_bytes(size=10)}'),
-          (2 * [3 * [r]], '2 * 3 * {a: fixed_bytes(size=3), b: fixed_bytes(size=10)}')
         ]
 
         for v, s in test_cases:
