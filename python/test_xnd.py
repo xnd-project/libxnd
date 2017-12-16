@@ -750,6 +750,18 @@ class TestBytes(unittest.TestCase):
             self.assertEqual(x.type, t)
             self.assertEqual(x.value, v)
 
+    def test_bytes_assign(self):
+        t = "2 * SomeByteArray(3 * bytes)"
+        inner = [b'a', b'b', b'c']
+        v = 2 * [inner]
+
+        x = xnd(v, type=t)
+        for i in range(2):
+            for k in range(3):
+                x[i, k] = inner[k] = bytes(chr(ord('x') + k), "ascii")
+
+        self.assertEqual(x.value, v)
+
 
 class TestPrimitive(unittest.TestCase):
 

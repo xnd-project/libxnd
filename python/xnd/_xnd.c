@@ -862,7 +862,7 @@ mblock_init(xnd_t x, PyObject *v)
         memcpy(s, cp, size);
 
         if (XND_BYTES_DATA(x.ptr)) {
-            ndt_free(XND_BYTES_DATA(x.ptr));
+            ndt_aligned_free(XND_BYTES_DATA(x.ptr));
         }
 
         XND_BYTES_SIZE(x.ptr) = size;
