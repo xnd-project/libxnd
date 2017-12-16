@@ -668,6 +668,22 @@ class TestFixedBytes(unittest.TestCase):
             self.assertEqual(x.type, t)
             self.assertEqual(x.value, v)
 
+    def test_fixed_bytes_assign(self):
+        t = "2 * fixed_bytes(size=3, align=1)"
+        v = [b"abc", b"123"]
+        x = xnd(v, type=t)
+
+        x[0] = b"xyz"
+        self.assertEqual(x.value, [b"xyz", b"123"])
+
+
+        t = "2 * fixed_bytes(size=3, align=128)"
+        v = [b"abc", b"123"]
+        x = xnd(v, type=t)
+
+        x[0] = b"xyz"
+        self.assertEqual(x.value, [b"xyz", b"123"])
+
 
 class TestString(unittest.TestCase):
 
