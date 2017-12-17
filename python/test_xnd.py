@@ -721,6 +721,12 @@ class TestNominal(unittest.TestCase):
         self.assertRaises(ValueError, xnd.empty, "undefined_t")
 
 
+class TestScalarKind(unittest.TestCase):
+
+    def test_scalar_kind(self):
+        self.assertRaises(ValueError, xnd.empty, "Scalar")
+
+
 class TestCategorical(unittest.TestCase):
 
     def test_categorical_empty(self):
@@ -1652,6 +1658,7 @@ ALL_TESTS = [
   TestRef,
   TestConstr,
   TestNominal,
+  TestScalarKind,
   TestCategorical,
   TestFixedString,
   TestFixedBytes,
