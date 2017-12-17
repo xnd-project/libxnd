@@ -769,6 +769,12 @@ class TestCategorical(unittest.TestCase):
         self.assertEqual(x.value, [None, 'December'])
 
 
+class TestFixedStringKind(unittest.TestCase):
+
+    def test_flxed_string_kind(self):
+        self.assertRaises(ValueError, xnd.empty, "FixedString")
+
+
 class TestFixedString(unittest.TestCase):
 
     def test_fixed_string_empty(self):
@@ -1660,6 +1666,7 @@ ALL_TESTS = [
   TestNominal,
   TestScalarKind,
   TestCategorical,
+  TestFixedStringKind,
   TestFixedString,
   TestFixedBytes,
   TestString,
