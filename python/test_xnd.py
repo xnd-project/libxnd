@@ -951,17 +951,14 @@ class TestChar(unittest.TestCase):
         self.assertRaises(NotImplementedError, xnd, 1, type="char('utf8')")
 
 
-class TestPrimitive(unittest.TestCase):
+class TestVoid(unittest.TestCase):
 
-    def test_primitive_empty(self):
-        # Test creation and initialization of empty xnd objects.
+    def test_void(self):
+        self.assertRaises(ValueError, xnd.empty, "void")
+        self.assertRaises(ValueError, xnd.empty, "10 * 2 * void")
 
-        for value, type_string in EMPTY_TEST_CASES:
-            for p in PRIMITIVE:
-                ts = type_string % p
-                x = xnd.empty(ts)
-                self.assertEqual(x.value, value)
-                self.assertEqual(x.type, ndt(ts))
+
+class TestBool(unittest.TestCase):
 
     def test_bool(self):
         # From bool.
@@ -990,6 +987,19 @@ class TestPrimitive(unittest.TestCase):
         # Test broken input.
         b = BoolMemoryError()
         self.assertRaises(MemoryError, xnd, b, type="bool")
+
+
+class TestPrimitive(unittest.TestCase):
+
+    def test_primitive_empty(self):
+        # Test creation and initialization of empty xnd objects.
+
+        for value, type_string in EMPTY_TEST_CASES:
+            for p in PRIMITIVE:
+                ts = type_string % p
+                x = xnd.empty(ts)
+                self.assertEqual(x.value, value)
+                self.assertEqual(x.type, ndt(ts))
 
     def test_signed(self):
         # Test bounds.
@@ -1688,6 +1698,8 @@ ALL_TESTS = [
   TestString,
   TestBytes,
   TestChar,
+  TestVoid,
+  TestBool,
   TestPrimitive,
   TestTypeInference,
   TestIndexing,
