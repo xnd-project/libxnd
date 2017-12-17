@@ -25,13 +25,13 @@ class xnd(_xnd):
                     "the 'type' and 'levels' arguments are mutually exclusive")
             elif isinstance(type, str):
                 type = ndt(type)
-        return super().__new__(cls, value=value, type=type)
+        return super().__new__(cls, type=type, value=value)
 
     @classmethod
     def empty(cls, t):
         if isinstance(t, str):
             t = ndt(t)
-        return cls(value=None, type=t)
+        return super().__new__(cls, type=t)
 
 
 

@@ -169,7 +169,7 @@ mblock_from_typed_value(PyObject *type, PyObject *value)
     Py_INCREF(type);
     self->type = type;
 
-    if (value != Py_None) {
+    if (value != NULL) {
         if (mblock_init(self->xnd->master, value) < 0) {
             Py_DECREF(self);
             return NULL;
@@ -539,6 +539,12 @@ mblock_init(xnd_t x, PyObject *v)
     case Bool: {
         int tmp;
         bool b;
+
+        if (v == Py_None) {
+            PyErr_SetString(PyExc_ValueError,
+                "assigning None to memory block with non-optional type");
+            return -1;
+        }
 
         tmp = PyObject_IsTrue(v);
         if (tmp < 0) {
@@ -1040,7 +1046,8 @@ static PyObject *
 pyxnd_new(PyTypeObject *tp, PyObject *args, PyObject *kwds)
 {
     static char *kwlist[] = {"type", "value", NULL};
-    PyObject *type, *value = Py_None;
+    PyObject *type = NULL;
+    PyObject *value = NULL;
     MemoryBlockObject *mblock;
     XndObject *self;
 
