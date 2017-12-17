@@ -989,6 +989,12 @@ class TestBool(unittest.TestCase):
         self.assertRaises(MemoryError, xnd, b, type="bool")
 
 
+class TestSignedKind(unittest.TestCase):
+
+    def test_signed_kind(self):
+        self.assertRaises(ValueError, xnd.empty, "Signed")
+
+
 class TestSigned(unittest.TestCase):
 
     def test_signed(self):
@@ -1711,6 +1717,7 @@ ALL_TESTS = [
   TestChar,
   TestVoid,
   TestBool,
+  TestSignedKind,
   TestSigned,
   TestUnsigned,
   TestFloat,
