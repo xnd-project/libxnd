@@ -821,6 +821,12 @@ class TestFixedString(unittest.TestCase):
         self.assertEqual(x.value, ["a", "b\x00c"])
 
 
+class TestFixedBytesKind(unittest.TestCase):
+
+    def test_flxed_bytes_kind(self):
+        self.assertRaises(ValueError, xnd.empty, "FixedBytes")
+
+
 class TestFixedBytes(unittest.TestCase):
 
     def test_fixed_bytes_empty(self):
@@ -1668,6 +1674,7 @@ ALL_TESTS = [
   TestCategorical,
   TestFixedStringKind,
   TestFixedString,
+  TestFixedBytesKind,
   TestFixedBytes,
   TestString,
   TestBytes,
