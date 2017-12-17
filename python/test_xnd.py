@@ -1027,6 +1027,11 @@ class TestSigned(unittest.TestCase):
             i = IndexTypeError()
             self.assertRaises(TypeError, xnd, i, type=t)
 
+class TestUnsignedKind(unittest.TestCase):
+
+    def test_unsigned_kind(self):
+        self.assertRaises(ValueError, xnd.empty, "Unsigned")
+
 
 class TestUnsigned(unittest.TestCase):
 
@@ -1719,6 +1724,7 @@ ALL_TESTS = [
   TestBool,
   TestSignedKind,
   TestSigned,
+  TestUnsignedKind,
   TestUnsigned,
   TestFloat,
   TestComplex,
