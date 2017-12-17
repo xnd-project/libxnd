@@ -68,6 +68,20 @@ EMPTY_TEST_CASES = [
 ]
 
 
+class TestModule(unittest.TestCase):
+
+    def test_module(self):
+        test_cases = [
+          "Foo:: 2 * 3 * ?int64",
+          "Foo:: 10 * 2 * ?string",
+          "Bar:: !10 * 2 * {a: !2 * ?int64}",
+          "Quux:: {a: string, b: ?bytes}"
+        ]
+
+        for s in test_cases:
+            self.assertRaises(NotImplementedError, xnd.empty, s)
+
+
 class TestAny(unittest.TestCase):
 
     def test_any(self):
@@ -1607,6 +1621,7 @@ class LongIndexSliceTest(unittest.TestCase):
 
 
 ALL_TESTS = [
+  TestModule,
   TestAny,
   TestFixedDim,
   TestFortran,
