@@ -30,7 +30,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-import sys, unittest
+import sys, unittest, argparse
 from math import isinf, isnan
 from ndtypes import ndt
 from xnd import xnd
@@ -42,16 +42,13 @@ from randvalue import *
 np = None
 
 
-SKIP_LONG = True
-SKIP_BRUTE_FORCE = True
-
-if '--long' in sys.argv:
-    SKIP_LONG = False
-    sys.argv.remove('--long')
-if '--all' in sys.argv:
-    SKIP_LONG = False
-    SKIP_BRUTE_FORCE = False
-    sys.argv.remove('--all')
+parser = argparse.ArgumentParser()
+parser.add_argument("-f", "--failfast", action="store_true",
+                    help="stop the test run on first error")
+parser.add_argument('--long', action="store_true", help="run long slice tests")
+parser.add_argument('--all', action="store_true", help="run brute force tests")
+ARGS = parser.parse_args()
+if ARGS.all: ARGS.long = True
 
 
 PRIMITIVE = [
@@ -1193,7 +1190,7 @@ class TestPrimitive(unittest.TestCase):
         self.assertEqual(x.value.imag, 0.0)
 
 
-class TypeInferenceTest(unittest.TestCase):
+class TestTypeInference(unittest.TestCase):
 
     def test_tuple(self):
         d = R['a': (2.0, b"bytes"), 'b': ("str", float('inf'))]
@@ -1364,7 +1361,7 @@ class TypeInferenceTest(unittest.TestCase):
             self.assertRaises(NotImplementedError, xnd, v)
 
 
-class IndexTest(unittest.TestCase):
+class TestIndexing(unittest.TestCase):
 
     def test_indexing(self):
         x = xnd([])
@@ -1511,7 +1508,7 @@ class TestSpec(unittest.TestCase):
                         check(nd, d, value, 0)
 
 
-@unittest.skipIf(SKIP_LONG, "use --long argument to enable these tests")
+@unittest.skipIf(not ARGS.long, "use --long argument to enable these tests")
 class LongIndexSliceTest(unittest.TestCase):
 
     def test_subarray(self):
@@ -1581,7 +1578,7 @@ class LongIndexSliceTest(unittest.TestCase):
         indices = (slice(0,1,1), 0)
         self.assertRaises(IndexError, x.__getitem__, indices)
 
-    @unittest.skipIf(SKIP_BRUTE_FORCE, "use --all argument to enable these tests")
+    @unittest.skipIf(not ARGS.all, "use --all argument to enable these tests")
     def test_slices_brute_force(self):
         # Test all possible slices for the given ndim and shape
         t = TestSpec(constr=xnd,
@@ -1609,5 +1606,39 @@ class LongIndexSliceTest(unittest.TestCase):
         t.run()
 
 
+ALL_TESTS = [
+  TestAny,
+  TestFixedDim,
+  TestFortran,
+  TestVarDim,
+  TestSymbolicDim,
+  TestEllipsisDim,
+  TestTuple,
+  TestRecord,
+  TestRef,
+  TestConstr,
+  TestCategorical,
+  TestFixedString,
+  TestFixedBytes,
+  TestString,
+  TestBytes,
+  TestPrimitive,
+  TestTypeInference,
+  TestIndexing,
+  LongIndexSliceTest,
+]
+
+
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    suite = unittest.TestSuite()
+    loader = unittest.TestLoader()
+
+    for case in ALL_TESTS:
+        s = loader.loadTestsFromTestCase(case)
+        suite.addTest(s)
+
+    runner = unittest.TextTestRunner(failfast=ARGS.failfast, verbosity=2)
+    result = runner.run(suite)
+    ret = not result.wasSuccessful()
+
+    sys.exit(ret)
