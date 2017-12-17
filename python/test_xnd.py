@@ -1163,6 +1163,12 @@ class TestFloat(unittest.TestCase):
         self.assertTrue(isnan(x.value))
 
 
+class TestComplexKind(unittest.TestCase):
+
+    def test_complex_kind(self):
+        self.assertRaises(ValueError, xnd.empty, "Complex")
+
+
 class TestComplex(unittest.TestCase):
 
     @requires_py36
@@ -1734,6 +1740,7 @@ ALL_TESTS = [
   TestUnsigned,
   TestFloatKind,
   TestFloat,
+  TestComplexKind,
   TestComplex,
   TestPrimitive,
   TestTypeInference,
