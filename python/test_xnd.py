@@ -82,6 +82,18 @@ class TestModule(unittest.TestCase):
             self.assertRaises(NotImplementedError, xnd.empty, s)
 
 
+class TestFunction(unittest.TestCase):
+
+    def test_function(self):
+        test_cases = [
+          "(2 * 3 * ?int64, complex128) -> (T, T)",
+          "(2 * 3 * ?int64, {a: float64, b: bytes}) -> bytes",
+        ]
+
+        for s in test_cases:
+            self.assertRaises(ValueError, xnd.empty, s)
+
+
 class TestAny(unittest.TestCase):
 
     def test_any(self):
@@ -1622,6 +1634,7 @@ class LongIndexSliceTest(unittest.TestCase):
 
 ALL_TESTS = [
   TestModule,
+  TestFunction,
   TestAny,
   TestFixedDim,
   TestFortran,
