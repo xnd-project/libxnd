@@ -1066,6 +1066,12 @@ class TestUnsigned(unittest.TestCase):
             self.assertRaises(TypeError, xnd, i, type=t)
 
 
+class TestFloatKind(unittest.TestCase):
+
+    def test_float_kind(self):
+        self.assertRaises(ValueError, xnd.empty, "Float")
+
+
 class TestFloat(unittest.TestCase):
 
     @requires_py36
@@ -1726,6 +1732,7 @@ ALL_TESTS = [
   TestSigned,
   TestUnsignedKind,
   TestUnsigned,
+  TestFloatKind,
   TestFloat,
   TestComplex,
   TestPrimitive,
