@@ -265,6 +265,16 @@ DTYPE_EMPTY_TEST_CASES = [
    (2 * [0], "ref(ref(2 * int32))"),
    (2 * [3 * [0]], "ref(ref(2 * 3 * int8))"),
 
+   ([], "ref(!0 * bool)"),
+   ([0], "ref(!1 * int16)"),
+   (2 * [0], "ref(!2 * int32)"),
+   (2 * [3 * [0]], "ref(!2 * 3 * int8)"),
+
+   ([], "ref(ref(!0 * bool))"),
+   ([0], "ref(ref(!1 * int16))"),
+   (2 * [0], "ref(ref(!2 * int32))"),
+   (2 * [3 * [0]], "ref(ref(!2 * 3 * int8))"),
+
    # Optional references
    (None, "?&bool"),
 
@@ -302,6 +312,9 @@ DTYPE_EMPTY_TEST_CASES = [
    (None, "?ref(?ref(1 * int16))"),
    (None, "?ref(ref(2 * int32))"),
 
+   (None, "?ref(!2 * 3 * int8)"),
+   (None, "?ref(ref(!2 * 3 * int32))"),
+
    # References to types with optional data
    (None, "&?bool"),
 
@@ -335,6 +348,9 @@ DTYPE_EMPTY_TEST_CASES = [
    ([None], "ref(ref(1 * ?int16))"),
    (2 * [None], "ref(ref(2 * ?int32))"),
 
+   (2 * [3 * [None]], "ref(!2 * 3 * ?int8)"),
+   (2 * [3 * [None]], "ref(ref(!2 * 3 * ?int8))"),
+
    # Constructors
    (False, "Some(bool)"),
    (0, "Some(bool)"),
@@ -358,6 +374,8 @@ DTYPE_EMPTY_TEST_CASES = [
    ([0], "ThisGuy(1 * int16)"),
    (2 * [0], "ThisGuy(2 * int32)"),
    (2 * [3 * [0.0]], "ThisGuy(2 * 3 * float32)"),
+
+   (2 * [3 * [0.0]], "ThisGuy(!2 * 3 * float32)"),
 
    # Optional constructors
    (None, "?Some(bool)"),
@@ -383,6 +401,8 @@ DTYPE_EMPTY_TEST_CASES = [
    (None, "?ThisGuy(2 * int32)"),
    (None, "?ThisGuy(2 * 3 * float32)"),
 
+   (None, "?ThisGuy(!2 * 3 * float32)"),
+
    # Constructors with an optional data type argument
    (None, "Some(?bool)"),
 
@@ -406,6 +426,8 @@ DTYPE_EMPTY_TEST_CASES = [
    ([None], "ThisGuy(1 * ?int16)"),
    (2 * [None], "ThisGuy(2 * ?int32)"),
    (2 * [3 * [None]], "ThisGuy(2 * 3 * ?float32)"),
+
+   (2 * [3 * [None]], "ThisGuy(!2 * 3 * ?float32)"),
 ]
 
 
