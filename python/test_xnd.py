@@ -1146,17 +1146,7 @@ class TestFloat(unittest.TestCase):
         self.assertTrue(isnan(x.value))
 
 
-class TestPrimitive(unittest.TestCase):
-
-    def test_primitive_empty(self):
-        # Test creation and initialization of empty xnd objects.
-
-        for value, type_string in EMPTY_TEST_CASES:
-            for p in PRIMITIVE:
-                ts = type_string % p
-                x = xnd.empty(ts)
-                self.assertEqual(x.value, value)
-                self.assertEqual(x.type, ndt(ts))
+class TestComplex(unittest.TestCase):
 
     @requires_py36
     def test_complex32(self):
@@ -1267,6 +1257,18 @@ class TestPrimitive(unittest.TestCase):
         self.assertTrue(isnan(x.value.real))
         self.assertEqual(x.value.imag, 0.0)
 
+
+class TestPrimitive(unittest.TestCase):
+
+    def test_primitive_empty(self):
+        # Test creation and initialization of empty xnd objects.
+
+        for value, type_string in EMPTY_TEST_CASES:
+            for p in PRIMITIVE:
+                ts = type_string % p
+                x = xnd.empty(ts)
+                self.assertEqual(x.value, value)
+                self.assertEqual(x.type, ndt(ts))
 
 class TestTypeInference(unittest.TestCase):
 
@@ -1712,6 +1714,7 @@ ALL_TESTS = [
   TestSigned,
   TestUnsigned,
   TestFloat,
+  TestComplex,
   TestPrimitive,
   TestTypeInference,
   TestIndexing,
