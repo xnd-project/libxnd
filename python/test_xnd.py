@@ -189,6 +189,124 @@ class TestFixedDim(unittest.TestCase):
         self.assertEqual(x.value, v)
 
 
+class TestFortran(unittest.TestCase):
+
+    def test_fortran_empty(self):
+        for v, s in DTYPE_EMPTY_TEST_CASES:
+            for vv, ss in [
+               (0 * [v], "!0 * %s" % s),
+               (1 * [v], "!1 * %s" % s),
+               (2 * [v], "!2 * %s" % s),
+               (1000 * [v], "!1000 * %s" % s),
+
+               (0 * [0 * [v]], "!0 * 0 * %s" % s),
+               (0 * [1 * [v]], "!0 * 1 * %s" % s),
+               (1 * [0 * [v]], "!1 * 0 * %s" % s),
+
+               (1 * [1 * [v]], "!1 * 1 * %s" % s),
+               (1 * [2 * [v]], "!1 * 2 * %s" % s),
+               (2 * [1 * [v]], "!2 * 1 * %s" % s),
+               (2 * [2 * [v]], "!2 * 2 * %s" % s),
+               (2 * [3 * [v]], "!2 * 3 * %s" % s),
+               (3 * [2 * [v]], "!3 * 2 * %s" % s),
+               (3 * [40 * [v]], "!3 * 40 * %s" % s) ]:
+
+                t = ndt(ss)
+                x = xnd.empty(ss)
+                self.assertEqual(x.type, t)
+                self.assertEqual(x.value, vv)
+
+    def test_fortran_subscript(self):
+        test_cases = [
+            ([[11.12-2.3j, -1222+20e8j],
+              [complex("inf"), -0.00002j],
+              [0.201+1j, -1+1e301j]], "!3 * 2 * complex128"),
+            ([[11.12-2.3j, None],
+              [complex("inf"), None],
+              [0.201+1j, -1+1e301j]], "!3 * 2 * ?complex128")
+        ]
+
+        for v, s in test_cases:
+            nd = NDArray(v)
+            t = ndt(s)
+            x = xnd(v, type=t)
+
+            for i in range(3):
+                self.assertEqual(x[i].value, nd[i])
+
+            for i in range(3):
+                for k in range(2):
+                    self.assertEqual(x[i][k], nd[i][k])
+                    self.assertEqual(x[i, k], nd[i][k])
+
+            self.assertEqual(x[:].value, nd[:])
+
+            for start in list(range(-3, 4)) + [None]:
+                for stop in list(range(-3, 4)) + [None]:
+                    for step in list(range(-3, 0)) + list(range(1, 4)) + [None]:
+                        s = slice(start, stop, step)
+                        self.assertEqual(x[s].value, nd[s])
+
+            self.assertEqual(x[:, 0].value, nd[:, 0])
+            self.assertEqual(x[:, 1].value, nd[:, 1])
+
+    def test_fortran_assign(self):
+        ### Regular data ###
+        x = xnd.empty("!2 * 4 * float64")
+        v = [[0.0, 1.0, 2.0, 3.0], [4.0, 5.0, 6.0, 7.0]]
+
+        # Full slice
+        x[:] = v
+        self.assertEqual(x.value, v)
+
+        # Subarray
+        x[0] = v[0] = [1.2, -3e45, float("inf"), -322.25]
+        self.assertEqual(x.value, v)
+
+        x[1] = v[1] = [-11.25, 3.355e301, -0.000002, -5000.2]
+        self.assertEqual(x.value, v)
+
+        # Single values
+        for i in range(2):
+            for j in range(4):
+                x[i][j] = v[i][j] = 3.22 * i + j
+        self.assertEqual(x.value, v)
+
+        # Tuple indexing
+        for i in range(2):
+            for j in range(4):
+                x[i, j] = v[i][j] = -3.002e1 * i + j
+        self.assertEqual(x.value, v)
+
+
+        ### Optional data ###
+        x = xnd.empty("!2 * 4 * ?float64")
+        v = [[10.0, None, 2.0, 100.12], [None, None, 6.0, 7.0]]
+
+        # Full slice
+        x[:] = v
+        self.assertEqual(x.value, v)
+
+        # Subarray
+        x[0] = v[0] = [None, 3e45, float("inf"), None]
+        self.assertEqual(x.value, v)
+
+        x[1] = v[1] = [-11.25, 3.355e301, -0.000002, None]
+        self.assertEqual(x.value, v)
+
+        # Single values
+        for i in range(2):
+            for j in range(4):
+                x[i][j] = v[i][j] = -325.99 * i + j
+        self.assertEqual(x.value, v)
+
+        # Tuple indexing
+        for i in range(2):
+            for j in range(4):
+                x[i, j] = v[i][j] = -8.33e1 * i + j
+        self.assertEqual(x.value, v)
+
+
 class TestVarDim(unittest.TestCase):
 
     def test_var_dim_empty(self):

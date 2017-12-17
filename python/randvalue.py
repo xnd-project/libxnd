@@ -304,7 +304,6 @@ DTYPE_EMPTY_TEST_CASES = [
 
    # References to types with optional data
    (None, "&?bool"),
-   (None, "&?bool"),
 
    (None, "&?int8"),
    (None, "&?int16"),
