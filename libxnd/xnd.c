@@ -266,6 +266,10 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
         ndt_err_format(ctx, NDT_NotImplementedError, "modules not implemented");
         return -1;
 
+    case Char:
+        ndt_err_format(ctx, NDT_NotImplementedError, "char not implemented");
+        return -1;
+
     /* Primitive types are already initialized by calloc(). */
     case Bool:
     case Int8: case Int16: case Int32: case Int64:
@@ -273,7 +277,7 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
     case Float16: case Float32: case Float64:
     case Complex32: case Complex64: case Complex128:
     case FixedString: case FixedBytes:
-    case Char: case String: case Bytes:
+    case String: case Bytes:
         return 0;
 
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:

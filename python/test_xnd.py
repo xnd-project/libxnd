@@ -771,7 +771,7 @@ class TestCategorical(unittest.TestCase):
 
 class TestFixedStringKind(unittest.TestCase):
 
-    def test_flxed_string_kind(self):
+    def test_fixed_string_kind(self):
         self.assertRaises(ValueError, xnd.empty, "FixedString")
 
 
@@ -823,7 +823,7 @@ class TestFixedString(unittest.TestCase):
 
 class TestFixedBytesKind(unittest.TestCase):
 
-    def test_flxed_bytes_kind(self):
+    def test_fixed_bytes_kind(self):
         self.assertRaises(ValueError, xnd.empty, "FixedBytes")
 
 
@@ -940,6 +940,15 @@ class TestBytes(unittest.TestCase):
                 x[i, k] = inner[k] = bytes(chr(ord('x') + k), "ascii")
 
         self.assertEqual(x.value, v)
+
+
+class TestChar(unittest.TestCase):
+
+    def test_char(self):
+        # Semantics need to be evaluated (we already have fixed_string
+        # with different encodings).
+        self.assertRaises(NotImplementedError, xnd.empty, "char('utf8')")
+        self.assertRaises(NotImplementedError, xnd, 1, type="char('utf8')")
 
 
 class TestPrimitive(unittest.TestCase):
@@ -1678,6 +1687,7 @@ ALL_TESTS = [
   TestFixedBytes,
   TestString,
   TestBytes,
+  TestChar,
   TestPrimitive,
   TestTypeInference,
   TestIndexing,
