@@ -71,6 +71,20 @@ EMPTY_TEST_CASES = [
 ]
 
 
+class TestAny(unittest.TestCase):
+
+    def test_any(self):
+        test_cases = [
+          "Any",
+          "10 * 2 * Any",
+          "!10 * 2 * Any",
+          "{a: string, b: Any}"
+        ]
+
+        for s in test_cases:
+            self.assertRaises(ValueError, xnd.empty, s)
+
+
 class TestFixedDim(unittest.TestCase):
 
     def test_fixed_dim_empty(self):
