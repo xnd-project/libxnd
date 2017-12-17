@@ -989,17 +989,7 @@ class TestBool(unittest.TestCase):
         self.assertRaises(MemoryError, xnd, b, type="bool")
 
 
-class TestPrimitive(unittest.TestCase):
-
-    def test_primitive_empty(self):
-        # Test creation and initialization of empty xnd objects.
-
-        for value, type_string in EMPTY_TEST_CASES:
-            for p in PRIMITIVE:
-                ts = type_string % p
-                x = xnd.empty(ts)
-                self.assertEqual(x.value, value)
-                self.assertEqual(x.type, ndt(ts))
+class TestSigned(unittest.TestCase):
 
     def test_signed(self):
         # Test bounds.
@@ -1030,6 +1020,19 @@ class TestPrimitive(unittest.TestCase):
             self.assertRaises(MemoryError, xnd, i, type=t)
             i = IndexTypeError()
             self.assertRaises(TypeError, xnd, i, type=t)
+
+
+class TestPrimitive(unittest.TestCase):
+
+    def test_primitive_empty(self):
+        # Test creation and initialization of empty xnd objects.
+
+        for value, type_string in EMPTY_TEST_CASES:
+            for p in PRIMITIVE:
+                ts = type_string % p
+                x = xnd.empty(ts)
+                self.assertEqual(x.value, value)
+                self.assertEqual(x.type, ndt(ts))
 
     def test_unsigned(self):
         # Test bounds.
@@ -1700,6 +1703,7 @@ ALL_TESTS = [
   TestChar,
   TestVoid,
   TestBool,
+  TestSigned,
   TestPrimitive,
   TestTypeInference,
   TestIndexing,
