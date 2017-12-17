@@ -1293,6 +1293,15 @@ class TestPrimitive(unittest.TestCase):
                 self.assertEqual(x.value, value)
                 self.assertEqual(x.type, ndt(ts))
 
+
+class TestTypevar(unittest.TestCase):
+
+    def test_typevar(self):
+        self.assertRaises(ValueError, xnd.empty, "T")
+        self.assertRaises(ValueError, xnd.empty, "2 * 10 * T")
+        self.assertRaises(ValueError, xnd.empty, "{a: 2 * 10 * T, b: bytes}")
+
+
 class TestTypeInference(unittest.TestCase):
 
     def test_tuple(self):
@@ -1743,6 +1752,7 @@ ALL_TESTS = [
   TestComplexKind,
   TestComplex,
   TestPrimitive,
+  TestTypevar,
   TestTypeInference,
   TestIndexing,
   LongIndexSliceTest,
