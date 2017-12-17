@@ -908,6 +908,15 @@ class TestPrimitive(unittest.TestCase):
         x = xnd(0, type="bool")
         self.assertIs(x.value, False)
 
+        # From object (for numpy compat: np.bool([1,2,3]))
+        x = xnd([1,2,3], type="bool")
+        self.assertIs(x.value, True)
+
+        x = xnd(None, type="?bool")
+        self.assertIs(x.value, None)
+
+        self.assertRaises(ValueError, xnd, None, type="bool")
+
         # Test broken input.
         b = BoolMemoryError()
         self.assertRaises(MemoryError, xnd, b, type="bool")
