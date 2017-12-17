@@ -51,23 +51,6 @@ ARGS = parser.parse_args()
 if ARGS.all: ARGS.long = True
 
 
-PRIMITIVE = [
-    'bool',
-    'int8', 'int16', 'int32', 'int64',
-    'uint8', 'uint16', 'uint32', 'uint64',
-    'float32', 'float64',
-    'complex64', 'complex128'
-]
-
-EMPTY_TEST_CASES = [
-    (0, "%s"),
-    ([], "0 * %s"),
-    ([0], "1 * %s"),
-    ([0, 0], "var(offsets=[0, 2]) * %s"),
-    (3 * [{"a": 0, "b": 0}], "3 * {a: int64, b: %s}")
-]
-
-
 class TestModule(unittest.TestCase):
 
     def test_module(self):
