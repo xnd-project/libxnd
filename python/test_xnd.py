@@ -1055,17 +1055,7 @@ class TestUnsigned(unittest.TestCase):
             self.assertRaises(TypeError, xnd, i, type=t)
 
 
-class TestPrimitive(unittest.TestCase):
-
-    def test_primitive_empty(self):
-        # Test creation and initialization of empty xnd objects.
-
-        for value, type_string in EMPTY_TEST_CASES:
-            for p in PRIMITIVE:
-                ts = type_string % p
-                x = xnd.empty(ts)
-                self.assertEqual(x.value, value)
-                self.assertEqual(x.type, ndt(ts))
+class TestFloat(unittest.TestCase):
 
     @requires_py36
     def test_float16(self):
@@ -1154,6 +1144,19 @@ class TestPrimitive(unittest.TestCase):
 
         x = xnd(float("nan"), type="float64")
         self.assertTrue(isnan(x.value))
+
+
+class TestPrimitive(unittest.TestCase):
+
+    def test_primitive_empty(self):
+        # Test creation and initialization of empty xnd objects.
+
+        for value, type_string in EMPTY_TEST_CASES:
+            for p in PRIMITIVE:
+                ts = type_string % p
+                x = xnd.empty(ts)
+                self.assertEqual(x.value, value)
+                self.assertEqual(x.type, ndt(ts))
 
     @requires_py36
     def test_complex32(self):
@@ -1708,6 +1711,7 @@ ALL_TESTS = [
   TestBool,
   TestSigned,
   TestUnsigned,
+  TestFloat,
   TestPrimitive,
   TestTypeInference,
   TestIndexing,
