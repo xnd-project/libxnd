@@ -715,6 +715,12 @@ class TestConstr(unittest.TestCase):
         self.assertEqual(x.value, v)
 
 
+class TestNominal(unittest.TestCase):
+
+    def test_nominal(self):
+        self.assertRaises(ValueError, xnd.empty, "undefined_t")
+
+
 class TestCategorical(unittest.TestCase):
 
     def test_categorical_empty(self):
@@ -1645,6 +1651,7 @@ ALL_TESTS = [
   TestRecord,
   TestRef,
   TestConstr,
+  TestNominal,
   TestCategorical,
   TestFixedString,
   TestFixedBytes,
