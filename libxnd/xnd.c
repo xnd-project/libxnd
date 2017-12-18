@@ -262,10 +262,6 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
     case Categorical:
         return 0;
 
-    case Module:
-        ndt_err_format(ctx, NDT_NotImplementedError, "modules not implemented");
-        return -1;
-
     case Char:
         ndt_err_format(ctx, NDT_NotImplementedError, "char not implemented");
         return -1;
@@ -280,10 +276,11 @@ xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
     case String: case Bytes:
         return 0;
 
+    case Module: case Function:
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
     case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
     case ComplexKind: case FixedStringKind: case FixedBytesKind:
-    case Void: case Function:
+    case Void:
         /* NOT REACHED: intercepted by ndt_is_abstract(). */
         ndt_err_format(ctx, NDT_RuntimeError, "unexpected abstract type");
         return -1;

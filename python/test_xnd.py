@@ -62,7 +62,7 @@ class TestModule(unittest.TestCase):
         ]
 
         for s in test_cases:
-            self.assertRaises(NotImplementedError, xnd.empty, s)
+            self.assertRaises(ValueError, xnd.empty, s)
 
 
 class TestFunction(unittest.TestCase):
