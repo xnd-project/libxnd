@@ -818,8 +818,8 @@ class TestFixedBytes(unittest.TestCase):
         test_cases = [
           (b'\x00', 'fixed_bytes(size=1)'),
           (100 * b'\x00', 'fixed_bytes(size=100)'),
-          (b'\x00', 'fixed_bytes(size=1, align=2)'),
-          (100 * b'\x00', 'fixed_bytes(size=100, align=16)'),
+          (4 * b'\x00', 'fixed_bytes(size=4, align=2)'),
+          (128 * b'\x00', 'fixed_bytes(size=128, align=16)'),
           (r, '{a: fixed_bytes(size=3), b: fixed_bytes(size=10)}'),
           (2 * [3 * [r]], '2 * 3 * {a: fixed_bytes(size=3), b: fixed_bytes(size=10)}')
         ]
@@ -839,7 +839,7 @@ class TestFixedBytes(unittest.TestCase):
         self.assertEqual(x.value, [b"xyz", b"123"])
 
 
-        t = "2 * fixed_bytes(size=3, align=128)"
+        t = "2 * fixed_bytes(size=3, align=1)"
         v = [b"abc", b"123"]
         x = xnd(v, type=t)
 
