@@ -77,6 +77,13 @@ class TestFunction(unittest.TestCase):
             self.assertRaises(ValueError, xnd.empty, s)
 
 
+class TestVoid(unittest.TestCase):
+
+    def test_void(self):
+        self.assertRaises(ValueError, xnd.empty, "void")
+        self.assertRaises(ValueError, xnd.empty, "10 * 2 * void")
+
+
 class TestAny(unittest.TestCase):
 
     def test_any(self):
@@ -934,13 +941,6 @@ class TestChar(unittest.TestCase):
         self.assertRaises(NotImplementedError, xnd, 1, type="char('utf8')")
 
 
-class TestVoid(unittest.TestCase):
-
-    def test_void(self):
-        self.assertRaises(ValueError, xnd.empty, "void")
-        self.assertRaises(ValueError, xnd.empty, "10 * 2 * void")
-
-
 class TestBool(unittest.TestCase):
 
     def test_bool(self):
@@ -1704,6 +1704,7 @@ class LongIndexSliceTest(unittest.TestCase):
 ALL_TESTS = [
   TestModule,
   TestFunction,
+  TestVoid,
   TestAny,
   TestFixedDim,
   TestFortran,
@@ -1724,7 +1725,6 @@ ALL_TESTS = [
   TestString,
   TestBytes,
   TestChar,
-  TestVoid,
   TestBool,
   TestSignedKind,
   TestSigned,
