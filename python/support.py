@@ -40,6 +40,9 @@ class IndexTypeError(object):
     def __index__(self):
         return ""
 
+def skip_if(condition, reason):
+    if condition:
+        raise unittest.SkipTest(reason)
 
 requires_py36 = unittest.skipUnless(
     sys.version_info > (3, 6),

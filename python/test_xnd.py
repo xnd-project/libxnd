@@ -42,13 +42,8 @@ from randvalue import *
 np = None
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-f", "--failfast", action="store_true",
-                    help="stop the test run on first error")
-parser.add_argument('--long', action="store_true", help="run long slice tests")
-parser.add_argument('--all', action="store_true", help="run brute force tests")
-ARGS = parser.parse_args()
-if ARGS.all: ARGS.long = True
+SKIP_LONG = True
+SKIP_BRUTE_FORCE = True
 
 
 class TestModule(unittest.TestCase):
@@ -1603,11 +1598,12 @@ class TestSpec(unittest.TestCase):
                         check(nd, d, value, 0)
 
 
-@unittest.skipIf(not ARGS.long, "use --long argument to enable these tests")
 class LongIndexSliceTest(unittest.TestCase):
 
     def test_subarray(self):
         # Multidimensional indexing
+        skip_if(SKIP_LONG, "use --long argument to enable these tests")
+
         t = TestSpec(constr=xnd,
                      values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
@@ -1624,6 +1620,8 @@ class LongIndexSliceTest(unittest.TestCase):
 
     def test_slices(self):
         # Multidimensional slicing
+        skip_if(SKIP_LONG, "use --long argument to enable these tests")
+
         t = TestSpec(constr=xnd,
                      values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
@@ -1640,6 +1638,8 @@ class LongIndexSliceTest(unittest.TestCase):
 
     def test_chained_indices_slices(self):
         # Multidimensional indexing and slicing, chained
+        skip_if(SKIP_LONG, "use --long argument to enable these tests")
+
         t = TestSpec(constr=xnd,
                      values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
@@ -1657,6 +1657,8 @@ class LongIndexSliceTest(unittest.TestCase):
 
     def test_fixed_mixed_indices_slices(self):
         # Multidimensional indexing and slicing, mixed
+        skip_if(SKIP_LONG, "use --long argument to enable these tests")
+
         t = TestSpec(constr=xnd,
                      values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
@@ -1665,6 +1667,9 @@ class LongIndexSliceTest(unittest.TestCase):
         t.run()
 
     def test_var_mixed_indices_slices(self):
+        # Multidimensional indexing and slicing, mixed
+        skip_if(SKIP_LONG, "use --long argument to enable these tests")
+
         x = xnd([[1], [2, 3], [4, 5, 6]])
 
         indices = (0, slice(0,1,1))
@@ -1673,9 +1678,10 @@ class LongIndexSliceTest(unittest.TestCase):
         indices = (slice(0,1,1), 0)
         self.assertRaises(IndexError, x.__getitem__, indices)
 
-    @unittest.skipIf(not ARGS.all, "use --all argument to enable these tests")
     def test_slices_brute_force(self):
         # Test all possible slices for the given ndim and shape
+        skip_if(SKIP_BRUTE_FORCE, "use --all argument to enable these tests")
+
         t = TestSpec(constr=xnd,
                      values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
@@ -1743,6 +1749,15 @@ ALL_TESTS = [
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--failfast", action="store_true",
+                        help="stop the test run on first error")
+    parser.add_argument('--long', action="store_true", help="run long slice tests")
+    parser.add_argument('--all', action="store_true", help="run brute force tests")
+    args = parser.parse_args()
+    SKIP_LONG = not (args.long or args.all)
+    SKIP_BRUTE_FORCE = not args.all
+
     suite = unittest.TestSuite()
     loader = unittest.TestLoader()
 
@@ -1750,7 +1765,7 @@ if __name__ == '__main__':
         s = loader.loadTestsFromTestCase(case)
         suite.addTest(s)
 
-    runner = unittest.TextTestRunner(failfast=ARGS.failfast, verbosity=2)
+    runner = unittest.TextTestRunner(failfast=args.failfast, verbosity=2)
     result = runner.run(suite)
     ret = not result.wasSuccessful()
 
