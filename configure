@@ -663,7 +663,7 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
-with_ndtypes_path
+with_ndtypes
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1286,8 +1286,7 @@ if test -n "$ac_init_help"; then
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-ndtypes-path=".."
-                          relative path to a local ndtypes directory
+  --with-ndtypes=".."     relative path to a local ndtypes directory
 
 Some influential environment variables:
   CC          C compiler command
@@ -3458,24 +3457,24 @@ test -z "$INSTALL_DATA" && INSTALL_DATA='${INSTALL} -m 644'
 
 # Set the prefix of a local ndtypes directory.  If unset, libndtypes is
 # assumed to be installed in the system library directories.
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for --with-ndtypes-path" >&5
-$as_echo_n "checking for --with-ndtypes-path... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for --with-ndtypes" >&5
+$as_echo_n "checking for --with-ndtypes... " >&6; }
 
-# Check whether --with-ndtypes-path was given.
-if test "${with_ndtypes_path+set}" = set; then :
-  withval=$with_ndtypes_path;
+# Check whether --with-ndtypes was given.
+if test "${with_ndtypes+set}" = set; then :
+  withval=$with_ndtypes;
 else
-  with_ndtypes_path="none"
+  with_ndtypes="none"
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_ndtypes_path" >&5
-$as_echo "$with_ndtypes_path" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_ndtypes" >&5
+$as_echo "$with_ndtypes" >&6; }
 
-if test "$with_ndtypes_path" = "none"; then
+if test "$with_ndtypes" = "none"; then
     LIBNDTYPESDIR=
 else
-    LIBNDTYPESDIR=$with_ndtypes_path/ndtypes/libndtypes
+    LIBNDTYPESDIR=$with_ndtypes/ndtypes/libndtypes
 fi
 
 

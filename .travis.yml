@@ -21,7 +21,7 @@ matrix:
         - python3 setup.py install --local=../python
         - cd ..
       script:
-        - ./configure --with-ndtypes-path=.
+        - ./configure --with-ndtypes=.
         - make check
         - python3 setup.py module
         - python3 setup.py test
@@ -34,7 +34,7 @@ matrix:
         - python3 setup.py install --local=../python
         - cd ..
       script:
-        - ./configure --with-ndtypes-path=.
+        - ./configure --with-ndtypes=.
         - make memcheck
         - python3 setup.py module
         - python3 setup.py test
@@ -47,7 +47,7 @@ matrix:
         - python3 setup.py install --local=../python
         - cd ..
       script:
-        - ./configure --with-ndtypes-path=.
+        - ./configure --with-ndtypes=.
         - make check
         - python3 setup.py module
         - python3 setup.py test
@@ -62,7 +62,7 @@ matrix:
         - python3 setup.py install --local=../python
         - cd ..
       script:
-        - ./configure --with-ndtypes-path=.
+        - ./configure --with-ndtypes=.
         - make check
         - python3 setup.py module
         - python3 setup.py test

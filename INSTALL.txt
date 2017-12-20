@@ -33,7 +33,7 @@ Unix: libxnd build instructions
 ===============================
 
 # Build
-./configure --with-ndtypes-path=.
+./configure --with-ndtypes=.
 make
 
 # Test

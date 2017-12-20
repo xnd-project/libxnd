@@ -130,7 +130,7 @@ def ndtypes_ext():
             runtime_library_dirs = ["$ORIGIN"]
 
         if BUILD_ALL:
-            os.system("./configure --with-ndtypes-path=. && make")
+            os.system("./configure --with-ndtypes=. && make")
 
     return Extension (
       "xnd._xnd",

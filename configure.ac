@@ -61,19 +61,19 @@ AC_SUBST(INSTALL)
 
 # Set the prefix of a local ndtypes directory.  If unset, libndtypes is
 # assumed to be installed in the system library directories.
-AC_MSG_CHECKING(for --with-ndtypes-path)
-AC_ARG_WITH(ndtypes-path,
-            AS_HELP_STRING([--with-ndtypes-path=".."],
+AC_MSG_CHECKING(for --with-ndtypes)
+AC_ARG_WITH(ndtypes,
+            AS_HELP_STRING([--with-ndtypes=".."],
             [relative path to a local ndtypes directory]),
             [],
-            [with_ndtypes_path="none"])
+            [with_ndtypes="none"])
 
-AC_MSG_RESULT($with_ndtypes_path)
+AC_MSG_RESULT($with_ndtypes)
 
-if test "$with_ndtypes_path" = "none"; then
+if test "$with_ndtypes" = "none"; then
     LIBNDTYPESDIR=
 else
-    LIBNDTYPESDIR=$with_ndtypes_path/ndtypes/libndtypes
+    LIBNDTYPESDIR=$with_ndtypes/ndtypes/libndtypes
 fi
 
 AC_SUBST(LIBNDTYPESDIR)
