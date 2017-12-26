@@ -1176,11 +1176,7 @@ pyxnd_new(PyTypeObject *tp, PyObject *args, PyObject *kwds)
     Py_INCREF(mblock->type);
     self->mblock = mblock;
     self->type = mblock->type;
-
-    self->xnd.bitmap = mblock->xnd->master.bitmap;
-    self->xnd.index = 0;
-    self->xnd.type = mblock->xnd->master.type;
-    self->xnd.ptr = mblock->xnd->master.ptr;
+    self->xnd = mblock->xnd->master;
 
     return (PyObject *)self;
 }
