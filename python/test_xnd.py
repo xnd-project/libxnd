@@ -38,8 +38,11 @@ from support import *
 from randvalue import *
 
 
-# NumPy tests disabled: importing numpy causes memory leaks in Python3.
-np = None
+try:
+    # NOTE (valgrind): importing numpy leaks memory.
+    import numpy as np
+except ImportError:
+    np = None
 
 
 SKIP_LONG = True
@@ -1503,6 +1506,30 @@ class TestIndexing(unittest.TestCase):
         self.assertEqual(x[1].value, ["x", "y", "z"])
 
 
+class TestBuffer(unittest.TestCase):
+
+    @unittest.skipIf(np is None, "numpy not found")
+    def test_from_buffer(self):
+        x = np.array([[[0,1,2],
+                       [3,4,5]],
+                     [[6,7,8],
+                      [9,10,11]]])
+
+        y = xnd.from_buffer(x)
+        for i in range(2):
+            for j in range(2):
+                for k in range(3):
+                    self.assertEqual(y[i,j,k], x[i,j,k])
+
+        x = np.array([(1000, 400.25, 'abc'), (-23, -1e10, 'cba')],
+                     dtype=[('x', 'i4'), ('y', 'f4'), ('z', 'S3')])
+        y = xnd.from_buffer(x)
+
+        for i in range(2):
+            for k in ['x', 'y', 'z']:
+                self.assertEqual(y[i][k], x[i][k])
+
+
 class TestSpec(unittest.TestCase):
 
     def __init__(self, *, constr,
@@ -1699,6 +1726,8 @@ class LongIndexSliceTest(unittest.TestCase):
     @unittest.skipIf(np is None, "numpy not found")
     def test_array_definition(self):
         # Test the NDArray definition against NumPy
+        skip_if(SKIP_LONG, "use --long argument to enable these tests")
+
         t = TestSpec(constr=np.array,
                      values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
@@ -1744,6 +1773,7 @@ ALL_TESTS = [
   TestTypevar,
   TestTypeInference,
   TestIndexing,
+  TestBuffer,
   LongIndexSliceTest,
 ]
 
