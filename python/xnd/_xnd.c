@@ -97,15 +97,17 @@ seterr_xnd(ndt_context_t *ctx)
    The memory block is created by the primary xnd object on initialization.
    Sub-views, slices etc. share the memory block.
 
-   At a later stage, the object will potentially need to communicate with
-   Arrow or other formats in order to acquire and manage external memory
-   blocks. */
+   PEP-3118 imports are supported.  At a later stage the mblock object will
+   potentially need to communicate with Arrow or other formats in order
+   to acquire and manage external memory blocks.
+*/
 
 
 typedef struct {
     PyObject_HEAD
     PyObject *type;    /* type owner */
     xnd_master_t *xnd; /* memblock owner */
+    Py_buffer *view;   /* PEP-3118 imports */
 } MemoryBlockObject;
 
 static int mblock_init(xnd_t x, PyObject *v);
@@ -124,6 +126,7 @@ mblock_alloc(void)
  
     self->type = NULL;
     self->xnd = NULL;
+    self->view = NULL;
 
     PyObject_GC_Track(self);
     return self;
@@ -133,6 +136,9 @@ static int
 mblock_traverse(MemoryBlockObject *self, visitproc visit, void *arg)
 {
     Py_VISIT(self->type);
+    if (self->view) {
+        Py_VISIT(self->view->obj);
+    }
     return 0;
 }
 
@@ -141,7 +147,13 @@ mblock_dealloc(MemoryBlockObject *self)
 {
     PyObject_GC_UnTrack(self);
     xnd_del(self->xnd);
+    self->xnd = NULL;
     Py_CLEAR(self->type);
+    if (self->view) {
+        PyBuffer_Release(self->view);
+        ndt_free(self->view);
+        self->view = NULL;
+    }
     PyObject_GC_Del(self);
 }
 
@@ -178,6 +190,100 @@ mblock_from_typed_value(PyObject *type, PyObject *value)
 
     return self;
 }
+
+static PyObject *
+type_from_buffer(const Py_buffer *view)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    ndt_t *t, *type;
+    int64_t shape, step;
+    int64_t i;
+
+    if (view->buf == NULL || view->obj == NULL ||
+        view->format == NULL || view->shape == NULL ||
+        view->strides == NULL || view->suboffsets != NULL) {
+        PyErr_SetString(PyExc_RuntimeError,
+            "expect a buffer with full information and no suboffsets");
+        return NULL;
+    }
+
+    type = ndt_from_bpformat(view->format, &ctx);
+    if (type == NULL) {
+        return seterr(&ctx);
+    }
+
+    if (ndt_itemsize(type) != view->itemsize) {
+        PyErr_SetString(PyExc_RuntimeError,
+            "mismatch between computed itemsize and buffer itemsize");
+        ndt_del(type);
+        return NULL;
+    }
+
+    for (i=view->ndim-1, t=type; i>=0; i--, type=t) {
+        shape = view->shape[i];
+        step = view->strides[i] / view->itemsize;
+        t = ndt_fixed_dim(type, shape, step, &ctx);
+        if (t == NULL) {
+            return seterr(&ctx);
+        }
+    }
+
+    return Ndt_FromType(t);
+}
+
+static MemoryBlockObject *
+mblock_from_buffer(PyObject *obj)
+{
+    MemoryBlockObject *self;
+
+    self = mblock_alloc();
+    if (self == NULL) {
+        return NULL;
+    }
+
+    self->view = ndt_calloc(1, sizeof *self->view);
+    if (self->view == NULL) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
+    if (PyObject_GetBuffer(obj, self->view, PyBUF_FULL_RO) < 0) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
+    if (!PyBuffer_IsContiguous(self->view, 'A')) {
+        /* Conversion from buf+strides to steps+linear_index is not possible
+           if the start of the original data is missing. */
+        PyErr_SetString(PyExc_NotImplementedError,
+            "conversion from non-contiguous buffers is not implemented");
+        Py_DECREF(self);
+        return NULL;
+    }
+
+    self->type = type_from_buffer(self->view);
+    if (self->type == NULL) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
+    self->xnd = ndt_calloc(1, sizeof *self->xnd);
+    if (self->xnd == NULL) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
+    self->xnd->flags = 0;
+    self->xnd->master.bitmap.data = NULL;
+    self->xnd->master.bitmap.size = 0;
+    self->xnd->master.bitmap.next = NULL;
+    self->xnd->master.index = 0;
+    self->xnd->master.type = CONST_NDT(self->type);
+    self->xnd->master.ptr = self->view->buf;
+
+    return self;
+}
+
 
 static PyTypeObject MemoryBlock_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
@@ -1075,6 +1181,31 @@ pyxnd_new(PyTypeObject *tp, PyObject *args, PyObject *kwds)
     self->xnd.index = 0;
     self->xnd.type = mblock->xnd->master.type;
     self->xnd.ptr = mblock->xnd->master.ptr;
+
+    return (PyObject *)self;
+}
+
+static PyObject *
+pyxnd_from_buffer(PyObject *tp, PyObject *obj)
+{
+    MemoryBlockObject *mblock;
+    XndObject *self;
+
+    mblock = mblock_from_buffer(obj);
+    if (mblock == NULL) {
+        return NULL;
+    }
+
+    self = pyxnd_alloc((PyTypeObject *)tp);
+    if (self == NULL) {
+        Py_DECREF(mblock);
+        return NULL;
+    }
+
+    Py_INCREF(mblock->type);
+    self->mblock = mblock;
+    self->type = mblock->type;
+    self->xnd = mblock->xnd->master;
 
     return (PyObject *)self;
 }
@@ -2149,6 +2280,9 @@ static PyMappingMethods pyxnd_as_mapping = {
 
 static PyMethodDef pyxnd_methods [] =
 {
+  /* Class methods */
+  { "from_buffer", pyxnd_from_buffer, METH_O|METH_CLASS, NULL },
+
   { NULL, NULL, 1 }
 };
 

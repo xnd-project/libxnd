@@ -587,16 +587,22 @@ xnd_del(xnd_master_t *x)
 {
     if (x != NULL) {
         if (x->master.ptr != NULL && x->master.type != NULL) {
-            xnd_clear(x->master, x->flags);
+            if (x->flags & XND_OWN_DATA) {
+                xnd_clear(x->master, x->flags);
+            }
 
             if (x->flags & XND_OWN_TYPE) {
                 ndt_del((ndt_t *)x->master.type);
             }
 
-            ndt_aligned_free(x->master.ptr);
+            if (x->flags & XND_OWN_DATA) {
+                ndt_aligned_free(x->master.ptr);
+            }
         }
 
-        xnd_bitmap_clear(&x->master.bitmap);
+        if (x->flags & XND_OWN_DATA) {
+            xnd_bitmap_clear(&x->master.bitmap);
+        }
         ndt_free(x);
     }
 }

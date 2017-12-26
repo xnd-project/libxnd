@@ -60,12 +60,21 @@
  * reference counting to to keep track of exported memory blocks.
  */
 #define XND_OWN_TYPE     0x00000001U /* type pointer */
-#define XND_OWN_STRINGS  0x00000002U /* embedded string pointers */
-#define XND_OWN_BYTES    0x00000004U /* embedded bytes pointers */
-#define XND_OWN_POINTERS 0x00000008U /* embedded pointers */
+#define XND_OWN_DATA     0x00000002U /* data pointer */
+#define XND_OWN_STRINGS  0x00000004U /* embedded string pointers */
+#define XND_OWN_BYTES    0x00000008U /* embedded bytes pointers */
+#define XND_OWN_POINTERS 0x00000010U /* embedded pointers */
 
-#define XND_OWN_ALL (XND_OWN_TYPE|XND_OWN_STRINGS|XND_OWN_BYTES|XND_OWN_POINTERS)
-#define XND_OWN_EMBEDDED (XND_OWN_STRINGS|XND_OWN_BYTES|XND_OWN_POINTERS)
+#define XND_OWN_ALL (XND_OWN_TYPE |    \
+                     XND_OWN_DATA |    \
+                     XND_OWN_STRINGS | \
+                     XND_OWN_BYTES |   \
+                     XND_OWN_POINTERS)
+
+#define XND_OWN_EMBEDDED (XND_OWN_DATA |    \
+                          XND_OWN_STRINGS | \
+                          XND_OWN_BYTES |   \
+                          XND_OWN_POINTERS)
 
 
 /* Convenience macros to extract embedded values. */
