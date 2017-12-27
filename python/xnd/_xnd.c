@@ -1160,23 +1160,9 @@ pyxnd_dealloc(XndObject *self)
 }
 
 static PyObject *
-pyxnd_new(PyTypeObject *tp, PyObject *args, PyObject *kwds)
+pyxnd_from_mblock(PyTypeObject *tp, MemoryBlockObject *mblock)
 {
-    static char *kwlist[] = {"type", "value", NULL};
-    PyObject *type = NULL;
-    PyObject *value = NULL;
-    MemoryBlockObject *mblock;
     XndObject *self;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &type,
-        &value)) {
-        return NULL;
-    }
-
-    mblock = mblock_from_typed_value(type, value);
-    if (mblock == NULL) {
-        return NULL;
-    }
 
     self = pyxnd_alloc(tp);
     if (self == NULL) {
@@ -1193,10 +1179,30 @@ pyxnd_new(PyTypeObject *tp, PyObject *args, PyObject *kwds)
 }
 
 static PyObject *
-pyxnd_empty(PyObject *tp, PyObject *type)
+pyxnd_new(PyTypeObject *tp, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"type", "value", NULL};
+    PyObject *type = NULL;
+    PyObject *value = NULL;
+    MemoryBlockObject *mblock;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &type,
+        &value)) {
+        return NULL;
+    }
+
+    mblock = mblock_from_typed_value(type, value);
+    if (mblock == NULL) {
+        return NULL;
+    }
+
+    return pyxnd_from_mblock(tp, mblock);
+}
+
+static PyObject *
+pyxnd_empty(PyTypeObject *tp, PyObject *type)
 {
     MemoryBlockObject *mblock;
-    XndObject *self;
 
     type = Ndt_FromObject(type);
     if (type == NULL) {
@@ -1204,46 +1210,25 @@ pyxnd_empty(PyObject *tp, PyObject *type)
     }
 
     mblock = mblock_empty(type);
+    Py_DECREF(type);
     if (mblock == NULL) {
         return NULL;
     }
 
-    self = pyxnd_alloc((PyTypeObject *)tp);
-    if (self == NULL) {
-        Py_DECREF(mblock);
-        return NULL;
-    }
-
-    self->mblock = mblock;
-    self->type = mblock->type;
-    self->xnd = mblock->xnd->master;
-
-    return (PyObject *)self;
+    return pyxnd_from_mblock(tp, mblock);
 }
 
 static PyObject *
-pyxnd_from_buffer(PyObject *tp, PyObject *obj)
+pyxnd_from_buffer(PyTypeObject *tp, PyObject *obj)
 {
     MemoryBlockObject *mblock;
-    XndObject *self;
 
     mblock = mblock_from_buffer(obj);
     if (mblock == NULL) {
         return NULL;
     }
 
-    self = pyxnd_alloc((PyTypeObject *)tp);
-    if (self == NULL) {
-        Py_DECREF(mblock);
-        return NULL;
-    }
-
-    Py_INCREF(mblock->type);
-    self->mblock = mblock;
-    self->type = mblock->type;
-    self->xnd = mblock->xnd->master;
-
-    return (PyObject *)self;
+    return pyxnd_from_mblock(tp, mblock);
 }
 
 
@@ -2317,8 +2302,8 @@ static PyMappingMethods pyxnd_as_mapping = {
 static PyMethodDef pyxnd_methods [] =
 {
   /* Class methods */
-  { "empty", pyxnd_empty, METH_O|METH_CLASS, NULL },
-  { "from_buffer", pyxnd_from_buffer, METH_O|METH_CLASS, NULL },
+  { "empty", (PyCFunction)pyxnd_empty, METH_O|METH_CLASS, NULL },
+  { "from_buffer", (PyCFunction)pyxnd_from_buffer, METH_O|METH_CLASS, NULL },
 
   { NULL, NULL, 1 }
 };
