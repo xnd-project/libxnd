@@ -55,12 +55,6 @@
   #endif
 #endif
 
-#if PY_LITTLE_ENDIAN
-static const int little_endian = 1;
-#else
-static const int little_endian = 0;
-#endif
-
 
 /****************************************************************************/
 /*                               Error handling                             */
@@ -327,19 +321,58 @@ static PyTypeObject MemoryBlock_Type = {
 /*                      MemoryBlock Object Initialization                   */
 /****************************************************************************/
 
-#define PACK_SINGLE(ptr, src, type) \
-    do {                                     \
-        type _x;                             \
-        _x = (type)src;                      \
-        memcpy(ptr, (char *)&_x, sizeof _x); \
+#if NDT_SYS_BIG_ENDIAN == 1
+  #define XND_REV_COND NDT_LITTLE_ENDIAN
+#else
+  #define XND_REV_COND NDT_BIG_ENDIAN
+#endif
+
+static inline void
+memcpy_rev(char *dest, const char *src, size_t size)
+{
+    size_t i;
+
+    for (i = 0; i < size; i++) {
+        dest[i] = src[size-1-i];
+    }
+}
+
+static inline void
+bcopy_swap(char *dest, const char *src, size_t size, uint32_t flags)
+{
+    if (flags & XND_REV_COND) {
+        memcpy_rev(dest, src, size);
+    }
+    else {
+        memcpy(dest, src, size);
+    }
+}
+
+static inline int
+le(uint32_t flags)
+{
+#if NDT_SYS_BIG_ENDIAN == 1
+    return flags & NDT_LITTLE_ENDIAN;
+#else
+    return !(flags & NDT_BIG_ENDIAN);
+#endif
+}
+
+
+#define PACK_SINGLE(ptr, src, type, flags) \
+    do {                                                      \
+        type _x;                                              \
+        _x = (type)src;                                       \
+        bcopy_swap(ptr, (const char *)&_x, sizeof _x, flags); \
     } while (0)
 
-#define UNPACK_SINGLE(dest, ptr, type) \
-    do {                                     \
-        type _x;                             \
-        memcpy((char *)&_x, ptr, sizeof _x); \
-        dest = _x;                           \
+#define UNPACK_SINGLE(dest, ptr, type, flags) \
+    do {                                                \
+        type _x;                                        \
+        bcopy_swap((char *)&_x, ptr, sizeof _x, flags); \
+        dest = _x;                                      \
     } while (0)
+
 
 static void
 _strncpy(char *dest, const void *src, size_t len, size_t size)
@@ -669,7 +702,7 @@ mblock_init(xnd_t x, PyObject *v)
         }
         b = (bool)tmp;
 
-        PACK_SINGLE(x.ptr, b, bool);
+        PACK_SINGLE(x.ptr, b, bool, t->flags);
         return 0;
     }
 
@@ -678,7 +711,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, int8_t);
+        PACK_SINGLE(x.ptr, tmp, int8_t, t->flags);
         return 0;
     }
 
@@ -687,7 +720,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, int16_t);
+        PACK_SINGLE(x.ptr, tmp, int16_t, t->flags);
         return 0;
     }
 
@@ -696,7 +729,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, int32_t);
+        PACK_SINGLE(x.ptr, tmp, int32_t, t->flags);
         return 0;
     }
 
@@ -705,7 +738,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, int64_t);
+        PACK_SINGLE(x.ptr, tmp, int64_t, t->flags);
         return 0;
     }
 
@@ -714,7 +747,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == UINT8_MAX && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, uint8_t);
+        PACK_SINGLE(x.ptr, tmp, uint8_t, t->flags);
         return 0;
     }
 
@@ -723,7 +756,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == UINT16_MAX && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, uint16_t);
+        PACK_SINGLE(x.ptr, tmp, uint16_t, t->flags);
         return 0;
     }
 
@@ -732,7 +765,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == UINT32_MAX && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, uint32_t);
+        PACK_SINGLE(x.ptr, tmp, uint32_t, t->flags);
         return 0;
     }
 
@@ -741,7 +774,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == UINT64_MAX && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, uint64_t);
+        PACK_SINGLE(x.ptr, tmp, uint64_t, t->flags);
         return 0;
     }
 
@@ -751,7 +784,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        return _PyFloat_Pack2(tmp, (unsigned char *)x.ptr, little_endian);
+        return _PyFloat_Pack2(tmp, (unsigned char *)x.ptr, le(t->flags));
 #else
         PyErr_SetString(PyExc_NotImplementedError,
             "half-float not implemented in Python versions < 3.6");
@@ -764,7 +797,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        return _PyFloat_Pack4(tmp, (unsigned char *)x.ptr, little_endian);
+        return _PyFloat_Pack4(tmp, (unsigned char *)x.ptr, le(t->flags));
     }
 
     case Float64: {
@@ -772,7 +805,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        return _PyFloat_Pack8(tmp, (unsigned char *)x.ptr, little_endian);
+        return _PyFloat_Pack8(tmp, (unsigned char *)x.ptr, le(t->flags));
     }
 
     case Complex32: {
@@ -781,10 +814,10 @@ mblock_init(xnd_t x, PyObject *v)
         if (c.real == -1.0 && PyErr_Occurred()) {
             return -1;
         }
-        if (_PyFloat_Pack2(c.real, (unsigned char *)x.ptr, little_endian) < 0) {
+        if (_PyFloat_Pack2(c.real, (unsigned char *)x.ptr, le(t->flags)) < 0) {
             return -1;
         }
-        return _PyFloat_Pack2(c.imag, (unsigned char *)(x.ptr+2), little_endian);
+        return _PyFloat_Pack2(c.imag, (unsigned char *)(x.ptr+2), le(t->flags));
 #else
         PyErr_SetString(PyExc_NotImplementedError,
             "half-float not implemented in Python versions < 3.6");
@@ -797,10 +830,10 @@ mblock_init(xnd_t x, PyObject *v)
         if (c.real == -1.0 && PyErr_Occurred()) {
             return -1;
         }
-        if (_PyFloat_Pack4(c.real, (unsigned char *)x.ptr, little_endian) < 0) {
+        if (_PyFloat_Pack4(c.real, (unsigned char *)x.ptr, le(t->flags)) < 0) {
             return -1;
         }
-        return _PyFloat_Pack4(c.imag, (unsigned char *)(x.ptr+4), little_endian);
+        return _PyFloat_Pack4(c.imag, (unsigned char *)(x.ptr+4), le(t->flags));
     }
 
     case Complex128: {
@@ -808,10 +841,10 @@ mblock_init(xnd_t x, PyObject *v)
         if (c.real == -1.0 && PyErr_Occurred()) {
             return -1;
         }
-        if (_PyFloat_Pack8(c.real, (unsigned char *)x.ptr, little_endian) < 0) {
+        if (_PyFloat_Pack8(c.real, (unsigned char *)x.ptr, le(t->flags)) < 0) {
             return -1;
         }
-        return _PyFloat_Pack8(c.imag, (unsigned char *)(x.ptr+8), little_endian);
+        return _PyFloat_Pack8(c.imag, (unsigned char *)(x.ptr+8), le(t->flags));
     }
 
     case FixedString: {
@@ -1005,7 +1038,7 @@ mblock_init(xnd_t x, PyObject *v)
             for (k = 0; k < t->Categorical.ntypes; k++) {
                 if (t->Categorical.types[k].tag == ValBool &&
                     tmp == t->Categorical.types[k].ValBool) {
-                    PACK_SINGLE(x.ptr, k, size_t);
+                    PACK_SINGLE(x.ptr, k, size_t, t->flags);
                     return 0;
                 }
             }
@@ -1021,7 +1054,7 @@ mblock_init(xnd_t x, PyObject *v)
             for (k = 0; k < t->Categorical.ntypes; k++) {
                 if (t->Categorical.types[k].tag == ValInt64 &&
                     tmp == t->Categorical.types[k].ValInt64) {
-                    PACK_SINGLE(x.ptr, k, size_t);
+                    PACK_SINGLE(x.ptr, k, size_t, t->flags);
                     return 0;
                 }
             }
@@ -1038,7 +1071,7 @@ mblock_init(xnd_t x, PyObject *v)
                 /* XXX: DBL_EPSILON? */
                 if (t->Categorical.types[k].tag == ValFloat64 &&
                     tmp == t->Categorical.types[k].ValFloat64) {
-                    PACK_SINGLE(x.ptr, k, size_t);
+                    PACK_SINGLE(x.ptr, k, size_t, t->flags);
                     return 0;
                 }
             }
@@ -1054,7 +1087,7 @@ mblock_init(xnd_t x, PyObject *v)
             for (k = 0; k < t->Categorical.ntypes; k++) {
                 if (t->Categorical.types[k].tag == ValString &&
                     strcmp(tmp, t->Categorical.types[k].ValString) == 0) {
-                    PACK_SINGLE(x.ptr, k, size_t);
+                    PACK_SINGLE(x.ptr, k, size_t, t->flags);
                     return 0;
                 }
             }
@@ -1064,7 +1097,7 @@ mblock_init(xnd_t x, PyObject *v)
     not_found:
         for (k = 0; k < t->Categorical.ntypes; k++) {
             if (t->Categorical.types[k].tag == ValNA) {
-                PACK_SINGLE(x.ptr, k, size_t);
+                PACK_SINGLE(x.ptr, k, size_t, t->flags);
                 return 0;
             }
         }
@@ -1428,61 +1461,61 @@ _pyxnd_value(xnd_t x)
 
     case Bool: {
         bool tmp;
-        UNPACK_SINGLE(tmp, x.ptr, bool);
+        UNPACK_SINGLE(tmp, x.ptr, bool, t->flags);
         return PyBool_FromLong(tmp);
     }
 
     case Int8: {
         int8_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, int8_t);
+        UNPACK_SINGLE(tmp, x.ptr, int8_t, t->flags);
         return PyLong_FromLong(tmp);
     }
 
     case Int16: {
         int16_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, int16_t);
+        UNPACK_SINGLE(tmp, x.ptr, int16_t, t->flags);
         return PyLong_FromLong(tmp);
     }
 
     case Int32: {
         int32_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, int32_t);
+        UNPACK_SINGLE(tmp, x.ptr, int32_t, t->flags);
         return PyLong_FromLong(tmp);
     }
 
     case Int64: {
         int64_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, int64_t);
+        UNPACK_SINGLE(tmp, x.ptr, int64_t, t->flags);
         return PyLong_FromLongLong(tmp);
     }
 
     case Uint8: {
         uint8_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, uint8_t);
+        UNPACK_SINGLE(tmp, x.ptr, uint8_t, t->flags);
         return PyLong_FromUnsignedLong(tmp);
     }
 
     case Uint16: {
         uint16_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, uint16_t);
+        UNPACK_SINGLE(tmp, x.ptr, uint16_t, t->flags);
         return PyLong_FromUnsignedLong(tmp);
     }
 
     case Uint32: {
         uint32_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, uint32_t);
+        UNPACK_SINGLE(tmp, x.ptr, uint32_t, t->flags);
         return PyLong_FromUnsignedLong(tmp);
     }
 
     case Uint64: {
         uint64_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, uint64_t);
+        UNPACK_SINGLE(tmp, x.ptr, uint64_t, t->flags);
         return PyLong_FromUnsignedLongLong(tmp);
     }
 
     case Float16: {
 #if PY_VERSION_HEX >= 0x03060000
-        double tmp = _PyFloat_Unpack2((unsigned char *)x.ptr, little_endian);
+        double tmp = _PyFloat_Unpack2((unsigned char *)x.ptr, le(t->flags));
         if (tmp == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
@@ -1495,7 +1528,7 @@ _pyxnd_value(xnd_t x)
     }
 
     case Float32: {
-        double tmp = _PyFloat_Unpack4((unsigned char *)x.ptr, little_endian);
+        double tmp = _PyFloat_Unpack4((unsigned char *)x.ptr, le(t->flags));
         if (tmp == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
@@ -1503,7 +1536,7 @@ _pyxnd_value(xnd_t x)
     }
 
     case Float64: {
-        double tmp = _PyFloat_Unpack8((unsigned char *)x.ptr, little_endian);
+        double tmp = _PyFloat_Unpack8((unsigned char *)x.ptr, le(t->flags));
         if (tmp == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
@@ -1513,11 +1546,11 @@ _pyxnd_value(xnd_t x)
     case Complex32: {
 #if PY_VERSION_HEX >= 0x03060000
         Py_complex c;
-        c.real = _PyFloat_Unpack2((unsigned char *)x.ptr, little_endian);
+        c.real = _PyFloat_Unpack2((unsigned char *)x.ptr, le(t->flags));
         if (c.real == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
-        c.imag = _PyFloat_Unpack2((unsigned char *)x.ptr+2, little_endian);
+        c.imag = _PyFloat_Unpack2((unsigned char *)x.ptr+2, le(t->flags));
         if (c.imag == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
@@ -1531,11 +1564,11 @@ _pyxnd_value(xnd_t x)
 
     case Complex64: {
         Py_complex c;
-        c.real = _PyFloat_Unpack4((unsigned char *)x.ptr, little_endian);
+        c.real = _PyFloat_Unpack4((unsigned char *)x.ptr, le(t->flags));
         if (c.real == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
-        c.imag = _PyFloat_Unpack4((unsigned char *)x.ptr+4, little_endian);
+        c.imag = _PyFloat_Unpack4((unsigned char *)x.ptr+4, le(t->flags));
         if (c.imag == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
@@ -1544,11 +1577,11 @@ _pyxnd_value(xnd_t x)
 
     case Complex128: {
         Py_complex c;
-        c.real = _PyFloat_Unpack8((unsigned char *)x.ptr, little_endian);
+        c.real = _PyFloat_Unpack8((unsigned char *)x.ptr, le(t->flags));
         if (c.real == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
-        c.imag = _PyFloat_Unpack8((unsigned char *)x.ptr+8, little_endian);
+        c.imag = _PyFloat_Unpack8((unsigned char *)x.ptr+8, le(t->flags));
         if (c.imag == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
@@ -1605,7 +1638,7 @@ _pyxnd_value(xnd_t x)
     case Categorical: {
         size_t k;
 
-        UNPACK_SINGLE(k, x.ptr, size_t);
+        UNPACK_SINGLE(k, x.ptr, size_t, t->flags);
 
         switch (t->Categorical.types[k].tag) {
         case ValBool: {

@@ -1529,6 +1529,36 @@ class TestBuffer(unittest.TestCase):
             for k in ['x', 'y', 'z']:
                 self.assertEqual(y[i][k], x[i][k])
 
+    @unittest.skipIf(np is None, "numpy not found")
+    def test_endian(self):
+        standard = [
+            '?',
+            'c', 'b', 'B',
+            'h', 'i', 'l', 'q',
+            'H', 'I', 'L', 'Q',
+            'e', 'f', 'd',
+            'c8', 'c16'
+        ]
+
+        modifiers = ['', '<', '>']
+
+        for fmt in standard:
+            for mod in modifiers:
+                f = mod + fmt
+                x = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dtype=f)
+                y = xnd.from_buffer(x)
+                for i in range(10):
+                    self.assertEqual(y[i], x[i])
+
+        # XXX T{>i:x:f:y:3s:z:} does not work.
+        x = np.array([(1000, 400.25, 'abc'), (-23, -1e10, 'cba')],
+                     dtype=[('x', '<i4'), ('y', '>f4'), ('z', 'S3')])
+        y = xnd.from_buffer(x)
+
+        for i in range(2):
+            for k in ['x', 'y', 'z']:
+                self.assertEqual(y[i][k], x[i][k])
+
 
 class TestSpec(unittest.TestCase):
 
