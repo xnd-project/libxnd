@@ -27,13 +27,6 @@ class xnd(_xnd):
                 type = ndt(type)
         return super().__new__(cls, type=type, value=value)
 
-    @classmethod
-    def empty(cls, t):
-        if isinstance(t, str):
-            t = ndt(t)
-        return super().__new__(cls, type=t)
-
-
 
 # ======================================================================
 #                            Type inference

@@ -158,7 +158,7 @@ mblock_dealloc(MemoryBlockObject *self)
 }
 
 static MemoryBlockObject *
-mblock_from_typed_value(PyObject *type, PyObject *value)
+mblock_empty(PyObject *type)
 {
     NDT_STATIC_CONTEXT(ctx);
     MemoryBlockObject *self;
@@ -181,11 +181,22 @@ mblock_from_typed_value(PyObject *type, PyObject *value)
     Py_INCREF(type);
     self->type = type;
 
-    if (value != NULL) {
-        if (mblock_init(self->xnd->master, value) < 0) {
-            Py_DECREF(self);
-            return NULL;
-        }
+    return self;
+}
+
+static MemoryBlockObject *
+mblock_from_typed_value(PyObject *type, PyObject *value)
+{
+    MemoryBlockObject *self;
+
+    self = mblock_empty(type);
+    if (self == NULL) {
+        return NULL;
+    }
+
+    if (mblock_init(self->xnd->master, value) < 0) {
+        Py_DECREF(self);
+        return NULL;
     }
 
     return self;
@@ -1157,7 +1168,7 @@ pyxnd_new(PyTypeObject *tp, PyObject *args, PyObject *kwds)
     MemoryBlockObject *mblock;
     XndObject *self;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", kwlist, &type,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &type,
         &value)) {
         return NULL;
     }
@@ -1174,6 +1185,35 @@ pyxnd_new(PyTypeObject *tp, PyObject *args, PyObject *kwds)
     }
 
     Py_INCREF(mblock->type);
+    self->mblock = mblock;
+    self->type = mblock->type;
+    self->xnd = mblock->xnd->master;
+
+    return (PyObject *)self;
+}
+
+static PyObject *
+pyxnd_empty(PyObject *tp, PyObject *type)
+{
+    MemoryBlockObject *mblock;
+    XndObject *self;
+
+    type = Ndt_FromObject(type);
+    if (type == NULL) {
+        return NULL;
+    }
+
+    mblock = mblock_empty(type);
+    if (mblock == NULL) {
+        return NULL;
+    }
+
+    self = pyxnd_alloc((PyTypeObject *)tp);
+    if (self == NULL) {
+        Py_DECREF(mblock);
+        return NULL;
+    }
+
     self->mblock = mblock;
     self->type = mblock->type;
     self->xnd = mblock->xnd->master;
@@ -2277,6 +2317,7 @@ static PyMappingMethods pyxnd_as_mapping = {
 static PyMethodDef pyxnd_methods [] =
 {
   /* Class methods */
+  { "empty", pyxnd_empty, METH_O|METH_CLASS, NULL },
   { "from_buffer", pyxnd_from_buffer, METH_O|METH_CLASS, NULL },
 
   { NULL, NULL, 1 }
