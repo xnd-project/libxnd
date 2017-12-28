@@ -622,17 +622,19 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
 
     assert(ndt_is_concrete(t));
 
-    if (t->ndim == 0) {
-        x.ptr += x.index * t->datasize;
+    if (t->ndim > 0 && ndt_is_optional(t)) {
+        ndt_err_format(ctx, NDT_NotImplementedError,
+            "optional dimensions are not supported");
+        return xnd_error;
     }
 
     if (len == 0) {
-        if (ndt_is_optional(t)) {
-            ndt_err_format(ctx, NDT_NotImplementedError,
-                "option type is temporarily disabled");
-            return xnd_error;
-        }
         return x;
+    }
+
+    /* Add the linear index. */
+    if (t->ndim == 0) {
+        x.ptr += x.index * t->datasize;
     }
 
     i = indices[0];
@@ -645,40 +647,26 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
+        next = x;
         next.index = x.index + i * t->Concrete.FixedDim.step;
         next.type = t->FixedDim.type;
-        next.ptr = x.ptr;
 
         break;
     }
 
     case VarDim: {
-        const int32_t noffsets = t->Concrete.VarDim.noffsets;
-        int32_t start, stop;
+        int64_t start, step, shape;
 
-        if (ndt_is_optional(t)) {
-            ndt_err_format(ctx, NDT_NotImplementedError,
-                "optional dimensions are temporarily disabled");
-            return xnd_error;
-        }
+        shape = ndt_var_indices(&start, &step, t, x.index);
 
-        if (x.index < 0 || x.index+1 >= noffsets) {
-            ndt_err_format(ctx, NDT_RuntimeError,
-                "var dim offset index out of bounds");
-            return xnd_error;
-        }
-
-        start = t->Concrete.VarDim.offsets[x.index];
-        stop = t->Concrete.VarDim.offsets[x.index+1];
-
-        if (i < 0 || i >= stop) {
+        if (i < 0 || i >= shape) {
             ndt_err_format(ctx, NDT_ValueError, "var dim index out of bounds");
             return xnd_error;
         }
 
-        next.index = start + i;
+        next = x;
+        next.index = start + i * step;
         next.type = t->VarDim.type;
-        next.ptr = x.ptr;
 
         break;
     }
@@ -686,6 +674,11 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
     case Tuple: {
         if (i < 0 || i >= t->Tuple.shape) {
             ndt_err_format(ctx, NDT_ValueError, "tuple index out of bounds");
+            return xnd_error;
+        }
+
+        next.bitmap = xnd_bitmap_next(&x, i, ctx);
+        if (ndt_err_occurred(ctx)) {
             return xnd_error;
         }
 
@@ -702,11 +695,42 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
+        next.bitmap = xnd_bitmap_next(&x, i, ctx);
+        if (ndt_err_occurred(ctx)) {
+            return xnd_error;
+        }
+
         next.index = 0;
         next.type = t->Record.types[i];
         next.ptr = x.ptr + t->Concrete.Record.offset[i];
 
         break;
+    }
+
+    case Ref: {
+        next.bitmap = xnd_bitmap_next(&x, 0, ctx);
+        if (ndt_err_occurred(ctx)) {
+            return xnd_error;
+        }
+
+        next.index = 0;
+        next.type = t->Ref.type;
+        next.ptr = XND_POINTER_DATA(x.ptr);
+
+        return xnd_subtree(next, indices, len, ctx);
+    }
+
+    case Constr: {
+        next.bitmap = xnd_bitmap_next(&x, 0, ctx);
+        if (ndt_err_occurred(ctx)) {
+            return xnd_error;
+        }
+
+        next.index = 0;
+        next.type = t->Constr.type;
+        next.ptr = x.ptr;
+
+        return xnd_subtree(next, indices, len, ctx);
     }
 
     default:

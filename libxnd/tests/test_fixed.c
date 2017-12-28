@@ -82,7 +82,9 @@ test_fixed(void)
                     goto error;
                 }
                 assert(view.type->tag == Uint16);
-                if (*(uint16_t *)view.ptr != data[l]) {
+                /* XXX The convention of adding the index at access time is
+                 * XXX convenient for the Python module, less so for C. */
+                if (*(uint16_t *)(view.ptr + view.index * view.type->datasize) != data[l]) {
                     ndt_err_format(ctx, NDT_RuntimeError, "unexpected value");
                     goto error;
                 }
