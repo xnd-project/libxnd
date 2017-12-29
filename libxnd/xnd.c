@@ -560,7 +560,7 @@ xnd_clear(xnd_t x, const uint32_t flags)
         return;
 
     case Categorical:
-        /* Categorical values ar, flagse just indices into the categories. */
+        /* Categorical values are just indices into the categories. */
         return;
 
     case Char:
