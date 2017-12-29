@@ -44,6 +44,8 @@ def skip_if(condition, reason):
     if condition:
         raise unittest.SkipTest(reason)
 
+HAVE_PYTHON_36 = sys.version_info >= (3, 6, 0)
+
 requires_py36 = unittest.skipUnless(
     sys.version_info > (3, 6),
     "test requires Python 3.6 or greater")

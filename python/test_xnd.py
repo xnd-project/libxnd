@@ -1536,9 +1536,12 @@ class TestBuffer(unittest.TestCase):
             'c', 'b', 'B',
             'h', 'i', 'l', 'q',
             'H', 'I', 'L', 'Q',
-            'e', 'f', 'd',
+            'f', 'd',
             'c8', 'c16'
         ]
+
+        if HAVE_PYTHON_36:
+            standard += 'e'
 
         modifiers = ['', '<', '>']
 
