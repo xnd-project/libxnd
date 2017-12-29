@@ -500,9 +500,10 @@ mblock_init(xnd_t x, PyObject *v)
         xnd_set_valid(&x);
     }
 
-    /* Add the linear index. */
+    /* Add and reset the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
+        x.index = 0;
     }
 
     switch (t->tag) {
@@ -1295,13 +1296,15 @@ _pyxnd_value(xnd_t x)
 
     assert(ndt_is_concrete(t));
 
+    /* Bitmap access needs the linear index. */
     if (xnd_is_na(&x)) {
         Py_RETURN_NONE;
     }
 
-    /* Add the linear index. */
+    /* Add and reset the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
+        x.index = 0;
     }
 
     switch (t->tag) {
@@ -1817,9 +1820,10 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
         return x;
     }
 
-    /* Add the linear index. */
+    /* Add and reset the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
+        x.index = 0;
     }
 
     key = indices[0];
@@ -1988,9 +1992,10 @@ pyxnd_index(xnd_t x, PyObject *indices[], int len)
     assert(ndt_is_concrete(t));
     assert(x.ptr != NULL);
 
-    /* Add the linear index. */
+    /* Add and reset the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
+        x.index = 0;
     }
 
     key = indices[0];
