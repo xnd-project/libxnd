@@ -660,7 +660,10 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
     case VarDim: {
         int64_t start, step, shape;
 
-        shape = ndt_var_indices(&start, &step, t, x.index);
+        shape = ndt_var_indices(&start, &step, t, x.index, ctx);
+        if (shape < 0) {
+            return xnd_error;
+        }
 
         if (i < 0 || i >= shape) {
             ndt_err_format(ctx, NDT_ValueError, "var dim index out of bounds");

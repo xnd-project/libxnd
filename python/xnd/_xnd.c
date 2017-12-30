@@ -537,7 +537,6 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case VarDim: {
-        const int32_t noffsets = t->Concrete.VarDim.noffsets;
         Py_ssize_t start, step, shape, i;
 
         if (!PyList_Check(v)) {
@@ -546,14 +545,10 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        if (x.index < 0 || x.index+1 >= noffsets) {
-            PyErr_Format(PyExc_RuntimeError,
-                "xnd: offset index out of range: index=%" PRIi32 ", noffsets=%" PRIi32,
-                x.index, noffsets);
-            return -1;
+        shape = ndt_var_indices(&start, &step, t, x.index, &ctx);
+        if (shape < 0) {
+            return seterr_int(&ctx);
         }
-
-        shape = ndt_var_indices(&start, &step, t, x.index);
 
         if (PyList_GET_SIZE(v) != shape) {
             PyErr_Format(PyExc_ValueError,
@@ -1338,7 +1333,10 @@ _pyxnd_value(xnd_t x)
         PyObject *lst, *v;
         Py_ssize_t start, step, shape, i;
 
-        shape = ndt_var_indices(&start, &step, t, x.index);
+        shape = ndt_var_indices(&start, &step, t, x.index, &ctx);
+        if (shape < 0) {
+            return seterr(&ctx);
+        }
 
         lst = PyList_New(shape);
         if (lst == NULL) {
@@ -1847,7 +1845,10 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
         Py_ssize_t i;
 
 
-        shape = ndt_var_indices(&start, &step, t, x.index);
+        shape = ndt_var_indices(&start, &step, t, x.index, &ctx);
+        if (shape < 0) {
+            return seterr_xnd(&ctx);
+        }
 
         i = get_index(key, shape);
         if (i < 0) {
