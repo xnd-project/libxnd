@@ -537,7 +537,8 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case VarDim: {
-        Py_ssize_t start, step, shape, i;
+        int64_t start, step, shape;
+        int64_t i;
 
         if (!PyList_Check(v)) {
             PyErr_Format(PyExc_TypeError,
@@ -1331,7 +1332,8 @@ _pyxnd_value(xnd_t x)
 
     case VarDim: {
         PyObject *lst, *v;
-        Py_ssize_t start, step, shape, i;
+        int64_t start, step, shape;
+        int64_t i;
 
         shape = ndt_var_indices(&start, &step, t, x.index, &ctx);
         if (shape < 0) {
@@ -1841,9 +1843,8 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
     }
 
     case VarDim: {
-        Py_ssize_t start, step, shape;
-        Py_ssize_t i;
-
+        int64_t start, step, shape;
+        int64_t i;
 
         shape = ndt_var_indices(&start, &step, t, x.index, &ctx);
         if (shape < 0) {
