@@ -109,7 +109,7 @@ xnd_new(const ndt_t *t, const uint32_t flags, ndt_context_t *ctx)
  * At all times the data pointers must be NULL or pointers to valid memory.
  */
 static int
-xnd_init(xnd_t x, uint32_t flags, ndt_context_t *ctx)
+xnd_init(xnd_t x, const uint32_t flags, ndt_context_t *ctx)
 {
     const ndt_t *t = x.type;
     xnd_t next;
