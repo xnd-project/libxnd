@@ -403,6 +403,34 @@ bytes_from_string_and_size(const char *str, int64_t size)
 #endif
 }
 
+static inline int
+py_slice_get_indices_ex(PyObject *key, int64_t length,
+                        int64_t *start, int64_t *stop, int64_t *step,
+                        int64_t *slicelength)
+{
+#if SIZE_MAX < INT64_MAX
+    Py_ssize_t _start, _stop, _step, _slicelength;
+    int ret;
+
+    if (length > PY_SSIZE_T_MAX) {
+        PyErr_SetString(PyExc_ValueError,
+            "length should never exceed SSIZE_MAX");
+        return -1;
+    }
+
+    ret = PySlice_GetIndicesEx(key, (Py_ssize_t)length, &_start, &_stop,
+                               &_step, &_slicelength);
+    *start = _start;
+    *stop = _stop;
+    *step = _step;
+    *slicelength = _slicelength;
+
+    return ret;
+#else
+    return PySlice_GetIndicesEx(key, length, start, stop, step, slicelength);
+#endif
+}
+
 static inline void
 memcpy_rev(char *dest, const char *src, size_t size)
 {
@@ -2129,9 +2157,9 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
 
     switch (t->tag) {
     case FixedDim: {
-        Py_ssize_t start, stop, step, shape;
-        if (PySlice_GetIndicesEx(key, t->FixedDim.shape,
-                                 &start, &stop, &step, &shape) < 0) {
+        int64_t start, stop, step, shape;
+        if (py_slice_get_indices_ex(key, t->FixedDim.shape,
+                                    &start, &stop, &step, &shape) < 0) {
             return xnd_error;
         }
 
