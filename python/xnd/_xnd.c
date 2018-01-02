@@ -343,6 +343,21 @@ check_invariants(const ndt_t *t)
 #endif
 }
 
+static inline PyObject *
+list_new(int64_t shape)
+{
+#if SIZE_MAX < INT64_MAX
+    if (shape > PY_SSIZE_MAX) {
+        PyErr_SetString(PyExc_ValueError,
+            "shape should never exceed SSIZE_MAX");
+        return NULL;
+    }
+    return PyList_New((Py_ssize_t)shape);
+#else
+    return PyList_New(shape);
+#endif
+}
+
 static inline void
 memcpy_rev(char *dest, const char *src, size_t size)
 {
@@ -1329,7 +1344,7 @@ _pyxnd_value(xnd_t x)
         int64_t shape, i;
 
         shape = t->FixedDim.shape;
-        lst = PyList_New(shape);
+        lst = list_new(shape);
         if (lst == NULL) {
             return NULL;
         }
@@ -1360,7 +1375,7 @@ _pyxnd_value(xnd_t x)
             return seterr(&ctx);
         }
 
-        lst = PyList_New(shape);
+        lst = list_new(shape);
         if (lst == NULL) {
             return NULL;
         }
