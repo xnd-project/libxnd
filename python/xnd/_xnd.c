@@ -1642,7 +1642,7 @@ _pyxnd_value(xnd_t x)
     }
 
     case FixedString: {
-        int64_t codepoints = (int64_t)t->FixedString.size;
+        int64_t codepoints = t->FixedString.size;
 
         switch (t->FixedString.encoding) {
         case Ascii:
