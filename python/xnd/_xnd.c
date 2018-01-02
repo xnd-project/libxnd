@@ -1834,10 +1834,10 @@ pyxnd_view_move_type(const XndObject *src, xnd_t x)
     return (PyObject *)view;
 }
 
-static Py_ssize_t
-get_index(PyObject *key, Py_ssize_t shape)
+static int64_t
+get_index(PyObject *key, int64_t shape)
 {
-    Py_ssize_t i = PyNumber_AsSsize_t(key, PyExc_IndexError);
+    int64_t i = PyNumber_AsSsize_t(key, PyExc_IndexError);
     if (i == -1 && PyErr_Occurred()) {
         return -1;
     }
@@ -1846,7 +1846,7 @@ get_index(PyObject *key, Py_ssize_t shape)
         i += shape;
     }
 
-    if (i < 0 || i >= shape) {
+    if (i < 0 || i >= shape || i > PY_SSIZE_T_MAX) {
         PyErr_SetString(PyExc_IndexError, "index out of bounds");
         return -1;
     }
@@ -1854,13 +1854,13 @@ get_index(PyObject *key, Py_ssize_t shape)
     return i;
 }
 
-static Py_ssize_t
+static int64_t
 get_index_record(const ndt_t *t, PyObject *key)
 {
     assert(t->tag == Record);
 
     if (PyUnicode_Check(key)) {
-        Py_ssize_t i;
+        int64_t i;
 
         for (i = 0; i < t->Record.shape; i++) {
             if (PyUnicode_CompareWithASCIIString(
@@ -1910,7 +1910,7 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
 
     switch (t->tag) {
     case FixedDim: {
-        Py_ssize_t i = get_index(key, t->FixedDim.shape);
+        int64_t i = get_index(key, t->FixedDim.shape);
         if (i < 0) {
             return xnd_error;
         }
@@ -1944,7 +1944,7 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
     }
 
     case Tuple: {
-        Py_ssize_t i = get_index(key, t->Tuple.shape);
+        int64_t i = get_index(key, t->Tuple.shape);
         if (i < 0) {
             return xnd_error;
         }
@@ -1962,7 +1962,7 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
     }
 
     case Record: {
-        Py_ssize_t i = get_index_record(t, key);
+        int64_t i = get_index_record(t, key);
         if (i < 0) {
             return xnd_error;
         }
@@ -2084,7 +2084,7 @@ pyxnd_index(xnd_t x, PyObject *indices[], int len)
 
     switch (t->tag) {
     case FixedDim: {
-        Py_ssize_t i = get_index(key, t->FixedDim.shape);
+        int64_t i = get_index(key, t->FixedDim.shape);
         if (i < 0) {
             return xnd_error;
         }
