@@ -388,6 +388,21 @@ unicode_from_kind_and_data(int kind, const void *buffer, int64_t size)
 #endif
 }
 
+static inline PyObject *
+bytes_from_string_and_size(const char *str, int64_t size)
+{
+#if SIZE_MAX < INT64_MAX
+    if (size > PY_SSIZE_T_MAX) {
+        PyErr_SetString(PyExc_ValueError,
+            "size should never exceed SSIZE_MAX");
+        return NULL;
+    }
+    return PyBytes_FromStringAndSize(str, (Py_ssize_t)size);
+#else
+    return PyBytes_FromStringAndSize(str, size);
+#endif
+}
+
 static inline void
 memcpy_rev(char *dest, const char *src, size_t size)
 {
@@ -1688,7 +1703,7 @@ _pyxnd_value(xnd_t x)
     }
 
     case FixedBytes: {
-        return PyBytes_FromStringAndSize(x.ptr, t->FixedBytes.size);
+        return bytes_from_string_and_size(x.ptr, t->FixedBytes.size);
     }
 
     case String: {
