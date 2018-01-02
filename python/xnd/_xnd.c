@@ -373,6 +373,21 @@ tuple_new(int64_t shape)
 #endif
 }
 
+static inline PyObject *
+unicode_from_kind_and_data(int kind, const void *buffer, int64_t size)
+{
+#if SIZE_MAX < INT64_MAX
+    if (size > PY_SSIZE_T_MAX) {
+        PyErr_SetString(PyExc_ValueError,
+            "size should never exceed SSIZE_MAX");
+        return NULL;
+    }
+    return PyUnicode_FromKindAndData(kind, buffer, ((Py_ssize_t))size);
+#else
+    return PyUnicode_FromKindAndData(kind, buffer, size);
+#endif
+}
+
 static inline void
 memcpy_rev(char *dest, const char *src, size_t size)
 {
@@ -1647,19 +1662,19 @@ _pyxnd_value(xnd_t x)
         switch (t->FixedString.encoding) {
         case Ascii:
             codepoints = u8_skip_trailing_zero((uint8_t *)x.ptr, codepoints);
-            return PyUnicode_FromKindAndData(PyUnicode_1BYTE_KIND, x.ptr, codepoints);
+            return unicode_from_kind_and_data(PyUnicode_1BYTE_KIND, x.ptr, codepoints);
 
         case Utf8:
             codepoints = u8_skip_trailing_zero((uint8_t *)x.ptr, codepoints);
-            return PyUnicode_FromKindAndData(PyUnicode_1BYTE_KIND, x.ptr, codepoints);
+            return unicode_from_kind_and_data(PyUnicode_1BYTE_KIND, x.ptr, codepoints);
 
         case Utf16:
             codepoints = u16_skip_trailing_zero((uint16_t *)x.ptr, codepoints);
-            return PyUnicode_FromKindAndData(PyUnicode_2BYTE_KIND, x.ptr, codepoints);
+            return unicode_from_kind_and_data(PyUnicode_2BYTE_KIND, x.ptr, codepoints);
 
         case Utf32:
             codepoints = u32_skip_trailing_zero((uint32_t *)x.ptr, codepoints);
-            return PyUnicode_FromKindAndData(PyUnicode_4BYTE_KIND, x.ptr, codepoints);
+            return unicode_from_kind_and_data(PyUnicode_4BYTE_KIND, x.ptr, codepoints);
 
         case Ucs2:
             PyErr_SetString(PyExc_NotImplementedError,
