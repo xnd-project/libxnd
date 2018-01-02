@@ -2248,7 +2248,11 @@ pyxnd_subscript(XndObject *self, PyObject *key)
     }
     else if (is_multiindex(key)) {
         PyObject **indices = &PyTuple_GET_ITEM(key, 0);
-        x = pyxnd_subtree(self->xnd, indices, PyTuple_GET_SIZE(key));
+        Py_ssize_t n = PyTuple_GET_SIZE(key);
+        if (n > INT_MAX) {
+            goto value_error;
+        }
+        x = pyxnd_subtree(self->xnd, indices, (int)n);
         return value_or_view_copy(self, x);
     }
     else if (PySlice_Check(key)) {
@@ -2259,13 +2263,20 @@ pyxnd_subscript(XndObject *self, PyObject *key)
     else if (is_multikey(key)) {
         PyObject **indices = &PyTuple_GET_ITEM(key, 0);
         Py_ssize_t n = PyTuple_GET_SIZE(key);
-        x = pyxnd_multikey(self->xnd, indices, n);
+        if (n > INT_MAX) {
+            goto value_error;
+        }
+        x = pyxnd_multikey(self->xnd, indices, (int)n);
         return value_or_view_move(self, x);
     }
     else {
         PyErr_SetString(PyExc_TypeError, "invalid subscript key");
         return NULL;
     }
+
+value_error:
+    PyErr_SetString(PyExc_ValueError, "too many indices");
+    return NULL;
 }
 
 static int
