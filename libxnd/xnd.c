@@ -68,7 +68,7 @@ xnd_err_occurred(const xnd_t *x)
 
 /* Create and initialize memory with type 't'. */
 static char *
-xnd_new(const ndt_t *t, uint32_t flags, ndt_context_t *ctx)
+xnd_new(const ndt_t *t, const uint32_t flags, ndt_context_t *ctx)
 {
     xnd_t x;
 
