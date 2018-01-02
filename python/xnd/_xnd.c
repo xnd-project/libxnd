@@ -1024,7 +1024,7 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case Categorical: {
-        size_t k;
+        int64_t k;
 
         if (PyBool_Check(v)) {
             int tmp = PyObject_IsTrue(v);
@@ -1035,7 +1035,7 @@ mblock_init(xnd_t x, PyObject *v)
             for (k = 0; k < t->Categorical.ntypes; k++) {
                 if (t->Categorical.types[k].tag == ValBool &&
                     tmp == t->Categorical.types[k].ValBool) {
-                    PACK_SINGLE(x.ptr, k, size_t, t->flags);
+                    PACK_SINGLE(x.ptr, k, int64_t, t->flags);
                     return 0;
                 }
             }
@@ -1051,7 +1051,7 @@ mblock_init(xnd_t x, PyObject *v)
             for (k = 0; k < t->Categorical.ntypes; k++) {
                 if (t->Categorical.types[k].tag == ValInt64 &&
                     tmp == t->Categorical.types[k].ValInt64) {
-                    PACK_SINGLE(x.ptr, k, size_t, t->flags);
+                    PACK_SINGLE(x.ptr, k, int64_t, t->flags);
                     return 0;
                 }
             }
@@ -1068,7 +1068,7 @@ mblock_init(xnd_t x, PyObject *v)
                 /* XXX: DBL_EPSILON? */
                 if (t->Categorical.types[k].tag == ValFloat64 &&
                     tmp == t->Categorical.types[k].ValFloat64) {
-                    PACK_SINGLE(x.ptr, k, size_t, t->flags);
+                    PACK_SINGLE(x.ptr, k, int64_t, t->flags);
                     return 0;
                 }
             }
@@ -1084,7 +1084,7 @@ mblock_init(xnd_t x, PyObject *v)
             for (k = 0; k < t->Categorical.ntypes; k++) {
                 if (t->Categorical.types[k].tag == ValString &&
                     strcmp(tmp, t->Categorical.types[k].ValString) == 0) {
-                    PACK_SINGLE(x.ptr, k, size_t, t->flags);
+                    PACK_SINGLE(x.ptr, k, int64_t, t->flags);
                     return 0;
                 }
             }
@@ -1094,7 +1094,7 @@ mblock_init(xnd_t x, PyObject *v)
     not_found:
         for (k = 0; k < t->Categorical.ntypes; k++) {
             if (t->Categorical.types[k].tag == ValNA) {
-                PACK_SINGLE(x.ptr, k, size_t, t->flags);
+                PACK_SINGLE(x.ptr, k, int64_t, t->flags);
                 return 0;
             }
         }
@@ -1639,9 +1639,9 @@ _pyxnd_value(xnd_t x)
     }
 
     case Categorical: {
-        size_t k;
+        int64_t k;
 
-        UNPACK_SINGLE(k, x.ptr, size_t, t->flags);
+        UNPACK_SINGLE(k, x.ptr, int64_t, t->flags);
 
         switch (t->Categorical.types[k].tag) {
         case ValBool: {
