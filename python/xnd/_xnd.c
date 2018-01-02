@@ -2297,7 +2297,11 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
     }
     else if (is_multiindex(key)) {
         PyObject **indices = &PyTuple_GET_ITEM(key, 0);
-        x = pyxnd_subtree(self->xnd, indices, PyTuple_GET_SIZE(key));
+        Py_ssize_t n = PyTuple_GET_SIZE(key);
+        if (n > INT_MAX) {
+            goto value_error;
+        }
+        x = pyxnd_subtree(self->xnd, indices, (int)n);
     }
     else if (PySlice_Check(key)) {
         PyObject *indices[1] = {key};
@@ -2307,7 +2311,10 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
     else if (is_multikey(key)) {
         PyObject **indices = &PyTuple_GET_ITEM(key, 0);
         Py_ssize_t n = PyTuple_GET_SIZE(key);
-        x = pyxnd_multikey(self->xnd, indices, n);
+        if (n > INT_MAX) {
+            goto value_error;
+        }
+        x = pyxnd_multikey(self->xnd, indices, (int)n);
         free_type = 1;
     }
     else {
@@ -2325,6 +2332,10 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
     }
 
     return ret;
+
+value_error:
+    PyErr_SetString(PyExc_ValueError, "too many indices");
+    return -1;
 }
 
 static PyObject *
