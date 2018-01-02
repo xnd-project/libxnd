@@ -347,7 +347,7 @@ static inline PyObject *
 list_new(int64_t shape)
 {
 #if SIZE_MAX < INT64_MAX
-    if (shape > PY_SSIZE_MAX) {
+    if (shape > PY_SSIZE_T_MAX) {
         PyErr_SetString(PyExc_ValueError,
             "shape should never exceed SSIZE_MAX");
         return NULL;
@@ -362,7 +362,7 @@ static inline PyObject *
 tuple_new(int64_t shape)
 {
 #if SIZE_MAX < INT64_MAX
-    if (shape > PY_SSIZE_MAX) {
+    if (shape > PY_SSIZE_T_MAX) {
         PyErr_SetString(PyExc_ValueError,
             "shape should never exceed SSIZE_MAX");
         return NULL;
