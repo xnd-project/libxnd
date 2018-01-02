@@ -1714,8 +1714,10 @@ _pyxnd_value(xnd_t x)
     }
 
     case Bytes: {
-        return PyBytes_FromStringAndSize((char *)XND_BYTES_DATA(x.ptr),
-                                         XND_BYTES_SIZE(x.ptr));
+        char *s = (char *)XND_BYTES_DATA(x.ptr);
+        int64_t size = XND_BYTES_SIZE(x.ptr);
+
+        return bytes_from_string_and_size(s, size);
     }
 
     case Categorical: {
