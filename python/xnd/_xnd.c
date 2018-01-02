@@ -382,7 +382,7 @@ unicode_from_kind_and_data(int kind, const void *buffer, int64_t size)
             "size should never exceed SSIZE_MAX");
         return NULL;
     }
-    return PyUnicode_FromKindAndData(kind, buffer, ((Py_ssize_t))size);
+    return PyUnicode_FromKindAndData(kind, buffer, (Py_ssize_t)size);
 #else
     return PyUnicode_FromKindAndData(kind, buffer, size);
 #endif
