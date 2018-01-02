@@ -865,7 +865,7 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case FixedString: {
-        int64_t codepoints = (int64_t)t->FixedString.size; /* XXX */
+        int64_t codepoints = t->FixedString.size;
         int64_t len;
 
         if (!PyUnicode_Check(v)) {
