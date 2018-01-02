@@ -358,6 +358,21 @@ list_new(int64_t shape)
 #endif
 }
 
+static inline PyObject *
+tuple_new(int64_t shape)
+{
+#if SIZE_MAX < INT64_MAX
+    if (shape > PY_SSIZE_MAX) {
+        PyErr_SetString(PyExc_ValueError,
+            "shape should never exceed SSIZE_MAX");
+        return NULL;
+    }
+    return PyTuple_New((Py_ssize_t)shape);
+#else
+    return PyTuple_New(shape);
+#endif
+}
+
 static inline void
 memcpy_rev(char *dest, const char *src, size_t size)
 {
@@ -1401,7 +1416,7 @@ _pyxnd_value(xnd_t x)
         int64_t shape, i;
 
         shape = t->Tuple.shape;
-        tuple = PyTuple_New(shape);
+        tuple = tuple_new(shape);
         if (tuple == NULL) {
             return NULL;
         }
