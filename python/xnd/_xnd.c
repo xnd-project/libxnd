@@ -893,7 +893,7 @@ mblock_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            _strncpy(x.ptr, PyUnicode_1BYTE_DATA(v), len, (size_t)t->datasize);
+            _strncpy(x.ptr, PyUnicode_1BYTE_DATA(v), (size_t)len, (size_t)t->datasize);
             return 0;
         }
 
@@ -911,7 +911,7 @@ mblock_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            _strncpy(x.ptr, PyUnicode_1BYTE_DATA(v), len, (size_t)t->datasize);
+            _strncpy(x.ptr, PyUnicode_1BYTE_DATA(v), (size_t)len, (size_t)t->datasize);
             return 0;
         }
 
@@ -932,7 +932,7 @@ mblock_init(xnd_t x, PyObject *v)
             /* skip byte order mark */
             assert(len >= 2);
 
-            _strncpy(x.ptr, PyBytes_AS_STRING(b)+2, len-2, (size_t)t->datasize);
+            _strncpy(x.ptr, PyBytes_AS_STRING(b)+2, (size_t)(len-2), (size_t)t->datasize);
             Py_DECREF(b);
 
             return 0;
@@ -955,7 +955,7 @@ mblock_init(xnd_t x, PyObject *v)
             /* skip byte order mark */
             assert(len >= 4);
 
-            _strncpy(x.ptr, PyBytes_AS_STRING(b)+4, len-4, (size_t)t->datasize);
+            _strncpy(x.ptr, PyBytes_AS_STRING(b)+4, (size_t)(len-4), (size_t)t->datasize);
             Py_DECREF(b);
 
             return 0;
