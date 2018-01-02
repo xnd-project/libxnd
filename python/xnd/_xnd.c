@@ -327,6 +327,22 @@ static PyTypeObject MemoryBlock_Type = {
   #define XND_REV_COND NDT_BIG_ENDIAN
 #endif
 
+static inline bool
+check_invariants(const ndt_t *t)
+{
+#if SIZE_MAX < INT64_MAX
+    if (t->datasize > SIZE_MAX) {
+        PyErr_SetString(PyExc_RuntimeError,
+            "t->datasize should never exceed SIZE_MAX");
+        return 0;
+    }
+    return 1;
+#else
+    (void)t;
+    return 1;
+#endif
+}
+
 static inline void
 memcpy_rev(char *dest, const char *src, size_t size)
 {
@@ -478,6 +494,10 @@ mblock_init(xnd_t x, PyObject *v)
     NDT_STATIC_CONTEXT(ctx);
     const ndt_t *t = x.type;
     xnd_t next;
+
+    if (!check_invariants(t)) {
+        return -1;
+    }
 
     if (ndt_is_abstract(t)) {
         PyErr_SetString(PyExc_TypeError, "xnd has abstract type");
@@ -873,7 +893,7 @@ mblock_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            _strncpy(x.ptr, PyUnicode_1BYTE_DATA(v), len, t->datasize);
+            _strncpy(x.ptr, PyUnicode_1BYTE_DATA(v), len, (size_t)t->datasize);
             return 0;
         }
 
@@ -891,7 +911,7 @@ mblock_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            _strncpy(x.ptr, PyUnicode_1BYTE_DATA(v), len, t->datasize);
+            _strncpy(x.ptr, PyUnicode_1BYTE_DATA(v), len, (size_t)t->datasize);
             return 0;
         }
 
@@ -912,7 +932,7 @@ mblock_init(xnd_t x, PyObject *v)
             /* skip byte order mark */
             assert(len >= 2);
 
-            _strncpy(x.ptr, PyBytes_AS_STRING(b)+2, len-2, t->datasize);
+            _strncpy(x.ptr, PyBytes_AS_STRING(b)+2, len-2, (size_t)t->datasize);
             Py_DECREF(b);
 
             return 0;
@@ -935,7 +955,7 @@ mblock_init(xnd_t x, PyObject *v)
             /* skip byte order mark */
             assert(len >= 4);
 
-            _strncpy(x.ptr, PyBytes_AS_STRING(b)+4, len-4, t->datasize);
+            _strncpy(x.ptr, PyBytes_AS_STRING(b)+4, len-4, (size_t)t->datasize);
             Py_DECREF(b);
 
             return 0;
