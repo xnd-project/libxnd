@@ -41,16 +41,25 @@
 #include <inttypes.h>
 #include "ndtypes.h"
 
+
+static inline Py_ssize_t
+safe_downcast(int64_t size)
+{
+#if SIZE_MAX < INT64_MAX
+    if (size > INT32_MAX) {
+        PyErr_SetString(PyExc_ValueError,
+            "sizes should never exceed INT32_MAX on 32-bit platforms");
+        return -1;
+    }
+#endif
+    return size;
+}
+
 static inline bool
 check_invariants(const ndt_t *t)
 {
 #if SIZE_MAX < INT64_MAX
-    if (t->datasize > SIZE_MAX) {
-        PyErr_SetString(PyExc_RuntimeError,
-            "t->datasize should never exceed SIZE_MAX");
-        return 0;
-    }
-    return 1;
+    return safe_downcast(t->datasize) >= 0;
 #else
     (void)t;
     return 1;
@@ -58,32 +67,24 @@ check_invariants(const ndt_t *t)
 }
 
 static inline PyObject *
-list_new(int64_t shape)
+list_new(int64_t size)
 {
 #if SIZE_MAX < INT64_MAX
-    if (shape > PY_SSIZE_T_MAX) {
-        PyErr_SetString(PyExc_ValueError,
-            "shape should never exceed SSIZE_MAX");
-        return NULL;
-    }
-    return PyList_New((Py_ssize_t)shape);
+    Py_ssize_t n = safe_downcast(size);
+    return n < 0 ? NULL : PyList_New(n);
 #else
-    return PyList_New(shape);
+    return PyList_New(size);
 #endif
 }
 
 static PyObject *
-tuple_new(int64_t shape)
+tuple_new(int64_t size)
 {
 #if SIZE_MAX < INT64_MAX
-    if (shape > PY_SSIZE_T_MAX) {
-        PyErr_SetString(PyExc_ValueError,
-            "shape should never exceed SSIZE_MAX");
-        return NULL;
-    }
-    return PyTuple_New((Py_ssize_t)shape);
+    Py_ssize_t n = safe_downcast(size);
+    return n < 0 ? NULL : PyTuple_New(n);
 #else
-    return PyTuple_New(shape);
+    return PyTuple_New(size);
 #endif
 }
 
@@ -91,12 +92,8 @@ static inline PyObject *
 unicode_from_kind_and_data(int kind, const void *buffer, int64_t size)
 {
 #if SIZE_MAX < INT64_MAX
-    if (size > PY_SSIZE_T_MAX) {
-        PyErr_SetString(PyExc_ValueError,
-            "size should never exceed SSIZE_MAX");
-        return NULL;
-    }
-    return PyUnicode_FromKindAndData(kind, buffer, (Py_ssize_t)size);
+    Py_ssize_t n = safe_downcast(size);
+    return n < 0 ? NULL : PyUnicode_FromKindAndData(kind, buffer, n);
 #else
     return PyUnicode_FromKindAndData(kind, buffer, size);
 #endif
@@ -106,12 +103,8 @@ static inline PyObject *
 bytes_from_string_and_size(const char *str, int64_t size)
 {
 #if SIZE_MAX < INT64_MAX
-    if (size > PY_SSIZE_T_MAX) {
-        PyErr_SetString(PyExc_ValueError,
-            "size should never exceed SSIZE_MAX");
-        return NULL;
-    }
-    return PyBytes_FromStringAndSize(str, (Py_ssize_t)size);
+    Py_ssize_t n = safe_downcast(size);
+    return n < 0 ? NULL : PyBytes_FromStringAndSize(str, n);
 #else
     return PyBytes_FromStringAndSize(str, size);
 #endif
@@ -123,17 +116,15 @@ py_slice_get_indices_ex(PyObject *key, int64_t length,
                         int64_t *slicelength)
 {
 #if SIZE_MAX < INT64_MAX
-    Py_ssize_t _start, _stop, _step, _slicelength;
+    Py_ssize_t n, _start, _stop, _step, _slicelength;
     int ret;
 
-    if (length > PY_SSIZE_T_MAX) {
-        PyErr_SetString(PyExc_ValueError,
-            "length should never exceed SSIZE_MAX");
-        return -1;
+    n = safe_downcast(length);
+    if (n < 0) {
+        return NULL;
     }
 
-    ret = PySlice_GetIndicesEx(key, (Py_ssize_t)length, &_start, &_stop,
-                               &_step, &_slicelength);
+    ret = PySlice_GetIndicesEx(key, n, &_start, &_stop, &_step, &_slicelength);
     *start = _start;
     *stop = _stop;
     *step = _step;
