@@ -293,11 +293,11 @@ xnd_init(xnd_t x, const uint32_t flags, ndt_context_t *ctx)
 }
 
 /*
- * Create a type from 'datashape' and return a new master buffer for that
- * type. Any combination of flags that include XND_OWN_TYPE can be passed.
+ * Create a type from a string and return a new master buffer for that type.
+ * Any combination of flags that include XND_OWN_TYPE can be passed.
  */
 xnd_master_t *
-xnd_empty_from_string(const char *datashape, uint32_t flags, ndt_context_t *ctx)
+xnd_empty_from_string(const char *s, uint32_t flags, ndt_context_t *ctx)
 {
     xnd_bitmap_t b = {.data=NULL, .size=0, .next=NULL};
     xnd_master_t *x;
@@ -315,7 +315,7 @@ xnd_empty_from_string(const char *datashape, uint32_t flags, ndt_context_t *ctx)
         return ndt_memory_error(ctx);
     }
 
-    t = ndt_from_string(datashape, ctx);
+    t = ndt_from_string(s, ctx);
     if (t == NULL) {
         ndt_free(x);
         return NULL;

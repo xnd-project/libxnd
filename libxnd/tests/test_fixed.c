@@ -50,7 +50,7 @@ test_fixed(void)
     int64_t indices[3];
 
     /* a1 = [[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]] */
-    const char *datashape = "3 * 2 * 2 * uint16";
+    const char *s = "3 * 2 * 2 * uint16";
     uint16_t data[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
 
 
@@ -62,7 +62,7 @@ test_fixed(void)
 
 
     /***** Type with fixed dimensions *****/
-    x = xnd_empty_from_string(datashape, XND_OWN_ALL, ctx);
+    x = xnd_empty_from_string(s, XND_OWN_ALL, ctx);
     if (x == NULL) {
         goto error;
     }
