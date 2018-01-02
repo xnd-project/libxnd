@@ -41,7 +41,6 @@
 #include "pyndtypes.h"
 #include "xnd.h"
 #include "util.h"
-#include "compat.h"
 
 
 #ifdef _MSC_VER
