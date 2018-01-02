@@ -1,0 +1,149 @@
+/*
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2017, plures
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+
+#ifndef UTIL_H
+#define UTIL_H
+
+
+#include <Python.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include "ndtypes.h"
+
+static inline bool
+check_invariants(const ndt_t *t)
+{
+#if SIZE_MAX < INT64_MAX
+    if (t->datasize > SIZE_MAX) {
+        PyErr_SetString(PyExc_RuntimeError,
+            "t->datasize should never exceed SIZE_MAX");
+        return 0;
+    }
+    return 1;
+#else
+    (void)t;
+    return 1;
+#endif
+}
+
+static inline PyObject *
+list_new(int64_t shape)
+{
+#if SIZE_MAX < INT64_MAX
+    if (shape > PY_SSIZE_T_MAX) {
+        PyErr_SetString(PyExc_ValueError,
+            "shape should never exceed SSIZE_MAX");
+        return NULL;
+    }
+    return PyList_New((Py_ssize_t)shape);
+#else
+    return PyList_New(shape);
+#endif
+}
+
+static PyObject *
+tuple_new(int64_t shape)
+{
+#if SIZE_MAX < INT64_MAX
+    if (shape > PY_SSIZE_T_MAX) {
+        PyErr_SetString(PyExc_ValueError,
+            "shape should never exceed SSIZE_MAX");
+        return NULL;
+    }
+    return PyTuple_New((Py_ssize_t)shape);
+#else
+    return PyTuple_New(shape);
+#endif
+}
+
+static inline PyObject *
+unicode_from_kind_and_data(int kind, const void *buffer, int64_t size)
+{
+#if SIZE_MAX < INT64_MAX
+    if (size > PY_SSIZE_T_MAX) {
+        PyErr_SetString(PyExc_ValueError,
+            "size should never exceed SSIZE_MAX");
+        return NULL;
+    }
+    return PyUnicode_FromKindAndData(kind, buffer, (Py_ssize_t)size);
+#else
+    return PyUnicode_FromKindAndData(kind, buffer, size);
+#endif
+}
+
+static inline PyObject *
+bytes_from_string_and_size(const char *str, int64_t size)
+{
+#if SIZE_MAX < INT64_MAX
+    if (size > PY_SSIZE_T_MAX) {
+        PyErr_SetString(PyExc_ValueError,
+            "size should never exceed SSIZE_MAX");
+        return NULL;
+    }
+    return PyBytes_FromStringAndSize(str, (Py_ssize_t)size);
+#else
+    return PyBytes_FromStringAndSize(str, size);
+#endif
+}
+
+static inline int
+py_slice_get_indices_ex(PyObject *key, int64_t length,
+                        int64_t *start, int64_t *stop, int64_t *step,
+                        int64_t *slicelength)
+{
+#if SIZE_MAX < INT64_MAX
+    Py_ssize_t _start, _stop, _step, _slicelength;
+    int ret;
+
+    if (length > PY_SSIZE_T_MAX) {
+        PyErr_SetString(PyExc_ValueError,
+            "length should never exceed SSIZE_MAX");
+        return -1;
+    }
+
+    ret = PySlice_GetIndicesEx(key, (Py_ssize_t)length, &_start, &_stop,
+                               &_step, &_slicelength);
+    *start = _start;
+    *stop = _stop;
+    *step = _step;
+    *slicelength = _slicelength;
+
+    return ret;
+#else
+    return PySlice_GetIndicesEx(key, length, start, stop, step, slicelength);
+#endif
+}
+
+
+#endif /* UTIL_H */
