@@ -973,7 +973,7 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case FixedBytes: {
-        int64_t size = (int64_t)t->FixedBytes.size; /* XXX */
+        int64_t size = t->FixedBytes.size;
         int64_t len;
 
         if (!PyBytes_Check(v)) {
@@ -989,7 +989,7 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        _strncpy(x.ptr, PyBytes_AS_STRING(v), len, size);
+        _strncpy(x.ptr, PyBytes_AS_STRING(v), (size_t)len, (size_t)size);
 
         return 0;
     }
