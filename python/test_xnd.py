@@ -39,7 +39,6 @@ from randvalue import *
 
 
 try:
-    # NOTE (valgrind): importing numpy leaks memory.
     import numpy as np
 except ImportError:
     np = None
