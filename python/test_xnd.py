@@ -448,6 +448,10 @@ class TestVarDim(unittest.TestCase):
             x[1, i] = v[1][i] = -3e22 * i
         self.assertEqual(x.value, v)
 
+    def test_var_dim_overflow(self):
+        s = "var(offsets=[0, 2]) * var(offsets=[0, 1073741824, 2147483648]) * uint8"
+        self.assertRaises(ValueError, xnd.empty, s)
+
 
 class TestSymbolicDim(unittest.TestCase):
 
