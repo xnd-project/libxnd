@@ -583,6 +583,20 @@ class TestRecord(unittest.TestCase):
         x['z'] = v['z']
         self.assertEqual(x.value, v)
 
+    def test_record_overflow(self):
+        # Type cannot be created.
+        s = "{a: 4611686018427387904 * uint8, b: 4611686018427387904 * uint8}"
+        self.assertRaises(ValueError, xnd.empty, s)
+
+        if HAVE_64_BIT:
+            # Allocation fails.
+            s = "{a: 4611686018427387904 * uint8, b: 4611686018427387903 * uint8}"
+            self.assertRaises(MemoryError, xnd.empty, s)
+        else:
+            # Allocation fails.
+            s = "{a: 1073741824 * uint8, b: 1073741823 * uint8}"
+            self.assertRaises(MemoryError, xnd.empty, s)
+
 
 class TestRef(unittest.TestCase):
 
