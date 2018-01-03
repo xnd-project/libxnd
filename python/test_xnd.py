@@ -926,6 +926,20 @@ class TestFixedBytes(unittest.TestCase):
         x[0] = b"xyz"
         self.assertEqual(x.value, [b"xyz", b"123"])
 
+    def test_fixed_bytes_overflow(self):
+        # Type cannot be created.
+        s = "fixed_bytes(size=9223372036854775808)"
+        self.assertRaises(ValueError, xnd.empty, s)
+
+        if HAVE_64_BIT:
+            # Allocation fails.
+            s = "fixed_bytes(size=9223372036854775807)"
+            self.assertRaises(MemoryError, xnd.empty, s)
+        else:
+            # Allocation fails.
+            s = "fixed_bytes(size=2147483648)"
+            self.assertRaises(MemoryError, xnd.empty, s)
+
 
 class TestString(unittest.TestCase):
 
