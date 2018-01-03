@@ -2075,7 +2075,6 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
         if (x.type == NULL) {
             return seterr_xnd(&ctx);
         }
-        x.ptr = next.ptr;
 
         return x;
     }
