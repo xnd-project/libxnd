@@ -220,6 +220,7 @@ class TestFixedDim(unittest.TestCase):
 
             # Allocation fails.
             s = "2147483648 * 2147483647 * 2 * uint8"
+            self.assertRaises(MemoryError, xnd.empty, s)
         else:
             # Type cannot be created.
             s = "2147483648 * 2147483648 * 2 * uint8"
