@@ -121,7 +121,7 @@ py_slice_get_indices_ex(PyObject *key, int64_t length,
 
     n = safe_downcast(length);
     if (n < 0) {
-        return NULL;
+        return -1;
     }
 
     ret = PySlice_GetIndicesEx(key, n, &_start, &_stop, &_step, &_slicelength);

@@ -44,6 +44,8 @@ def skip_if(condition, reason):
     if condition:
         raise unittest.SkipTest(reason)
 
+HAVE_64_BIT = sys.maxsize == 2**63-1
+
 HAVE_PYTHON_36 = sys.version_info >= (3, 6, 0)
 
 requires_py36 = unittest.skipUnless(
