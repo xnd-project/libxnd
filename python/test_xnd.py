@@ -348,6 +348,24 @@ class TestFortran(unittest.TestCase):
                 x[i, j] = v[i][j] = -8.33e1 * i + j
         self.assertEqual(x.value, v)
 
+    def test_fortran_overflow(self):
+        if HAVE_64_BIT:
+            # Type cannot be created.
+            s = "!2147483648 * 2147483648 * 2 * uint8"
+            self.assertRaises(ValueError, xnd.empty, s)
+
+            # Allocation fails.
+            s = "!2147483648 * 2147483647 * 2 * uint8"
+            self.assertRaises(MemoryError, xnd.empty, s)
+        else:
+            # Type cannot be created.
+            s = "!2147483648 * 2147483648 * 2 * uint8"
+            self.assertRaises(ValueError, xnd.empty, s)
+
+            # Allocation fails.
+            s = "!32768 * 32768 * 2 * uint8"
+            self.assertRaises(MemoryError, xnd.empty, s)
+
 
 class TestVarDim(unittest.TestCase):
 
