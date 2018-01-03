@@ -867,6 +867,22 @@ class TestFixedString(unittest.TestCase):
         x[1] = "b\x00c"
         self.assertEqual(x.value, ["a", "b\x00c"])
 
+    def test_fixed_string_overflow(self):
+        # Type cannot be created.
+        for s in ["fixed_string(9223372036854775808)",
+                  "fixed_string(4611686018427387904, 'utf16')",
+                  "fixed_string(2305843009213693952, 'utf32')"]:
+            self.assertRaises(ValueError, xnd.empty, s)
+
+        if HAVE_64_BIT:
+            # Allocation fails.
+            s = "fixed_string(4611686018427387903, 'utf16')"
+            self.assertRaises(MemoryError, xnd.empty, s)
+        else:
+            # Allocation fails.
+            s = "fixed_string(1073741824, 'utf16')"
+            self.assertRaises(MemoryError, xnd.empty, s)
+
 
 class TestFixedBytesKind(unittest.TestCase):
 
