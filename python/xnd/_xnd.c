@@ -1842,8 +1842,8 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
         }
 
         next = x;
-        next.index = x.index + i * t->Concrete.FixedDim.step;
         next.type = t->FixedDim.type;
+        next.index = x.index + i * t->Concrete.FixedDim.step;
 
         break;
     }
@@ -1863,8 +1863,8 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
         }
 
         next = x;
-        next.index = start + i * step;
         next.type = t->VarDim.type;
+        next.index = start + i * step;
 
         break;
     }
@@ -2016,8 +2016,8 @@ pyxnd_index(xnd_t x, PyObject *indices[], int len)
         }
 
         next = x;
-        next.index = x.index + i * t->Concrete.FixedDim.step;
         next.type = t->FixedDim.type;
+        next.index = x.index + i * t->Concrete.FixedDim.step;
 
         break;
     }
@@ -2060,21 +2060,22 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
         }
 
         next = x;
-        next.index = x.index + start * t->Concrete.FixedDim.step;
         next.type = t->FixedDim.type;
+        next.index = x.index + start * t->Concrete.FixedDim.step;
 
         next = pyxnd_multikey(next, indices+1, len-1);
         if (next.ptr == NULL) {
             return xnd_error;
         }
 
-        x.index = next.index;
         x.type = ndt_fixed_dim((ndt_t *)next.type, shape,
                                t->Concrete.FixedDim.step * step,
                                &ctx);
         if (x.type == NULL) {
             return seterr_xnd(&ctx);
         }
+
+        x.index = next.index;
 
         return x;
     }
@@ -2107,7 +2108,6 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
             return seterr_xnd(&ctx);
         }
 
-        x.index = next.index;
         x.type = ndt_var_dim((ndt_t *)next.type,
                              ExternalOffsets,
                              t->Concrete.VarDim.noffsets, t->Concrete.VarDim.offsets,
@@ -2116,6 +2116,7 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
         if (x.type == NULL) {
             return seterr_xnd(&ctx);
         }
+        x.index = next.index;
         x.ptr = next.ptr;
 
         return x;
