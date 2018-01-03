@@ -213,19 +213,15 @@ class TestFixedDim(unittest.TestCase):
         self.assertEqual(x.value, v)
 
     def test_fixed_dim_overflow(self):
-        if HAVE_64_BIT:
-            # Type cannot be created.
-            s = "2147483648 * 2147483648 * 2 * uint8"
-            self.assertRaises(ValueError, xnd.empty, s)
+        # Type cannot be created.
+        s = "2147483648 * 2147483648 * 2 * uint8"
+        self.assertRaises(ValueError, xnd.empty, s)
 
+        if HAVE_64_BIT:
             # Allocation fails.
             s = "2147483648 * 2147483647 * 2 * uint8"
             self.assertRaises(MemoryError, xnd.empty, s)
         else:
-            # Type cannot be created.
-            s = "2147483648 * 2147483648 * 2 * uint8"
-            self.assertRaises(ValueError, xnd.empty, s)
-
             # Allocation fails.
             s = "32768 * 32768 * 2 * uint8"
             self.assertRaises(MemoryError, xnd.empty, s)
@@ -349,19 +345,15 @@ class TestFortran(unittest.TestCase):
         self.assertEqual(x.value, v)
 
     def test_fortran_overflow(self):
-        if HAVE_64_BIT:
-            # Type cannot be created.
-            s = "!2147483648 * 2147483648 * 2 * uint8"
-            self.assertRaises(ValueError, xnd.empty, s)
+        # Type cannot be created.
+        s = "!2147483648 * 2147483648 * 2 * uint8"
+        self.assertRaises(ValueError, xnd.empty, s)
 
+        if HAVE_64_BIT:
             # Allocation fails.
             s = "!2147483648 * 2147483647 * 2 * uint8"
             self.assertRaises(MemoryError, xnd.empty, s)
         else:
-            # Type cannot be created.
-            s = "!2147483648 * 2147483648 * 2 * uint8"
-            self.assertRaises(ValueError, xnd.empty, s)
-
             # Allocation fails.
             s = "!32768 * 32768 * 2 * uint8"
             self.assertRaises(MemoryError, xnd.empty, s)
