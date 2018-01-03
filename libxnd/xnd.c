@@ -651,8 +651,8 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
         }
 
         next = x;
-        next.index = x.index + i * t->Concrete.FixedDim.step;
         next.type = t->FixedDim.type;
+        next.index = x.index + i * t->Concrete.FixedDim.step;
 
         break;
     }
@@ -671,8 +671,8 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
         }
 
         next = x;
-        next.index = start + i * step;
         next.type = t->VarDim.type;
+        next.index = start + i * step;
 
         break;
     }
