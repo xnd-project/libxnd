@@ -524,6 +524,20 @@ class TestTuple(unittest.TestCase):
         x[2] = v[2]
         self.assertEqual(x.value, v)
 
+    def test_tuple_overflow(self):
+        # Type cannot be created.
+        s = "(4611686018427387904 * uint8, 4611686018427387904 * uint8)"
+        self.assertRaises(ValueError, xnd.empty, s)
+
+        if HAVE_64_BIT:
+            # Allocation fails.
+            s = "(4611686018427387904 * uint8, 4611686018427387903 * uint8)"
+            self.assertRaises(MemoryError, xnd.empty, s)
+        else:
+            # Allocation fails.
+            s = "(1073741824 * uint8, 1073741823 * uint8)"
+            self.assertRaises(MemoryError, xnd.empty, s)
+
 
 class TestRecord(unittest.TestCase):
 
