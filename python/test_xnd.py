@@ -87,7 +87,7 @@ class TestAny(unittest.TestCase):
         test_cases = [
           "Any",
           "10 * 2 * Any",
-          "!10 * 2 * Any",
+          "10 * N * int64",
           "{a: string, b: Any}"
         ]
 
