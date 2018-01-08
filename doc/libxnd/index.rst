@@ -20,5 +20,6 @@ strings, bytes and categorical values.
 .. toctree::
 
    data-structures.rst
+   functions.rst
 
 
