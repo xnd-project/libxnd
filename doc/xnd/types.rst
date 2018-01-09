@@ -493,3 +493,31 @@ arrays.  This example with columnar data is from the Arrow homepage:
    x = xnd(data)
    >>> x.type
    ndt("{session_id : 4 * int64, timestamp : 4 * float64, source_ip : 4 * string}")
+
+
+
+Constructors
+~~~~~~~~~~~~
+
+Constructors are xnd's way of creating distinct named types. The constructor
+argument is a regular type.
+
+Constructors open up a new dtype, so named arrays can be the dtype of
+other arrays.  Type inference currently isn't aware of constructors,
+so types have to be provided.
+
+.. code-block:: py
+
+   >>> t = ndt("3 * SomeMatrix(2 * 2 * float32)")
+   >>> lst = [[[1,2], [3,4]], [[5,6], [7,8]], [[9,10], [11,12]]]
+   >>> x = xnd(lst, type=t)
+   >>> x.type
+   ndt("3 * SomeMatrix(2 * 2 * float32)")
+   >>> x.value
+   [[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]], [[9.0, 10.0], [11.0, 12.0]]]
+   >>> x[0].type
+   ndt("SomeMatrix(2 * 2 * float32)")
+
+
+
+
