@@ -29,7 +29,8 @@ Fixed arrays
 
 .. code-block:: py
 
-   >>> x = xnd([[0,1,2], [3,4,5]])
+   >>> from xnd import *
+   >>> x = xnd([[0, 1, 2], [3, 4, 5]])
    >>> x.type
    ndt("2 * 3 * int64")
    >>> x.value
@@ -78,7 +79,6 @@ per dimension.
    ndt("var * var * complex128")
    >>> x.value
    [[0.1j], [(3+2j), (4+5j), 10j]]
-   >>>
 
 Indexing and slicing works as usual, returning properly typed views or
 values in the case of scalars:
@@ -122,7 +122,6 @@ for initializing C structs.
    ndt("{a : string, b : float64}")
    >>> x.value
    {'a': 'foo', 'b': 10.2}
-
 
 
 Tuples
@@ -263,7 +262,6 @@ linear index.  The equation *stride = step * itemsize* always holds.
    ndt("2 * 2 * 2 * ?int64")
    >>> x.value
    [[[1, 2], [None, 3]], [[4, None], [5, 6]]]
-   >>>
 
 This is a fixed array with optional data.
 
@@ -276,7 +274,6 @@ This is a fixed array with optional data.
    ndt("2 * (int64, float64, complex128)")
    >>> x.value
    [(1, 2.0, 3j), (4, 5.0, 6j)]
-   >>>
 
 An array with tuple elements.
 
@@ -297,7 +294,7 @@ Fortran order is specified by prefixing the dimensions with *!*:
    (2, 4)
 
 
-Alternatively, steps can be explicitly passed as arguments:
+Alternatively, steps can be passed as arguments to the fixed dimension type:
 
 .. code-block:: py
 
@@ -311,3 +308,32 @@ Alternatively, steps can be explicitly passed as arguments:
    (2, 4)
 
 
+Ragged arrays
+~~~~~~~~~~~~~
+
+Ragged arrays with explicit types easiest to contruct using the *dtype*
+argument to the xnd constructor.
+
+.. code-block:: py
+
+   >>> lst = [[0], [1, 2], [3, 4, 5]]
+   >>> x = xnd(lst, dtype="int32")
+   >>> lst = [[0], [1, 2], [3, 4, 5]]
+   >>> x = xnd(lst, dtype="int32")
+   >>> x.type
+   ndt("var * var * int32")
+   >>> x.value
+   [[0], [1, 2], [3, 4, 5]]
+
+
+Alternatively, offsets can be passed as arguments to the var dimension type:
+
+.. code-block:: py
+
+   >>> from ndtypes import ndt
+   >>> t = ndt("var(offsets=[0,3]) * var(offsets=[0,1,3,6]) * int32")
+   >>> x = xnd(lst, type=t)
+   >>> x.type
+   ndt("var * var * int32")
+   >>> x.value
+   [[0], [1, 2], [3, 4, 5]]
