@@ -75,6 +75,9 @@ def _typeof(value, *, dtype=None):
 
         return t
 
+    elif dtype is not None:
+        raise TypeError("dtype argument is only supported for arrays")
+
     elif isinstance(value, tuple):
         return "(" + ", ".join([_typeof(x) for x in value]) + ")"
 
