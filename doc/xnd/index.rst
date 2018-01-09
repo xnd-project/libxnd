@@ -19,4 +19,5 @@ and slicing return zero-copy views that are still correctly typed.
 .. toctree::
    :maxdepth: 1
 
+   types.rst
    quickstart.rst
