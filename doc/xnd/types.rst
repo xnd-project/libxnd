@@ -17,6 +17,13 @@ Pointers only occur in explicit pointer types like *Ref* (reference), *Bytes*
 and *String*, but not in the general case.
 
 
+Type inference
+--------------
+
+If no explicit type is given, xnd supports type inference by assuming
+types for the most common Python values.
+
+
 Fixed arrays
 ~~~~~~~~~~~~
 
@@ -233,3 +240,74 @@ Python. Compare:
    >>> x = xnd(lst) # inference
    >>>
    >>> x = xnd(lst, type="1000000 * int64") # explicit
+
+
+All supported types
+-------------------
+
+Fixed arrays
+~~~~~~~~~~~~
+
+Fixed arrays are similar to NumPy's ndarray. One difference is that internally
+xnd used steps instead of strides. One step is the amount of indices required
+to move the linear index from one dimension element to the next.
+
+This facilitates optional data, whose bitmaps need to be addressed by the
+linear index.  The equation *stride = step * itemsize* always holds.
+
+
+.. code-block:: py
+
+   >>> lst = [[[1,2], [None, 3]], [[4, None], [5, 6]]]
+   >>> x.type
+   ndt("2 * 2 * 2 * ?int64")
+   >>> x.value
+   [[[1, 2], [None, 3]], [[4, None], [5, 6]]]
+   >>>
+
+This is a fixed array with optional data.
+
+
+.. code-block:: py
+
+   >>> lst = [(1,2.0,3j), (4,5.0,6j)]
+   >>> x = xnd(lst)
+   >>> x.type
+   ndt("2 * (int64, float64, complex128)")
+   >>> x.value
+   [(1, 2.0, 3j), (4, 5.0, 6j)]
+   >>>
+
+An array with tuple elements.
+
+
+Fortran order
+~~~~~~~~~~~~~
+
+Fortran order is specified by prefixing the dimensions with *!*:
+
+.. code-block:: py
+
+   >>> lst = [[1, 2, 3], [4, 5, 6]]
+   >>> x = xnd(lst, type="!2 * 3 * uint16")
+   >>> 
+   >>> x.type.shape
+   (2, 3)
+   >>> x.type.strides
+   (2, 4)
+
+
+Alternatively, steps can be explicitly passed as arguments:
+
+.. code-block:: py
+
+   >>> from ndtypes import *
+   >>> lst = [[1, 2, 3], [4, 5, 6]]
+   >>> t = ndt("fixed(shape=2, step=1) * fixed(shape=3, step=2) * uint16")
+   >>> x = xnd(lst, type=t)
+   >>> x.type.shape
+   (2, 3)
+   >>> x.type.strides
+   (2, 4)
+
+
