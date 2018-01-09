@@ -558,3 +558,18 @@ so types have to be provided.
    [[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]], [[9.0, 10.0], [11.0, 12.0]]]
    >>> x[0].type
    ndt("SomeMatrix(2 * 2 * float32)")
+
+
+Categorical
+~~~~~~~~~~~
+
+Categorical types contain values.  The data stored in xnd buffers are indices
+(:macro:`int64`) into the type's categories.
+
+.. code-block:: py
+
+   >>> t = ndt("categorical('a', 'b', 'c', NA)")
+   >>> data = ['a', 'a', 'b', 'a', 'a', 'a', 'foo', 'c']
+   >>> x = xnd(data, dtype=t)
+   >>> x.value
+   ['a', 'a', 'b', 'a', 'a', 'a', None, 'c']
