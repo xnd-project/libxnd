@@ -11,20 +11,22 @@ __all__ = ['xnd', 'typeof', '_typeof']
 # ======================================================================
 
 class xnd(_xnd):
-    def __new__(cls, value, *, type=None, levels=None):
-        if type is None:
-            if levels is not None:
-                args = ', '.join("'%s'" % l if l is not None else 'NA' for l in levels)
-                t = "%d * categorical(%s)" % (len(value), args)
-                type = ndt(t)
-            else:
-                type = typeof(value)
-        else:
-            if levels is not None:
-                raise TypeError(
-                    "the 'type' and 'levels' arguments are mutually exclusive")
-            elif isinstance(type, str):
+    def __new__(cls, value, *, type=None, dtype=None, levels=None):
+        if (type, dtype, levels).count(None) < 2:
+            raise TypeError(
+                "the 'type', 'dtype' and 'levels' arguments are mutually "
+                "exclusive")
+        if type is not None:
+            if isinstance(type, str):
                 type = ndt(type)
+        elif dtype is not None:
+            type = typeof(value, dtype=dtype)
+        elif levels is not None:
+            args = ', '.join("'%s'" % l if l is not None else 'NA' for l in levels)
+            t = "%d * categorical(%s)" % (len(value), args)
+            type = ndt(t)
+        else:
+            type = typeof(value)
         return super().__new__(cls, type=type, value=value)
 
 
@@ -32,8 +34,8 @@ class xnd(_xnd):
 #                            Type inference
 # ======================================================================
 
-def typeof(value):
-    return ndt(_typeof(value))
+def typeof(value, *, dtype=None):
+    return ndt(_typeof(value, dtype=dtype))
 
 def _choose_dtype(lst):
     for x in lst:
@@ -41,7 +43,7 @@ def _choose_dtype(lst):
             return _typeof(x)
     return "float64"
 
-def _typeof(value):
+def _typeof(value, *, dtype=None):
     """Infer the type of a Python value.  Only a subset of Datashape is
        supported.  In general, types need to be explicitly specified when
        creating xnd objects.
@@ -50,18 +52,19 @@ def _typeof(value):
         data, shapes = data_shapes(value)
         opt = None in data
 
-        if not data:
-            dtype = 'float64'
-        else:
-            dtype = _choose_dtype(data)
-            for x in data:
-                if x is not None:
-                    t = _typeof(x)
-                    if t != dtype:
-                        raise ValueError("dtype mismatch: have %s and %s" % (dtype, t))
+        if dtype is None:
+            if not data:
+                dtype = 'float64'
+            else:
+                dtype = _choose_dtype(data)
+                for x in data:
+                    if x is not None:
+                        t = _typeof(x)
+                        if t != dtype:
+                            raise ValueError("dtype mismatch: have %s and %s" % (dtype, t))
 
-        if opt:
-            dtype = '?' + dtype
+            if opt:
+                dtype = '?' + dtype
 
         t = dtype
         var = any(len(set(lst)) > 1 or None in lst for lst in shapes)
