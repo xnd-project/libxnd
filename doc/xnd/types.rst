@@ -10,7 +10,7 @@ Types
 =====
 
 The xnd object is a container that maps a wide range of Python values directly
-to memory.  xnd unpacks complex types of arbitary nesting depth to a single
+to memory.  xnd unpacks complex types of arbitrary nesting depth to a single
 memory block.
 
 Pointers only occur in explicit pointer types like *Ref* (reference), *Bytes*
@@ -159,7 +159,7 @@ Optional data (missing values)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Optional data is currently specified using *None*.  It is under debate if
-a separate *NA* singeton object would be more suitable.
+a separate *NA* singleton object would be more suitable.
 
 .. code-block:: py
 
@@ -311,7 +311,7 @@ Alternatively, steps can be passed as arguments to the fixed dimension type:
 Ragged arrays
 ~~~~~~~~~~~~~
 
-Ragged arrays with explicit types easiest to contruct using the *dtype*
+Ragged arrays with explicit types easiest to construct using the *dtype*
 argument to the xnd constructor.
 
 .. code-block:: py

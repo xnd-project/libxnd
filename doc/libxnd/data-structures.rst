@@ -39,7 +39,7 @@ Bitmaps
 libxnd supports data with optional values. Any type can have a bitmap for its
 data.  Bitmaps are addressed using the linear index in the :macro:`xnd_t` struct.
 
-For a scalar, the bitmap contains just one addressible bit.
+For a scalar, the bitmap contains just one addressable bit.
 
 For fixed and variable arrays, the bitmap contains one bit for each item.
 
@@ -72,7 +72,7 @@ When passing the view around, the linear index needs to be maintained because
 it is required to determine if a value is missing (NA).
 
 The convention is to apply the linear index (adjust the *ptr* and set it
-to *0*) only when a non-optional elemnent at *ndim == 0* is actually
+to *0*) only when a non-optional element at *ndim == 0* is actually
 accessed.
 
 This happens for example when getting the value of an element or when
