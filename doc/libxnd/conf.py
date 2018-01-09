@@ -22,7 +22,7 @@ html_title = 'libxnd'
 html_domain_indices = False
 html_use_index = False
 html_show_sourcelink = False
-html_add_permalinks = None
+#html_add_permalinks = None
 html_copy_source = False
 
 def setup(app):
