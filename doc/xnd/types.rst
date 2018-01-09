@@ -573,3 +573,47 @@ Categorical types contain values.  The data stored in xnd buffers are indices
    >>> x = xnd(data, dtype=t)
    >>> x.value
    ['a', 'a', 'b', 'a', 'a', 'a', None, 'c']
+
+
+Fixed String
+~~~~~~~~~~~~
+
+Fixed strings are embedded into arrays.  Supported encodings are 'ascii',
+'utf8', 'utf16' and 'utf32'.  The maximum string size is the number of
+code points rather than bytes.
+
+.. code-block:: py
+
+   >>> t = ndt("10 * fixed_string(3, 'utf32')")
+   >>> x = xnd.empty(t)
+   >>> x.value
+   ['', '', '', '', '', '', '', '', '', '']
+   >>> x[3] = "\U000003B1\U000003B2\U000003B3"
+   >>> x.value
+   ['', '', '', 'αβγ', '', '', '', '', '', '']
+
+
+Fixed Bytes
+~~~~~~~~~~~
+
+Fixed bytes are embedded into arrays.
+
+.. code-block:: py
+
+   >>> t = ndt("3 * fixed_bytes(size=3)")
+   >>> x = xnd.empty(t)
+   >>> x[2] = b'123'
+   >>> x.value
+   [b'\x00\x00\x00', b'\x00\x00\x00', b'123']
+   >>> x.align
+   1
+
+Alignment can be requested with the requirement that size is a multiple of
+alignment:
+
+.. code-block:: py
+
+   >>> t = ndt("3 * fixed_bytes(size=32, align=16)")
+   >>> x = xnd.empty(t)
+   >>> x.align
+   16
