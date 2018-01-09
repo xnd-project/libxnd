@@ -311,7 +311,7 @@ Alternatively, steps can be passed as arguments to the fixed dimension type:
 Ragged arrays
 ~~~~~~~~~~~~~
 
-Ragged arrays with explicit types easiest to construct using the *dtype*
+Ragged arrays with explicit types are easiest to construct using the *dtype*
 argument to the xnd constructor.
 
 .. code-block:: py
@@ -337,3 +337,51 @@ Alternatively, offsets can be passed as arguments to the var dimension type:
    ndt("var * var * int32")
    >>> x.value
    [[0], [1, 2], [3, 4, 5]]
+
+
+Tuples
+~~~~~~
+
+In memory, tuples are the same as records (C structs) but without field names.
+
+.. code-block:: py
+
+   >>> x = xnd(("foo", 1.0))
+   >>> x.type
+   ndt("(string, float64)")
+   >>> x.value
+   ('foo', 1.0)
+
+
+Indexing works the same as for arrays:
+
+.. code-block:: py
+
+   >>> x[0]
+   'foo'
+
+
+Nested tuples are more general than ragged arrays. They can a) hold different
+data types and b) the trees they represent may be unbalanced.
+
+They do not allow slicing though and are probably less efficient.
+
+This is an example of an unbalanced tree that cannot be represented as a
+ragged array:
+
+.. code-block:: py
+
+   >>> unbalanced_tree = (((1.0, 2.0), (3.0)), 4.0, ((5.0, 6.0, 7.0), ()))
+   >>> x = xnd(unbalanced_tree)
+   >>> x.type
+   ndt("(((float64, float64), float64), float64, ((float64, float64, float64), ()))")
+   >>> x.value
+   (((1.0, 2.0), 3.0), 4.0, ((5.0, 6.0, 7.0), ()))
+   >>>
+   >>> x[0]
+   ((1.0, 2.0), 3.0)
+   >>> x[0][0]
+   (1.0, 2.0)
+
+Note that the data in the above tree example is packed into a single contiguous
+memory block.
