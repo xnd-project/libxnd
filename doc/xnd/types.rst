@@ -477,3 +477,19 @@ In this case, the memory block is pointer-free.
        retail : int64
      }
    }
+
+
+Record of arrays
+~~~~~~~~~~~~~~~~
+
+Often it is more memory efficient to store an array of records as a record of
+arrays.  This example with columnar data is from the Arrow homepage:
+
+.. code-block:: py
+
+   >>> data = {'session_id': [1331247700, 1331247702, 1331247709, 1331247799],
+   ...         'timestamp': [1515529735.4895875, 1515529746.2128427, 1515529756.4485607, 1515529766.2181058],
+   ...         'source_ip': ['8.8.8.100', '100.2.0.11', '99.101.22.222', '12.100.111.200']}
+   x = xnd(data)
+   >>> x.type
+   ndt("{session_id : 4 * int64, timestamp : 4 * float64, source_ip : 4 * string}")
