@@ -342,7 +342,7 @@ Alternatively, offsets can be passed as arguments to the var dimension type:
 Tuples
 ~~~~~~
 
-In memory, tuples are the same as records (C structs) but without field names.
+In memory, tuples are the same as C structs.
 
 .. code-block:: py
 
@@ -385,3 +385,95 @@ ragged array:
 
 Note that the data in the above tree example is packed into a single contiguous
 memory block.
+
+
+Records
+~~~~~~~
+
+In memory, records are C structs. The field names are only stored in the type.
+
+The following examples use Python-3.6, which keeps the dict initialization
+order.
+
+.. code-block:: py
+
+   >>> x = xnd({'a': b'123', 'b': {'x': 1.2, 'y': 100+3j}})
+   >>> x.type
+   ndt("{a : bytes(), b : {x : float64, y : complex128}}")
+   >>> x.value
+   {'a': b'123', 'b': {'x': 1.2, 'y': (100+3j)}}
+
+
+Indexing works the same as for arrays. Additionally, fields can be indexed
+by name:
+
+.. code-block:: py
+
+   >>> x[0]
+   b'123'
+   >>> x['a']
+   b'123'
+   >>> x['b']
+   {'x': 1.2, 'y': (100+3j)}
+
+
+The nesting depth is arbitrary.  In the following example, the data -- except
+for strings, which are pointers -- is packed into a single contiguous memory
+block:
+
+.. code-block:: py
+
+   >>> item = {
+   ...   "id": 1001,
+   ...   "name": "cyclotron",
+   ...   "price": 5998321.99,
+   ...   "tags": ["connoisseur", "luxury"],
+   ...   "stock": {
+   ...     "warehouse": 722,
+   ...     "retail": 20
+   ...   }
+   ... }
+   >>> x = xnd(item)
+   >>> print(x.type.pretty())
+   {
+     id : int64,
+     name : string,
+     price : float64,
+     tags : 2 * string,
+     stock : {
+       warehouse : int64,
+       retail : int64
+     }
+   }
+   >>> x.value
+   {'id': 1001, 'name': 'cyclotron', 'price': 5998321.99, 'tags': ['connoisseur', 'luxury'], 'stock': {'warehouse': 722, 'retail': 20}}
+
+
+Strings can be embedded into the array by specifying the fixed string type.
+In this case, the memory block is pointer-free.
+
+.. code-block:: py
+
+   >>> from ndtypes import ndt
+   >>> 
+   >>> s = """
+   ...   { id : int64,
+   ...     name : fixed_string(30),
+   ...     price : float64,
+   ...     tags : 2 * fixed_string(30),
+   ...     stock : {warehouse : int64, retail : int64} 
+   ...   }
+   ... """
+   >>> 
+   >>> x = xnd(item, type=t)
+   >>> print(x.type.pretty())
+   {
+     id : int64,
+     name : fixed_string(30),
+     price : float64,
+     tags : 2 * fixed_string(30),
+     stock : {
+       warehouse : int64,
+       retail : int64
+     }
+   }
