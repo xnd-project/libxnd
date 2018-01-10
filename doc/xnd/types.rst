@@ -282,7 +282,7 @@ An array with tuple elements.
 Fortran order
 ~~~~~~~~~~~~~
 
-Fortran order is specified by prefixing the dimensions with *!*:
+Fortran order is specified by prefixing the dimensions with an exclamation mark:
 
 .. code-block:: py
 
