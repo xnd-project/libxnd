@@ -133,7 +133,7 @@ Python tuples are directly translated to the libndtypes tuple type:
 
    >>> x = xnd(('foo', b'bar', [None, 10.0, 20.0]))
    >>> x.type
-   ndt("(string, bytes(), 3 * ?float64)")
+   ndt("(string, bytes, 3 * ?float64)")
    >>> x.value
    ('foo', b'bar', [None, 10.0, 20.0])
 
@@ -399,7 +399,7 @@ order.
 
    >>> x = xnd({'a': b'123', 'b': {'x': 1.2, 'y': 100+3j}})
    >>> x.type
-   ndt("{a : bytes(), b : {x : float64, y : complex128}}")
+   ndt("{a : bytes, b : {x : float64, y : complex128}}")
    >>> x.value
    {'a': b'123', 'b': {'x': 1.2, 'y': (100+3j)}}
 
@@ -617,3 +617,48 @@ alignment:
    >>> x = xnd.empty(t)
    >>> x.align
    16
+
+
+String
+~~~~~~
+
+Strings are pointers to :macro:`NUL`-terminated UTF-8 strings.
+
+.. code-block:: py
+
+   >>> x = xnd.empty("10 * string")
+   >>> x.value
+   ['', '', '', '', '', '', '', '', '', '']
+   >>> x[0] = "abc"
+   >>> x.value
+   ['abc', '', '', '', '', '', '', '', '', '']
+
+
+
+Bytes
+~~~~~
+
+Internally, bytes are structs with a size field and a pointer to the data.
+
+.. code-block:: py
+
+   >>> x = xnd([b'123', b'45678'])
+   >>> x.type
+   ndt("2 * bytes")
+   >>> x.value
+   [b'123', b'45678']
+
+
+The bytes constructor takes an optional *align* argument that specifies the
+alignment of the allocated data:
+
+.. code-block:: py
+
+   >>> x = xnd([b'abc', b'123'], type="2 * bytes(align=64)")
+   >>> x.value
+   [b'abc', b'123']
+   >>> x.align
+   8
+
+Note that *x.align* is the alignment of the array.  The embedded pointers
+to the bytes data are aligned at *64*.
