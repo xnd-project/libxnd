@@ -21,4 +21,5 @@ and slicing return zero-copy views that are still correctly typed.
 
    types.rst
    align-pack.rst
+   buffer-protocol.rst
    quickstart.rst
