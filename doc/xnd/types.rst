@@ -249,7 +249,7 @@ Fixed arrays
 ~~~~~~~~~~~~
 
 Fixed arrays are similar to NumPy's ndarray. One difference is that internally
-xnd used steps instead of strides. One step is the amount of indices required
+xnd uses steps instead of strides. One step is the amount of indices required
 to move the linear index from one dimension element to the next.
 
 This facilitates optional data, whose bitmaps need to be addressed by the
