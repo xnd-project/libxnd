@@ -43,7 +43,7 @@ For a scalar, the bitmap contains just one addressable bit.
 
 For fixed and variable arrays, the bitmap contains one bit for each item.
 
-Containers dtypes like tuples and records have new bitmaps for each of their
+Container types like tuples and records have new bitmaps for each of their
 fields if any of the field subtrees contains optional data.
 
 These field bitmaps are in the *next* array.

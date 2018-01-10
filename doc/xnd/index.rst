@@ -20,4 +20,5 @@ and slicing return zero-copy views that are still correctly typed.
    :maxdepth: 1
 
    types.rst
+   align-pack.rst
    quickstart.rst

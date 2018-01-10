@@ -68,8 +68,8 @@ Subarrays are views and properly typed:
 Ragged arrays
 ~~~~~~~~~~~~~
 
-Ragged arrays are stored in the Arrow list representation. The data is
-pointer-free, addressing the elements works by having one offset array
+Ragged arrays are compatible with the Arrow list representation. The data
+is pointer-free, addressing the elements works by having one offset array
 per dimension.
 
 .. code-block:: py
@@ -79,6 +79,7 @@ per dimension.
    ndt("var * var * complex128")
    >>> x.value
    [[0.1j], [(3+2j), (4+5j), 10j]]
+
 
 Indexing and slicing works as usual, returning properly typed views or
 values in the case of scalars:
