@@ -1,6 +1,6 @@
 import sys, os, docutils
 
-# master_doc = 'index'
+master_doc = 'index'
 
 project = 'xnd'
 copyright = '2016-2017, Plures Project'
