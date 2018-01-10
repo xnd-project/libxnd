@@ -662,3 +662,22 @@ alignment of the allocated data:
 
 Note that *x.align* is the alignment of the array.  The embedded pointers
 to the bytes data are aligned at *64*.
+
+
+Primitive types
+~~~~~~~~~~~~~~~
+
+As a short example, here is a tuple that contains all primitive types:
+
+.. code-block:: py
+
+   >>> s = """
+   ...    (bool,
+   ...     int8, int16, int32, int64,
+   ...     uint8, uint16, uint32, uint64,
+   ...     float16, float32, float64,
+   ...     complex32, complex64, complex128)
+   ... """
+   >>> x = xnd.empty(s)
+   >>> x.value
+   (False, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0j, 0j, 0j)
