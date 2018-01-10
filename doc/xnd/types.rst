@@ -580,8 +580,8 @@ Fixed String
 ~~~~~~~~~~~~
 
 Fixed strings are embedded into arrays.  Supported encodings are 'ascii',
-'utf8', 'utf16' and 'utf32'.  The maximum string size is the number of
-code points rather than bytes.
+'utf8', 'utf16' and 'utf32'. The string size argument denotes the number
+of code points rather than bytes.
 
 .. code-block:: py
 
