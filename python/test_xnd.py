@@ -1575,7 +1575,7 @@ class TestIndexing(unittest.TestCase):
         self.assertEqual(x[0], 0)
 
         self.assertRaises(IndexError, x.__getitem__, 1)
-        self.assertRaises(IndexError, x.__getitem__, (0, 1))
+        self.assertRaises(TypeError, x.__getitem__, (0, 1))
 
         x = xnd([[0,1,2], [3,4,5]])
         self.assertEqual(x[0,0], 0)
