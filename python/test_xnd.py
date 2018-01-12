@@ -36,6 +36,7 @@ from ndtypes import ndt
 from xnd import xnd
 from support import *
 from randvalue import *
+from _testbuffer import ndarray, ND_WRITABLE
 
 
 try:
@@ -1650,6 +1651,16 @@ class TestBuffer(unittest.TestCase):
         for i in range(2):
             for k in ['x', 'y', 'z']:
                 self.assertEqual(y[i][k], x[i][k])
+
+    def test_readonly(self):
+        x = ndarray([1,2,3], shape=[3], format="L")
+        y = xnd.from_buffer(x)
+        self.assertRaises(TypeError, y.__setitem__, 0, 1000)
+
+        x = ndarray([1,2,3], shape=[3], format="L", flags=ND_WRITABLE)
+        y = xnd.from_buffer(x)
+        y[:] = [1000, 2000, 3000]
+        self.assertEqual(x.tolist(), [1000, 2000, 3000])
 
 
 class TestSpec(unittest.TestCase):

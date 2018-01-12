@@ -1161,6 +1161,13 @@ static PyTypeObject Xnd_Type;
 #define XND_PTR(v) (((XndObject *)v)->xnd.ptr)
 
 
+static inline bool
+is_readonly(XndObject *self)
+{
+    return self->mblock->view != NULL && self->mblock->view->readonly;
+}
+
+
 static XndObject *
 pyxnd_alloc(PyTypeObject *type)
 {
@@ -2281,6 +2288,11 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
 
     if (value == NULL) {
         PyErr_SetString(PyExc_TypeError, "cannot delete memory blocks");
+        return -1;
+    }
+
+    if (is_readonly(self)) {
+        PyErr_SetString(PyExc_TypeError, "memory block is read-only");
         return -1;
     }
 
