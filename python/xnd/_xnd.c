@@ -1720,7 +1720,7 @@ _pyxnd_value(xnd_t x)
 
 
 /******************************************************************************/
-/*                                xnd subscript                               */
+/*                            Indexing and slicing                            */
 /******************************************************************************/
 
 static PyObject *
@@ -2425,6 +2425,22 @@ value_error:
 }
 
 static PyObject *
+pyxnd_item(XndObject *self, Py_ssize_t index)
+{
+    PyObject *res;
+    PyObject *key;
+
+    key = PyLong_FromSsize_t(index);
+    if (key == NULL) {
+        return NULL;
+    }
+
+    res = pyxnd_subscript(self, key);
+    Py_DECREF(key);
+    return res;
+}
+
+static PyObject *
 pyxnd_type(PyObject *self, PyObject *args UNUSED)
 {
     Py_INCREF(TYPE_OWNER(self));
@@ -2467,6 +2483,13 @@ static PyMappingMethods pyxnd_as_mapping = {
     (objobjargproc)pyxnd_assign,   /* mp_ass_subscript */
 };
 
+static PySequenceMethods pyxnd_as_sequence = {
+    (lenfunc)pyxnd_length,         /* sq_length */
+    0,                             /* sq_concat */
+    0,                             /* sq_repeat */
+    (ssizeargfunc)pyxnd_item,      /* sq_item */
+};
+
 static PyMethodDef pyxnd_methods [] =
 {
   /* Class methods */
@@ -2490,7 +2513,7 @@ static PyTypeObject Xnd_Type =
     0,                                      /* tp_reserved */
     (reprfunc) 0,                           /* tp_repr */
     0,                                      /* tp_as_number */
-    0,                                      /* tp_as_sequence */
+    &pyxnd_as_sequence,                     /* tp_as_sequence */
     &pyxnd_as_mapping,                      /* tp_as_mapping */
     0,                                      /* tp_hash */
     0,                                      /* tp_call */

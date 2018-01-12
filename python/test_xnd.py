@@ -1616,6 +1616,26 @@ class TestIndexing(unittest.TestCase):
         self.assertEqual(x[1].value, ["x", "y", "z"])
 
 
+class TestSequence(unittest.TestCase):
+
+    def test_sequence(self):
+        for v, s in DTYPE_EMPTY_TEST_CASES:
+            for vv, ss in [
+               (1 * [1 * [v]], "!1 * 1 * %s" % s),
+               (1 * [2 * [v]], "!1 * 2 * %s" % s),
+               (2 * [1 * [v]], "!2 * 1 * %s" % s),
+               (2 * [2 * [v]], "2 * 2 * %s" % s),
+               (2 * [3 * [v]], "2 * 3 * %s" % s),
+               (3 * [2 * [v]], "3 * 2 * %s" % s)]:
+
+                x = xnd(vv, type=ss)
+
+                lst = [v for v in x]
+
+                for i, z in enumerate(x):
+                    self.assertEqual(z.value, lst[i].value)
+
+
 class TestBuffer(unittest.TestCase):
 
     @unittest.skipIf(np is None, "numpy not found")
@@ -1928,6 +1948,7 @@ ALL_TESTS = [
   TestTypevar,
   TestTypeInference,
   TestIndexing,
+  TestSequence,
   TestBuffer,
   LongIndexSliceTest,
 ]
