@@ -122,6 +122,7 @@ class TestFixedDim(unittest.TestCase):
                 x = xnd.empty(ss)
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
+                self.assertEqual(len(x), len(vv))
 
     def test_fixed_dim_subscript(self):
         test_cases = [
@@ -254,6 +255,7 @@ class TestFortran(unittest.TestCase):
                 x = xnd.empty(ss)
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
+                self.assertEqual(len(x), len(vv))
 
     def test_fortran_subscript(self):
         test_cases = [
@@ -382,6 +384,7 @@ class TestVarDim(unittest.TestCase):
                 x = xnd.empty(ss)
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
+                self.assertEqual(len(x), len(vv))
 
     def test_var_dim_assign(self):
         ### Regular data ###
@@ -498,6 +501,7 @@ class TestTuple(unittest.TestCase):
                 x = xnd.empty(ss)
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
+                self.assertEqual(len(x), len(vv))
 
     def test_tuple_assign(self):
         ### Regular data ###
@@ -557,6 +561,7 @@ class TestRecord(unittest.TestCase):
                 x = xnd.empty(ss)
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
+                self.assertEqual(len(x), len(vv))
 
     def test_record_assign(self):
         ### Regular data ###
@@ -622,6 +627,7 @@ class TestRef(unittest.TestCase):
                 x = xnd.empty(ss)
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
+                assertEqualWithEx(self, len, x, vv)
 
     def test_ref_empty_view(self):
         # If a ref is a dtype but contains an array itself, indexing should
@@ -700,6 +706,7 @@ class TestConstr(unittest.TestCase):
                 x = xnd.empty(ss)
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
+                assertEqualWithEx(self, len, x, vv)
 
     def test_constr_empty_view(self):
         # If a constr is a dtype but contains an array itself, indexing should
@@ -1059,6 +1066,10 @@ class TestBool(unittest.TestCase):
         b = BoolMemoryError()
         self.assertRaises(MemoryError, xnd, b, type="bool")
 
+        # Test len.
+        x = xnd(True, type="bool")
+        self.assertRaises(TypeError, len, x)
+
 
 class TestSignedKind(unittest.TestCase):
 
@@ -1098,6 +1109,11 @@ class TestSigned(unittest.TestCase):
             i = IndexTypeError()
             self.assertRaises(TypeError, xnd, i, type=t)
 
+        # Test len.
+        x = xnd(10, type="int16")
+        self.assertRaises(TypeError, len, x)
+
+
 class TestUnsignedKind(unittest.TestCase):
 
     def test_unsigned_kind(self):
@@ -1135,6 +1151,10 @@ class TestUnsigned(unittest.TestCase):
             self.assertRaises(MemoryError, xnd, i, type=t)
             i = IndexTypeError()
             self.assertRaises(TypeError, xnd, i, type=t)
+
+        # Test len.
+        x = xnd(10, type="uint64")
+        self.assertRaises(TypeError, len, x)
 
 
 class TestFloatKind(unittest.TestCase):
@@ -1693,6 +1713,8 @@ class TestSpec(unittest.TestCase):
 
     def run_single(self, nd, d, indices):
         """Run a single test case."""
+
+        self.assertEqual(len(nd), len(d))
 
         nd_exception = None
         try:

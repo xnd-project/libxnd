@@ -40,6 +40,27 @@ class IndexTypeError(object):
     def __index__(self):
         return ""
 
+def assertEqualWithEx(self, func, x, y):
+    if x.value is y is None:
+        return
+
+    xerr = None
+    try:
+        xres = func(x)
+    except Exception as e:
+        xerr = e.__class__
+
+    yerr = None
+    try:
+        yres = func(y)
+    except Exception as e:
+        yerr = e.__class__
+
+    if xerr is None is yerr:
+        self.assertEqual(xres, yres, msg="x: %s y: %s" % (x.type, y))
+    else:
+        self.assertEqual(xerr, yerr, msg="x: %s y: %s" % (x.type, y))
+
 def skip_if(condition, reason):
     if condition:
         raise unittest.SkipTest(reason)

@@ -1774,6 +1774,87 @@ pyxnd_view_move_type(const XndObject *src, xnd_t x)
     return (PyObject *)view;
 }
 
+static Py_ssize_t
+pyxnd_len(xnd_t x)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    const ndt_t *t = x.type;
+    xnd_t next;
+
+    assert(ndt_is_concrete(t));
+
+    if (t->ndim > 0 && ndt_is_optional(t)) {
+        PyErr_SetString(PyExc_NotImplementedError,
+            "optional dimensions are not supported");
+        return -1;
+    }
+
+    if (xnd_is_na(&x)) {
+        return 0;
+    }
+
+    switch (t->tag) {
+    case FixedDim: {
+        return t->FixedDim.shape;
+    }
+
+    case VarDim: {
+        int64_t start, step, shape;
+
+        shape = ndt_var_indices(&start, &step, t, x.index, &ctx);
+        if (shape < 0) {
+            return seterr_int(&ctx);
+        }
+
+        return shape;
+    }
+
+    case Tuple: {
+        return t->Tuple.shape;
+    }
+
+    case Record: {
+        return t->Record.shape;
+    }
+
+    case Ref: {
+        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
+        if (ndt_err_occurred(&ctx)) {
+            return seterr_int(&ctx);
+        }
+
+        next.index = 0;
+        next.type = t->Ref.type;
+        next.ptr = XND_POINTER_DATA(x.ptr);
+
+        return pyxnd_len(next);
+    }
+
+    case Constr: {
+        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
+        if (ndt_err_occurred(&ctx)) {
+            return seterr_int(&ctx);
+        }
+
+        next.index = 0;
+        next.type = t->Constr.type;
+        next.ptr = x.ptr;
+
+        return pyxnd_len(next);
+    }
+
+    default:
+        PyErr_SetString(PyExc_TypeError, "type has no len()");
+        return -1;
+    }
+}
+
+static Py_ssize_t
+pyxnd_length(XndObject *self)
+{
+    return pyxnd_len(XND(self));
+}
+
 static int64_t
 get_index(PyObject *key, int64_t shape)
 {
@@ -2381,7 +2462,7 @@ static PyGetSetDef pyxnd_getsets [] =
 };
 
 static PyMappingMethods pyxnd_as_mapping = {
-    (lenfunc)NULL,                 /* mp_length */
+    (lenfunc)pyxnd_length,         /* mp_length */
     (binaryfunc)pyxnd_subscript,   /* mp_subscript */
     (objobjargproc)pyxnd_assign,   /* mp_ass_subscript */
 };
