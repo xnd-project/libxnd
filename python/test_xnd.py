@@ -529,6 +529,11 @@ class TestTuple(unittest.TestCase):
         x[2] = v[2]
         self.assertEqual(x.value, v)
 
+        x = xnd([("a", 100, 10.5), ("a", 100, 10.5)])
+        x[0][1] = 20000000
+        self.assertEqual(x[0][1], 20000000)
+        self.assertEqual(x[0, 1], 20000000)
+
     def test_tuple_overflow(self):
         # Type cannot be created.
         s = "(4611686018427387904 * uint8, 4611686018427387904 * uint8)"
@@ -588,6 +593,11 @@ class TestRecord(unittest.TestCase):
         x['y'] = v['y']
         x['z'] = v['z']
         self.assertEqual(x.value, v)
+
+        x = xnd([R['x': "abc", 'y': 100, 'z': 10.5]])
+        x[0][1] = 20000000
+        self.assertEqual(x[0][1], 20000000)
+        self.assertEqual(x[0, 1], 20000000)
 
     def test_record_overflow(self):
         # Type cannot be created.
@@ -1593,16 +1603,16 @@ class TestIndexing(unittest.TestCase):
         t2 = (2.0, "volatile", (4, 5, 6))
 
         x = xnd([t1, t2])
-        self.assertEqual(x[0], t1)
-        self.assertEqual(x[1], t2)
+        self.assertEqual(x[0].value, t1)
+        self.assertEqual(x[1].value, t2)
 
         self.assertEqual(x[0,0], 1.0)
         self.assertEqual(x[0,1], "capricious")
-        self.assertEqual(x[0,2], (1, 2, 3))
+        self.assertEqual(x[0,2].value, (1, 2, 3))
 
         self.assertEqual(x[1,0], 2.0)
         self.assertEqual(x[1,1], "volatile")
-        self.assertEqual(x[1,2], (4, 5, 6))
+        self.assertEqual(x[1,2].value, (4, 5, 6))
 
     def test_subview(self):
         # fixed

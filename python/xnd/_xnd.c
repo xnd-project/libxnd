@@ -2295,9 +2295,7 @@ value_or_view_copy(XndObject *self, xnd_t x)
 
     if (x.type->ndim == 0) {
         switch (x.type->tag) {
-        case Ref:
-            return pyxnd_view_copy_type(self, x);
-        case Constr:
+        case Tuple: case Record: case Ref: case Constr:
             return pyxnd_view_copy_type(self, x);
         default:
             return _pyxnd_value(x);
@@ -2316,9 +2314,7 @@ value_or_view_move(XndObject *self, xnd_t x)
 
     if (x.type->ndim == 0) {
         switch (x.type->tag) {
-        case Ref:
-            return pyxnd_view_move_type(self, x);
-        case Constr:
+        case Tuple: case Record: case Ref: case Constr:
             return pyxnd_view_move_type(self, x);
         default:
             return _pyxnd_value(x);
