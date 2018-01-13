@@ -2027,7 +2027,7 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
     }
 
     default:
-        PyErr_SetString(PyExc_TypeError, "type not indexable");
+        PyErr_SetString(PyExc_IndexError, "type not indexable");
         return xnd_error;
     }
 
@@ -2118,13 +2118,13 @@ pyxnd_index(xnd_t x, PyObject *indices[], int len)
     }
 
     case VarDim: {
-        PyErr_SetString(PyExc_TypeError,
+        PyErr_SetString(PyExc_IndexError,
             "mixed indexing and slicing is not supported for var dimensions");
         return xnd_error;
     }
 
     default:
-        PyErr_SetString(PyExc_TypeError, "type is not indexable");
+        PyErr_SetString(PyExc_IndexError, "type is not indexable");
         return xnd_error;
     }
 
@@ -2230,7 +2230,7 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
     }
 
     default:
-        PyErr_SetString(PyExc_TypeError, "type not sliceable");
+        PyErr_SetString(PyExc_IndexError, "type not sliceable");
         return xnd_error;
     }
 }
