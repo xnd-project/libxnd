@@ -206,14 +206,14 @@ type_from_buffer(const Py_buffer *view)
 
     if (view->buf == NULL || view->obj == NULL ||
         view->format == NULL || view->suboffsets != NULL) {
-        PyErr_SetString(PyExc_RuntimeError,
+        PyErr_SetString(PyExc_BufferError,
             "expect a buffer with full information and no suboffsets");
         return NULL;
     }
 
     if (view->ndim != 0) {
         if (view->shape == NULL || view->strides == NULL) {
-            PyErr_SetString(PyExc_RuntimeError,
+            PyErr_SetString(PyExc_BufferError,
                 "expect a buffer with full information");
             return NULL;
         }
