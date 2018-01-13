@@ -1636,6 +1636,16 @@ class TestSequence(unittest.TestCase):
                     self.assertEqual(z.value, lst[i].value)
 
 
+class TestAPI(unittest.TestCase):
+
+    def test_hash(self):
+        x = xnd(1000)
+        self.assertRaises(TypeError, hash, x)
+
+        x = xnd([1, 2, 3])
+        self.assertRaises(TypeError, hash, x)
+
+
 class TestBuffer(unittest.TestCase):
 
     @unittest.skipIf(np is None, "numpy not found")
@@ -1949,6 +1959,7 @@ ALL_TESTS = [
   TestTypeInference,
   TestIndexing,
   TestSequence,
+  TestAPI,
   TestBuffer,
   LongIndexSliceTest,
 ]
