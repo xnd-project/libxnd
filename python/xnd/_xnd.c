@@ -1897,12 +1897,23 @@ get_index_record(const ndt_t *t, PyObject *key)
     return get_index(key, t->Record.shape);
 }
 
+static void
+set_index_exception(bool indexable)
+{
+    if (indexable) {
+        PyErr_SetString(PyExc_IndexError, "too many indices");
+    }
+    else {
+        PyErr_SetString(PyExc_TypeError, "type not indexable");
+    }
+}
+
 /*
  * Return a zero copy view of an xnd object.  If a dtype is indexable,
  * descend into the dtype.
  */
 static xnd_t
-pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
+pyxnd_subtree(xnd_t x, PyObject *indices[], int len, bool indexable)
 {
     NDT_STATIC_CONTEXT(ctx);
     const ndt_t *t = x.type;
@@ -2010,7 +2021,7 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
         next.type = t->Ref.type;
         next.ptr = XND_POINTER_DATA(x.ptr);
 
-        return pyxnd_subtree(next, indices, len);
+        return pyxnd_subtree(next, indices, len, false);
     }
 
     case Constr: {
@@ -2023,15 +2034,15 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len)
         next.type = t->Constr.type;
         next.ptr = x.ptr;
 
-        return pyxnd_subtree(next, indices, len);
+        return pyxnd_subtree(next, indices, len, false);
     }
 
     default:
-        PyErr_SetString(PyExc_IndexError, "type not indexable");
+        set_index_exception(indexable);
         return xnd_error;
     }
 
-    return pyxnd_subtree(next, indices+1, len-1);
+    return pyxnd_subtree(next, indices+1, len-1, true);
 }
 
 static xnd_t pyxnd_index(xnd_t x, PyObject *indices[], int len);
@@ -2324,7 +2335,7 @@ pyxnd_subscript(XndObject *self, PyObject *key)
 
     if (PyIndex_Check(key) || PyUnicode_Check(key)) {
         PyObject *indices[1] = {key};
-        x = pyxnd_subtree(self->xnd, indices, 1);
+        x = pyxnd_subtree(self->xnd, indices, 1, false);
         return value_or_view_copy(self, x);
     }
     else if (is_multiindex(key)) {
@@ -2333,7 +2344,7 @@ pyxnd_subscript(XndObject *self, PyObject *key)
         if (n > INT_MAX) {
             goto value_error;
         }
-        x = pyxnd_subtree(self->xnd, indices, (int)n);
+        x = pyxnd_subtree(self->xnd, indices, (int)n, false);
         return value_or_view_copy(self, x);
     }
     else if (PySlice_Check(key)) {
@@ -2379,7 +2390,7 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
 
     if (PyIndex_Check(key) || PyUnicode_Check(key)) {
         PyObject *indices[1] = {key};
-        x = pyxnd_subtree(self->xnd, indices, 1);
+        x = pyxnd_subtree(self->xnd, indices, 1, false);
     }
     else if (is_multiindex(key)) {
         PyObject **indices = &PyTuple_GET_ITEM(key, 0);
@@ -2387,7 +2398,7 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
         if (n > INT_MAX) {
             goto value_error;
         }
-        x = pyxnd_subtree(self->xnd, indices, (int)n);
+        x = pyxnd_subtree(self->xnd, indices, (int)n, false);
     }
     else if (PySlice_Check(key)) {
         PyObject *indices[1] = {key};
