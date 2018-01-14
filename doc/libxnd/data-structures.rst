@@ -37,7 +37,8 @@ Bitmaps
    };
 
 libxnd supports data with optional values. Any type can have a bitmap for its
-data.  Bitmaps are addressed using the linear index in the **xnd_t** struct.
+data.  Bitmaps are addressed using the linear index in the :c:macro:`xnd_t`
+struct.
 
 For a scalar, the bitmap contains just one addressable bit.
 
@@ -112,15 +113,15 @@ schemes from getting in each other's way.
 
 However, for deallocating a master buffer the flags must be set correctly.
 
-**XND_OWN_TYPE** is set if the master buffer owns the **ndt_t**.
+:c:macro:`XND_OWN_TYPE` is set if the master buffer owns the :c:macro:`ndt_t`.
 
-**XND_OWN_DATA** is set if the master buffer owns the data pointer.
+:c:macro:`XND_OWN_DATA` is set if the master buffer owns the data pointer.
 
 
 The *string*, *bytes* and *ref* types have pointers that are embedded in the
 data.  Usually, these are owned and deallocated by libxnd.
 
-For strings, the Python bindings use the convention that **NULL** strings
+For strings, the Python bindings use the convention that :c:macro:`NULL` strings
 are interpreted as the empty string. Once a string pointer is initialized it
 belongs to the master buffer.
 
