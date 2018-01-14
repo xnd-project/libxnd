@@ -31,10 +31,9 @@ Fixed arrays
 
    >>> from xnd import *
    >>> x = xnd([[0, 1, 2], [3, 4, 5]])
-   >>> x.type
-   ndt("2 * 3 * int64")
-   >>> x.value
-   [[0, 1, 2], [3, 4, 5]]
+   >>> x
+   xnd([[0, 1, 2], [3, 4, 5]], type="2 * 3 * int64")
+
 
 As expected, lists are mapped to ndarrays and integers to int64.  Indexing and
 slicing works the usual way.  For performance reasons these operations return
@@ -42,27 +41,55 @@ zero-copy views whenever possible:
 
 .. code-block:: py
 
+   # Scalars are returned as Python values.
    >>> x[0][1]
    1
 
+   # Containers are returned as views.
    >>> y = x[:, ::-1]
    >>> y
-   <xnd.xnd object at 0x141a798>
-   >>> y.type
-   ndt("2 * 3 * int64")
-   >>> y.value
-   [[2, 1, 0], [5, 4, 3]]
+   xnd([[2, 1, 0], [5, 4, 3]], type="2 * 3 * int64")
 
 
 Subarrays are views and properly typed:
 
 .. code-block:: py
 
-   >>> y = x[1]
-   >>> y.type
-   ndt("3 * int64")
-   >>> y.value
-   [3, 4, 5]
+   >>> x[1]
+   >>> xnd([3, 4, 5], type="3 * int64")
+
+
+The representation of large values is abbreviated:
+
+.. code-block:: py
+
+   >>> x = xnd(10 * [200 * [1]])
+   >>> x
+   xnd([[1, 1, 1, 1, 1, 1, 1, 1, 1, ...], [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...], [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...], [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...], [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...], ...], type="10 * 200 * int64")
+
+
+Values can be accessed in full using the *value* property:
+
+.. code-block:: py
+
+   >>> x = xnd(11 * [1])
+   >>> x
+   xnd([1, 1, 1, 1, 1, 1, 1, 1, 1, ...], type="11 * int64")
+   >>> x.value
+   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+
+
+Types can be accessed using the *type* property:
+
+.. code-block:: py
+
+   >>> x = xnd(11 * [1])
+   >>> x.type
+   ndt("11 * int64")
 
 
 Ragged arrays
@@ -74,11 +101,8 @@ per dimension.
 
 .. code-block:: py
 
-   >>> x = xnd([[0.1j], [3+2j, 4+5j, 10j]])
-   >>> x.type
-   ndt("var * var * complex128")
-   >>> x.value
-   [[0.1j], [(3+2j), (4+5j), 10j]]
+   >>> xnd([[0.1j], [3+2j, 4+5j, 10j]])
+   xnd([[0.1j], [(3+2j), (4+5j), 10j]], type="var * var * complex128")
 
 
 Indexing and slicing works as usual, returning properly typed views or
@@ -90,13 +114,8 @@ values in the case of scalars:
    >>> x[1, 2]
    10j
 
-   >>> y = x[1]
-   >>> y
-   <xnd.xnd object at 0x1e8b848>
-   >>> y.type
-   ndt("var * complex128")
-   >>> y.value
-   [(3+2j), (4+5j), 10j]
+   >>> x[1]
+   xnd([(3+2j), (4+5j), 10j], type="var * complex128")
 
 
 Eliminating dimensions through mixed slicing and indexing is not supported
@@ -118,11 +137,8 @@ for initializing C structs.
 
 .. code-block:: py
 
-   >>> x = xnd({'a': 'foo', 'b': 10.2})
-   >>> x.type
-   ndt("{a : string, b : float64}")
-   >>> x.value
-   {'a': 'foo', 'b': 10.2}
+   >>> xnd({'a': 'foo', 'b': 10.2})
+   xnd({'a': 'foo', 'b': 10.2}, type="{a : string, b : float64}")
 
 
 Tuples
@@ -132,11 +148,8 @@ Python tuples are directly translated to the libndtypes tuple type:
 
 .. code-block:: py
 
-   >>> x = xnd(('foo', b'bar', [None, 10.0, 20.0]))
-   >>> x.type
-   ndt("(string, bytes, 3 * ?float64)")
-   >>> x.value
-   ('foo', b'bar', [None, 10.0, 20.0])
+   >>> xnd(('foo', b'bar', [None, 10.0, 20.0]))
+   xnd(('foo', b'bar', [None, 10.0, 20.0]), type="(string, bytes, 3 * ?float64)")
 
 
 Nested arrays in structs
@@ -148,12 +161,9 @@ xnd seamlessly supports nested values of arbitrary depth:
 
    >>> lst = [{'name': 'John', 'internet_points': [1, 2, 3]},
    ...        {'name': 'Jane', 'internet_points': [4, 5, 6]}]
-   >>> x = xnd(lst)
-   >>> x.type
-   ndt("2 * {name : string, internet_points : 3 * int64}")
-   >>> x.value
-   [{'name': 'John', 'internet_points': [1, 2, 3]}, {'name': 'Jane', 'internet_points': [4, 5, 6]}]
-
+   >>> xnd(lst)
+   xnd([{'internet_points': [1, 2, 3], 'name': 'John'},
+        {'internet_points': [4, 5, 6], 'name': 'Jane'}], type="2 * {name : string, internet_points : 3 * int64}")
 
 
 Optional data (missing values)
@@ -165,12 +175,8 @@ a separate *NA* singleton object would be more suitable.
 .. code-block:: py
 
    >>> lst = [0, 1, None, 2, 3, None, 5, 10]
-   >>> x = xnd(lst)
-   >>> x.type
-   ndt("8 * ?int64")
-   >>> x.value
-   [0, 1, None, 2, 3, None, 5, 10]
-
+   >>> xnd(lst)
+   xnd([0, 1, None, 2, 3, None, 5, 10], type="8 * ?int64")
 
 
 Categorical data
@@ -183,10 +189,10 @@ the *levels* argument that is internally translated to the type.
 
    >>> levels = ['January', 'August', 'December', None]
    >>> x = xnd(['January', 'January', None, 'December', 'August', 'December', 'December'], levels=levels)
-   >>> x.type
-   ndt("7 * categorical('January', 'August', 'December', NA)")
    >>> x.value
    ['January', 'January', None, 'December', 'August', 'December', 'December']
+   >>> x.type
+   ndt("7 * categorical('January', 'August', 'December', NA)")
 
 
 The above is equivalent to specifying the type directly:
@@ -196,10 +202,10 @@ The above is equivalent to specifying the type directly:
    >>> from ndtypes import *
    >>> t = ndt("7 * categorical('January', 'August', 'December', NA)")
    >>> x = xnd(['January', 'January', None, 'December', 'August', 'December', 'December'], type=t)
-   >>> x.type
-   ndt("7 * categorical('January', 'August', 'December', NA)")
    >>> x.value
    ['January', 'January', None, 'December', 'August', 'December', 'December']
+   >>> x.type
+   ndt("7 * categorical('January', 'August', 'December', NA)")
 
 
 Explicit types
@@ -216,12 +222,8 @@ Different types are intended
 
 .. code-block:: py
 
-   >>> from ndtypes import *
-  >>> x = xnd([[0,1,2], [3,4,5]], type="2 * 3 * uint8")
-  >>> x.type
-  ndt("2 * 3 * uint8")
-  >>> x.value
-  [[0, 1, 2], [3, 4, 5]]
+   >>> xnd([[0,1,2], [3,4,5]], type="2 * 3 * uint8")
+   xnd([[0, 1, 2], [3, 4, 5]], type="2 * 3 * uint8")
 
 Here, type inference would deduce :macro:`int64`, so :macro:`uint8` needs
 to be passed explicitly.
@@ -258,23 +260,16 @@ linear index.  The equation *stride = step * itemsize* always holds.
 
 .. code-block:: py
 
-   >>> lst = [[[1,2], [None, 3]], [[4, None], [5, 6]]]
-   >>> x.type
-   ndt("2 * 2 * 2 * ?int64")
-   >>> x.value
-   [[[1, 2], [None, 3]], [[4, None], [5, 6]]]
+   >>> xnd([[[1,2], [None, 3]], [[4, None], [5, 6]]])
+   xnd([[[1, 2], [None, 3]], [[4, None], [5, 6]]], type="2 * 2 * 2 * ?int64")
 
 This is a fixed array with optional data.
 
 
 .. code-block:: py
 
-   >>> lst = [(1,2.0,3j), (4,5.0,6j)]
-   >>> x = xnd(lst)
-   >>> x.type
-   ndt("2 * (int64, float64, complex128)")
-   >>> x.value
-   [(1, 2.0, 3j), (4, 5.0, 6j)]
+   >>> xnd([(1,2.0,3j), (4,5.0,6j)])
+   xnd([(1, 2.0, 3j), (4, 5.0, 6j)], type="2 * (int64, float64, complex128)")
 
 An array with tuple elements.
 
@@ -318,13 +313,8 @@ argument to the xnd constructor.
 .. code-block:: py
 
    >>> lst = [[0], [1, 2], [3, 4, 5]]
-   >>> x = xnd(lst, dtype="int32")
-   >>> lst = [[0], [1, 2], [3, 4, 5]]
-   >>> x = xnd(lst, dtype="int32")
-   >>> x.type
-   ndt("var * var * int32")
-   >>> x.value
-   [[0], [1, 2], [3, 4, 5]]
+   >>> xnd(lst, dtype="int32")
+   xnd([[0], [1, 2], [3, 4, 5]], type="var * var * int32")
 
 
 Alternatively, offsets can be passed as arguments to the var dimension type:
@@ -333,11 +323,8 @@ Alternatively, offsets can be passed as arguments to the var dimension type:
 
    >>> from ndtypes import ndt
    >>> t = ndt("var(offsets=[0,3]) * var(offsets=[0,1,3,6]) * int32")
-   >>> x = xnd(lst, type=t)
-   >>> x.type
-   ndt("var * var * int32")
-   >>> x.value
-   [[0], [1, 2], [3, 4, 5]]
+   >>> xnd(lst, type=t)
+   xnd([[0], [1, 2], [3, 4, 5]], type="var * var * int32")
 
 
 Tuples
@@ -347,17 +334,15 @@ In memory, tuples are the same as C structs.
 
 .. code-block:: py
 
-   >>> x = xnd(("foo", 1.0))
-   >>> x.type
-   ndt("(string, float64)")
-   >>> x.value
-   ('foo', 1.0)
+   >>> xnd(("foo", 1.0))
+   xnd(('foo', 1.0), type="(string, float64)")
 
 
 Indexing works the same as for arrays:
 
 .. code-block:: py
 
+   >>> x = xnd(("foo", 1.0))
    >>> x[0]
    'foo'
 
@@ -374,15 +359,16 @@ ragged array:
 
    >>> unbalanced_tree = (((1.0, 2.0), (3.0)), 4.0, ((5.0, 6.0, 7.0), ()))
    >>> x = xnd(unbalanced_tree)
-   >>> x.type
-   ndt("(((float64, float64), float64), float64, ((float64, float64, float64), ()))")
    >>> x.value
    (((1.0, 2.0), 3.0), 4.0, ((5.0, 6.0, 7.0), ()))
-   >>>
+   >>> x.type
+   ndt("(((float64, float64), float64), float64, ((float64, float64, float64), ()))")
+   >>> 
    >>> x[0]
-   ((1.0, 2.0), 3.0)
+   xnd(((1.0, 2.0), 3.0), type="((float64, float64), float64)")
    >>> x[0][0]
-   (1.0, 2.0)
+   xnd((1.0, 2.0), type="(float64, float64)")
+
 
 Note that the data in the above tree example is packed into a single contiguous
 memory block.
@@ -399,10 +385,10 @@ order.
 .. code-block:: py
 
    >>> x = xnd({'a': b'123', 'b': {'x': 1.2, 'y': 100+3j}})
-   >>> x.type
-   ndt("{a : bytes, b : {x : float64, y : complex128}}")
    >>> x.value
    {'a': b'123', 'b': {'x': 1.2, 'y': (100+3j)}}
+   >>> x.type
+   ndt("{a : bytes, b : {x : float64, y : complex128}}")
 
 
 Indexing works the same as for arrays. Additionally, fields can be indexed
@@ -415,7 +401,7 @@ by name:
    >>> x['a']
    b'123'
    >>> x['b']
-   {'x': 1.2, 'y': (100+3j)}
+   xnd({'x': 1.2, 'y': (100+3j)}, type="{x : float64, y : complex128}")
 
 
 The nesting depth is arbitrary.  In the following example, the data -- except
@@ -424,6 +410,7 @@ block:
 
 .. code-block:: py
 
+   >>> from pprint import pprint
    >>> item = {
    ...   "id": 1001,
    ...   "name": "cyclotron",
@@ -435,6 +422,14 @@ block:
    ...   }
    ... }
    >>> x = xnd(item)
+   >>>
+   >>> pprint(x.value)
+   {'id': 1001,
+    'name': 'cyclotron',
+    'price': 5998321.99,
+    'stock': {'retail': 20, 'warehouse': 722},
+    'tags': ['connoisseur', 'luxury']}
+   >>>
    >>> print(x.type.pretty())
    {
      id : int64,
@@ -446,8 +441,7 @@ block:
        retail : int64
      }
    }
-   >>> x.value
-   {'id': 1001, 'name': 'cyclotron', 'price': 5998321.99, 'tags': ['connoisseur', 'luxury'], 'stock': {'warehouse': 722, 'retail': 20}}
+   >>>
 
 
 Strings can be embedded into the array by specifying the fixed string type.
@@ -509,11 +503,8 @@ For example, this is an array of pointer to array:
 
    >>> t = ndt("3 * ref(4 * uint64)")
    >>> lst = [[0,1,2,3], [4,5,6,7], [8,9,10,11]]
-   >>> x = xnd(lst, type=t)
-   >>> x.type
-   ndt("3 * ref(4 * uint64)")
-   >>> x.value
-   [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]]
+   >>> xnd(lst, type=t)
+   xnd([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]], type="3 * ref(4 * uint64)")
 
 The user sees no difference to a regular 3 by 4 array, but internally
 the outer dimension consists of three pointers to the inner arrays.
@@ -553,12 +544,11 @@ so types have to be provided.
    >>> t = ndt("3 * SomeMatrix(2 * 2 * float32)")
    >>> lst = [[[1,2], [3,4]], [[5,6], [7,8]], [[9,10], [11,12]]]
    >>> x = xnd(lst, type=t)
-   >>> x.type
-   ndt("3 * SomeMatrix(2 * 2 * float32)")
-   >>> x.value
-   [[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]], [[9.0, 10.0], [11.0, 12.0]]]
-   >>> x[0].type
-   ndt("SomeMatrix(2 * 2 * float32)")
+   >>> x
+   xnd([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]],
+       [[9.0, 10.0], [11.0, 12.0]]], type="3 * SomeMatrix(2 * 2 * float32)")
+   >>> x[0]
+   xnd([[1.0, 2.0], [3.0, 4.0]], type="SomeMatrix(2 * 2 * float32)")
 
 
 Categorical
@@ -643,11 +633,8 @@ Internally, bytes are structs with a size field and a pointer to the data.
 
 .. code-block:: py
 
-   >>> x = xnd([b'123', b'45678'])
-   >>> x.type
-   ndt("2 * bytes")
-   >>> x.value
-   [b'123', b'45678']
+   >>> xnd([b'123', b'45678'])
+   xnd([b'123', b'45678'], type="2 * bytes")
 
 
 The bytes constructor takes an optional *align* argument that specifies the
