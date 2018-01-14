@@ -33,7 +33,7 @@
 import sys, unittest, argparse
 from math import isinf, isnan
 from ndtypes import ndt
-from xnd import xnd
+from xnd import xnd, XndEllipsis
 from support import *
 from randvalue import *
 from _testbuffer import ndarray, ND_WRITABLE
@@ -1655,6 +1655,44 @@ class TestAPI(unittest.TestCase):
         x = xnd([1, 2, 3])
         self.assertRaises(TypeError, hash, x)
 
+    def test_short_value(self):
+        x = xnd([1, 2])
+        self.assertEqual(x.short_value(0), [])
+        self.assertEqual(x.short_value(1), [XndEllipsis])
+        self.assertEqual(x.short_value(2), [1, XndEllipsis])
+        self.assertEqual(x.short_value(3), [1, 2])
+        self.assertRaises(ValueError, x.short_value, -1)
+
+        x = xnd([[1, 2], [3]])
+        self.assertEqual(x.short_value(0), [])
+        self.assertEqual(x.short_value(1), [XndEllipsis])
+        self.assertEqual(x.short_value(2), [[1, XndEllipsis], XndEllipsis])
+        self.assertEqual(x.short_value(3), [[1, 2], [3]])
+        self.assertRaises(ValueError, x.short_value, -1)
+
+        x = xnd((1, 2))
+        self.assertEqual(x.short_value(0), ())
+        self.assertEqual(x.short_value(1), (XndEllipsis,))
+        self.assertEqual(x.short_value(2), (1, XndEllipsis))
+        self.assertEqual(x.short_value(3), (1, 2))
+        self.assertRaises(ValueError, x.short_value, -1)
+
+        x = xnd(R['a': 1, 'b': 2])
+        self.assertEqual(x.short_value(0), {})
+        self.assertEqual(x.short_value(1), {XndEllipsis: XndEllipsis})
+        self.assertEqual(x.short_value(2), R['a': 1, XndEllipsis: XndEllipsis])
+        self.assertEqual(x.short_value(3), R['a': 1, 'b': 2])
+        self.assertRaises(ValueError, x.short_value, -1)
+
+
+class TestRepr(unittest.TestCase):
+
+    def test_repr(self):
+        lst = 10 * [19 * [23 * [{'a': 100, 'b': "xyz", 'c': ['abc', 'uvw']}]]]
+        x = xnd(lst)
+        r = repr(x)
+        self.assertLess(len(r), 100000)
+
 
 class TestBuffer(unittest.TestCase):
 
@@ -1970,6 +2008,7 @@ ALL_TESTS = [
   TestIndexing,
   TestSequence,
   TestAPI,
+  TestRepr,
   TestBuffer,
   LongIndexSliceTest,
 ]

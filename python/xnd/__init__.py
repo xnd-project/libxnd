@@ -1,9 +1,10 @@
 # Ensure that libndtypes is loaded and initialized.
 from ndtypes import ndt, MAX_DIM
-from ._xnd import _xnd
+from ._xnd import _xnd, XndEllipsis
 from itertools import accumulate
+from pprint import pformat
 
-__all__ = ['xnd', 'typeof', '_typeof']
+__all__ = ['xnd', 'XndEllipsis', 'typeof', '_typeof']
 
 
 # ======================================================================
@@ -28,6 +29,12 @@ class xnd(_xnd):
         else:
             type = typeof(value)
         return super().__new__(cls, type=type, value=value)
+
+    def __repr__(self):
+        value = self.short_value(maxshape=10)
+        fmt = pformat(value, compact=True)
+        value_fmt = fmt.replace("\n", "\n    ")
+        return "xnd(%s, type=\"%s\")" % (value_fmt, self.type)
 
 
 # ======================================================================

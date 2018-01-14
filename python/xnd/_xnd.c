@@ -82,6 +82,44 @@ seterr_xnd(ndt_context_t *ctx)
 
 
 /****************************************************************************/
+/*                                Singletons                                */
+/****************************************************************************/
+
+static PyTypeObject XndEllipsis_Type;
+
+PyObject XndEllipsisObject = {
+    _PyObject_EXTRA_INIT
+    1, &XndEllipsis_Type
+};
+
+static PyObject *
+xnd_ellipsis(void)
+{
+    Py_INCREF(&XndEllipsisObject);
+    return &XndEllipsisObject;
+}
+
+static PyObject *
+xnd_ellipsis_repr(PyObject *self UNUSED)
+{
+    return PyUnicode_FromString("...");
+}
+
+static PyTypeObject XndEllipsis_Type = {
+    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    "_xnd.XndEllipsis",                 /* tp_name */
+    0,                                  /* tp_basicsize */
+    0,                                  /* tp_itemsize */
+    0, /*never called*/                 /* tp_dealloc */
+    0,                                  /* tp_print */
+    0,                                  /* tp_getattr */
+    0,                                  /* tp_setattr */
+    0,                                  /* tp_reserved */
+    xnd_ellipsis_repr,                  /* tp_repr */
+};
+
+
+/****************************************************************************/
 /*                           MemoryBlock Object                             */
 /****************************************************************************/
 
@@ -1302,7 +1340,7 @@ dict_set_item(PyObject *dict, const char *k, PyObject *value)
 }
 
 static PyObject *
-_pyxnd_value(xnd_t x)
+_pyxnd_value(xnd_t x, const int64_t maxshape)
 {
     NDT_STATIC_CONTEXT(ctx);
     const ndt_t *t = x.type;
@@ -1327,6 +1365,10 @@ _pyxnd_value(xnd_t x)
         int64_t shape, i;
 
         shape = t->FixedDim.shape;
+        if (shape > maxshape) {
+            shape = maxshape;
+        }
+
         lst = list_new(shape);
         if (lst == NULL) {
             return NULL;
@@ -1336,8 +1378,13 @@ _pyxnd_value(xnd_t x)
         next.type = t->FixedDim.type;
 
         for (i = 0; i < shape; i++) {
+            if (i == maxshape-1) {
+                PyList_SET_ITEM(lst, i, xnd_ellipsis());
+                break;
+            }
+
             next.index = x.index + i * t->Concrete.FixedDim.step;
-            v = _pyxnd_value(next);
+            v = _pyxnd_value(next, maxshape);
             if (v == NULL) {
                 Py_DECREF(lst);
                 return NULL;
@@ -1357,6 +1404,9 @@ _pyxnd_value(xnd_t x)
         if (shape < 0) {
             return seterr(&ctx);
         }
+        if (shape > maxshape) {
+            shape = maxshape;
+        }
 
         lst = list_new(shape);
         if (lst == NULL) {
@@ -1367,8 +1417,13 @@ _pyxnd_value(xnd_t x)
         next.type = t->VarDim.type;
 
         for (i = 0; i < shape; i++) {
+            if (i == maxshape-1) {
+                PyList_SET_ITEM(lst, i, xnd_ellipsis());
+                break;
+            }
+
             next.index = start + i * step;
-            v = _pyxnd_value(next);
+            v = _pyxnd_value(next, maxshape);
             if (v == NULL) {
                 Py_DECREF(lst);
                 return NULL;
@@ -1384,6 +1439,10 @@ _pyxnd_value(xnd_t x)
         int64_t shape, i;
 
         shape = t->Tuple.shape;
+        if (shape > maxshape) {
+            shape = maxshape;
+        }
+
         tuple = tuple_new(shape);
         if (tuple == NULL) {
             return NULL;
@@ -1392,6 +1451,11 @@ _pyxnd_value(xnd_t x)
         next.index = 0;
 
         for (i = 0; i < shape; i++) {
+            if (i == maxshape-1) {
+                PyTuple_SET_ITEM(tuple, i, xnd_ellipsis());
+                break;
+            }
+
             next.bitmap = xnd_bitmap_next(&x, i, &ctx);
             if (ndt_err_occurred(&ctx)) {
                 return seterr(&ctx);
@@ -1400,7 +1464,7 @@ _pyxnd_value(xnd_t x)
             next.type = t->Tuple.types[i];
             next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
 
-            v = _pyxnd_value(next);
+            v = _pyxnd_value(next, maxshape);
             if (v == NULL) {
                 Py_DECREF(tuple);
                 return NULL;
@@ -1417,6 +1481,10 @@ _pyxnd_value(xnd_t x)
         int ret;
 
         shape = t->Record.shape;
+        if (shape > maxshape) {
+            shape = maxshape;
+        }
+
         dict = PyDict_New();
         if (dict == NULL) {
             return NULL;
@@ -1425,6 +1493,15 @@ _pyxnd_value(xnd_t x)
         next.index = 0;
 
         for (i = 0; i < shape; i++) {
+            if (i == maxshape-1) {
+                ret = PyDict_SetItem(dict, xnd_ellipsis(), xnd_ellipsis());
+                if (ret < 0) {
+                    Py_DECREF(dict);
+                    return NULL;
+                }
+                break;
+            }
+
             next.bitmap = xnd_bitmap_next(&x, i, &ctx);
             if (ndt_err_occurred(&ctx)) {
                 return seterr(&ctx);
@@ -1433,7 +1510,7 @@ _pyxnd_value(xnd_t x)
             next.type = t->Record.types[i];
             next.ptr = x.ptr + t->Concrete.Record.offset[i];
 
-            v = _pyxnd_value(next);
+            v = _pyxnd_value(next, maxshape);
             if (v == NULL) {
                 Py_DECREF(dict);
                 return NULL;
@@ -1459,7 +1536,7 @@ _pyxnd_value(xnd_t x)
         next.index = 0;
         next.type = t->Ref.type;
         next.ptr = XND_POINTER_DATA(x.ptr);
-        return _pyxnd_value(next);
+        return _pyxnd_value(next, maxshape);
     }
 
     case Constr: {
@@ -1471,7 +1548,7 @@ _pyxnd_value(xnd_t x)
         next.index = 0;
         next.type = t->Constr.type;
         next.ptr = x.ptr;
-        return _pyxnd_value(next);
+        return _pyxnd_value(next, maxshape);
     }
 
     case Nominal: {
@@ -2298,7 +2375,7 @@ value_or_view_copy(XndObject *self, xnd_t x)
         case Tuple: case Record: case Ref: case Constr:
             return pyxnd_view_copy_type(self, x);
         default:
-            return _pyxnd_value(x);
+            return _pyxnd_value(x, INT64_MAX);
         }
     }
 
@@ -2317,7 +2394,7 @@ value_or_view_move(XndObject *self, xnd_t x)
         case Tuple: case Record: case Ref: case Constr:
             return pyxnd_view_move_type(self, x);
         default:
-            return _pyxnd_value(x);
+            return _pyxnd_value(x, INT64_MAX);
         }
     }
 
@@ -2448,6 +2525,33 @@ pyxnd_item(XndObject *self, Py_ssize_t index)
 }
 
 static PyObject *
+pyxnd_short_value(PyObject *self, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"maxshape", NULL};
+    PyObject *maxshape = Py_None;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &maxshape)) {
+        return NULL;
+    }
+
+    if (maxshape == Py_None) {
+        return _pyxnd_value(XND(self), INT64_MAX);
+    }
+    else {
+        Py_ssize_t max = PyLong_AsSsize_t(maxshape);
+        if (max == -1 && PyErr_Occurred()) {
+            return NULL;
+        }
+        if (max < 0) {
+            PyErr_SetString(PyExc_ValueError, "maxshape must be positive");
+            return NULL;
+        }
+
+        return _pyxnd_value(XND(self), max);
+    }
+}
+
+static PyObject *
 pyxnd_type(PyObject *self, PyObject *args UNUSED)
 {
     Py_INCREF(TYPE_OWNER(self));
@@ -2464,7 +2568,7 @@ pyxnd_ndim(PyObject *self, PyObject *args UNUSED)
 static PyObject *
 pyxnd_value(PyObject *self, PyObject *args UNUSED)
 {
-    return _pyxnd_value(XND(self));
+    return _pyxnd_value(XND(self), INT64_MAX);
 }
 
 static PyObject *
@@ -2499,6 +2603,9 @@ static PySequenceMethods pyxnd_as_sequence = {
 
 static PyMethodDef pyxnd_methods [] =
 {
+  /* Methods */
+  { "short_value", (PyCFunction)pyxnd_short_value, METH_VARARGS|METH_KEYWORDS, NULL },
+
   /* Class methods */
   { "empty", (PyCFunction)pyxnd_empty, METH_O|METH_CLASS, NULL },
   { "from_buffer", (PyCFunction)pyxnd_from_buffer, METH_O|METH_CLASS, NULL },
@@ -2578,6 +2685,10 @@ PyInit__xnd(void)
         initialized = 1;
     }
 
+    if (PyType_Ready(&XndEllipsis_Type) < 0) {
+        return NULL;
+    }
+
     if (PyType_Ready(&MemoryBlock_Type) < 0) {
         return NULL;
     }
@@ -2589,6 +2700,10 @@ PyInit__xnd(void)
 
     m = PyModule_Create(&xnd_module);
     if (m == NULL) {
+        goto error;
+    }
+
+    if (PyModule_AddObject(m, "XndEllipsis", xnd_ellipsis()) < 0) {
         goto error;
     }
 
