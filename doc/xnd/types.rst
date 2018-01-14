@@ -41,12 +41,10 @@ zero-copy views whenever possible:
 
 .. code-block:: py
 
-   # Scalars are returned as Python values.
-   >>> x[0][1]
+   >>> x[0][1] # Scalars are returned as Python values.
    1
 
-   # Containers are returned as views.
-   >>> y = x[:, ::-1]
+   >>> y = x[:, ::-1] # Containers are returned as views.
    >>> y
    xnd([[2, 1, 0], [5, 4, 3]], type="2 * 3 * int64")
 
