@@ -1494,7 +1494,7 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
 
         for (i = 0; i < shape; i++) {
             if (i == maxshape-1) {
-                ret = PyDict_SetItem(dict, xnd_ellipsis(), xnd_ellipsis());
+                ret = PyDict_SetItem(dict, &XndEllipsisObject, &XndEllipsisObject);
                 if (ret < 0) {
                     Py_DECREF(dict);
                     return NULL;
