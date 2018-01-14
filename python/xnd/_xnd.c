@@ -87,9 +87,10 @@ seterr_xnd(ndt_context_t *ctx)
 
 static PyTypeObject XndEllipsis_Type;
 
-PyObject XndEllipsisObject = {
+static PyObject XndEllipsisObject = {
     _PyObject_EXTRA_INIT
-    1, &XndEllipsis_Type
+    .ob_refcnt = 1,
+    .ob_type = NULL
 };
 
 static PyObject *
@@ -2685,6 +2686,7 @@ PyInit__xnd(void)
         initialized = 1;
     }
 
+    XndEllipsisObject.ob_type = &XndEllipsis_Type;
     if (PyType_Ready(&XndEllipsis_Type) < 0) {
         return NULL;
     }
