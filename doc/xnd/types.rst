@@ -225,7 +225,7 @@ Different types are intended
    >>> xnd([[0,1,2], [3,4,5]], type="2 * 3 * uint8")
    xnd([[0, 1, 2], [3, 4, 5]], type="2 * 3 * uint8")
 
-Here, type inference would deduce :macro:`int64`, so :macro:`uint8` needs
+Here, type inference would deduce **int64**, so **uint8** needs
 to be passed explicitly.
 
 
@@ -555,7 +555,7 @@ Categorical
 ~~~~~~~~~~~
 
 Categorical types contain values.  The data stored in xnd buffers are indices
-(:macro:`int64`) into the type's categories.
+(**int64**) into the type's categories.
 
 .. code-block:: py
 
@@ -613,7 +613,7 @@ alignment:
 String
 ~~~~~~
 
-Strings are pointers to :macro:`NUL`-terminated UTF-8 strings.
+Strings are pointers to **NUL**-terminated UTF-8 strings.
 
 .. code-block:: py
 

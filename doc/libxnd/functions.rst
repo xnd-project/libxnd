@@ -15,7 +15,7 @@ The main use case for libxnd is to create and manage typed memory blocks.
 These blocks are fully initialized to *0*.  References to additional memory
 blocks are allocated and initialized recursively.
 
-*bytes* and *string* types are initialized to :macro:`NULL`, since their
+*bytes* and *string* types are initialized to **NULL**, since their
 actual length is not known yet.
 
 
@@ -26,7 +26,7 @@ actual length is not known yet.
    xnd_master_t *xnd_empty_from_string(const char *s, uint32_t flags, ndt_context_t *ctx);
 
 Return a new master buffer according to the type string in *s*.  *flags*
-must include :macro:`XND_OWN_TYPE`.
+must include **XND_OWN_TYPE**.
 
 
 .. topic:: xnd_empty_from_type
@@ -37,7 +37,7 @@ must include :macro:`XND_OWN_TYPE`.
 
 
 Return a new master buffer according to *type*.  *flags* must not include
-:macro:`XND_OWN_TYPE`, i.e. the type is externally managed.
+**XND_OWN_TYPE**, i.e. the type is externally managed.
 
 This is the case in the Python bindings, where the ndtypes module creates
 and manages types.
@@ -52,8 +52,8 @@ Delete typed memory blocks
 
    void xnd_del(xnd_master_t *x);
 
-Delete the master buffer according to its flags. *x* may be :macro:`NULL`.
-*x->master.ptr* and *x->master.type* may be :macro:`NULL`.
+Delete the master buffer according to its flags. *x* may be **NULL**.
+*x->master.ptr* and *x->master.type* may be **NULL**.
 
 The latter situation should only arise when breaking up reference cycles.
 This is used in the Python module.
