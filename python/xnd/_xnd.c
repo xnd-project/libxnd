@@ -90,7 +90,7 @@ static PyTypeObject XndEllipsis_Type;
 static PyObject XndEllipsisObject = {
     _PyObject_EXTRA_INIT
     .ob_refcnt = 1,
-    .ob_type = NULL
+    .ob_type = &XndEllipsis_Type
 };
 
 static PyObject *
@@ -107,7 +107,7 @@ xnd_ellipsis_repr(PyObject *self UNUSED)
 }
 
 static PyTypeObject XndEllipsis_Type = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PyVarObject_HEAD_INIT(NULL, 0)
     "_xnd.XndEllipsis",                 /* tp_name */
     0,                                  /* tp_basicsize */
     0,                                  /* tp_itemsize */
@@ -2686,7 +2686,6 @@ PyInit__xnd(void)
         initialized = 1;
     }
 
-    XndEllipsisObject.ob_type = &XndEllipsis_Type;
     if (PyType_Ready(&XndEllipsis_Type) < 0) {
         return NULL;
     }
