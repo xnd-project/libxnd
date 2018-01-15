@@ -428,7 +428,7 @@ block:
     'stock': {'retail': 20, 'warehouse': 722},
     'tags': ['connoisseur', 'luxury']}
    >>>
-   >>> print(x.type.pretty())
+   >>> x.type.pprint()
    {
      id : int64,
      name : string,
@@ -459,7 +459,7 @@ In this case, the memory block is pointer-free.
    ... """
    >>> 
    >>> x = xnd(item, type=t)
-   >>> print(x.type.pretty())
+   >>> x.type.pprint()
    {
      id : int64,
      name : fixed_string(30),
