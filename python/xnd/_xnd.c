@@ -41,6 +41,7 @@
 #include "pyndtypes.h"
 #include "xnd.h"
 #include "util.h"
+#include "docstrings.h"
 
 
 #ifdef _MSC_VER
@@ -2582,10 +2583,10 @@ pyxnd_align(PyObject *self, PyObject *args UNUSED)
 
 static PyGetSetDef pyxnd_getsets [] =
 {
-  { "type", (getter)pyxnd_type, NULL, NULL, NULL},
-  { "value", (getter)pyxnd_value, NULL, NULL, NULL},
-  { "align", (getter)pyxnd_align, NULL, NULL, NULL},
-  { "ndim", (getter)pyxnd_ndim, NULL, NULL, NULL},
+  { "type", (getter)pyxnd_type, NULL, doc_type, NULL},
+  { "value", (getter)pyxnd_value, NULL, doc_value, NULL},
+  { "align", (getter)pyxnd_align, NULL, doc_align, NULL},
+  { "ndim", (getter)pyxnd_ndim, NULL, doc_ndim, NULL},
   {NULL}
 };
 
@@ -2605,11 +2606,11 @@ static PySequenceMethods pyxnd_as_sequence = {
 static PyMethodDef pyxnd_methods [] =
 {
   /* Methods */
-  { "short_value", (PyCFunction)pyxnd_short_value, METH_VARARGS|METH_KEYWORDS, NULL },
+  { "short_value", (PyCFunction)pyxnd_short_value, METH_VARARGS|METH_KEYWORDS, doc_short_value },
 
   /* Class methods */
-  { "empty", (PyCFunction)pyxnd_empty, METH_O|METH_CLASS, NULL },
-  { "from_buffer", (PyCFunction)pyxnd_from_buffer, METH_O|METH_CLASS, NULL },
+  { "empty", (PyCFunction)pyxnd_empty, METH_O|METH_CLASS, doc_empty },
+  { "from_buffer", (PyCFunction)pyxnd_from_buffer, METH_O|METH_CLASS, doc_from_buffer },
 
   { NULL, NULL, 1 }
 };
@@ -2663,7 +2664,7 @@ static PyTypeObject Xnd_Type =
 static struct PyModuleDef xnd_module = {
     PyModuleDef_HEAD_INIT,        /* m_base */
     "_xnd",                       /* m_name */
-    NULL,                         /* m_doc */
+    doc_module,                   /* m_doc */
     -1,                           /* m_size */
     NULL,                         /* m_methods */
     NULL,                         /* m_slots */
