@@ -9,7 +9,7 @@ echo.
 <nul (set /p x="Running shared library tests ... ")
 echo.
 echo.
-copy /y ..\ndtypes\libndtypes\libndtypes-0.1.0.dll dist32
+copy /y ..\ndtypes\libndtypes\libndtypes-0.2.0b1.dll dist32
 dist32\runtest_shared.exe
 IF ERRORLEVEL 1 echo FAIL
 
