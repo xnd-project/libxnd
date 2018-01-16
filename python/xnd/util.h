@@ -115,7 +115,6 @@ py_slice_get_indices_ex(PyObject *key, int64_t length,
                         int64_t *start, int64_t *stop, int64_t *step,
                         int64_t *slicelength)
 {
-#if SIZE_MAX < INT64_MAX
     Py_ssize_t n, _start, _stop, _step, _slicelength;
     int ret;
 
@@ -131,9 +130,6 @@ py_slice_get_indices_ex(PyObject *key, int64_t length,
     *slicelength = _slicelength;
 
     return ret;
-#else
-    return PySlice_GetIndicesEx(key, length, start, stop, step, slicelength);
-#endif
 }
 
 /* PSF copyright: Written by Jim Hugunin and Chris Chase. */
