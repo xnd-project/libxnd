@@ -83,7 +83,7 @@ else:
 PY_MAJOR = sys.version_info[0]
 PY_MINOR = sys.version_info[1]
 ARCH = platform.architecture()[0]
-BUILD_ALL = True
+BUILD_ALL = "build" in sys.argv or "install" in sys.argv
 
 
 if PY_MAJOR < 3:
@@ -117,7 +117,6 @@ def make_symlinks():
 if len(sys.argv) == 2:
     if sys.argv[1] == 'module':
        sys.argv[1] = 'build'
-       BUILD_ALL = False
     if sys.argv[1] == 'test':
         module_path = get_module_path()
         python_path = os.getenv('PYTHONPATH')
@@ -197,6 +196,8 @@ setup (
     description = DESCRIPTION,
     long_description = LONG_DESCRIPTION,
     url = "https://github.com/plures/xnd",
+    author = 'Stefan Krah',
+    author_email = 'skrah@bytereef.org',
     license = "BSD License",
     keywords = ["xnd", "array computing", "container", "memory blocks"],
     platforms = ["Many"],
