@@ -37,6 +37,7 @@ import platform
 import sys, os
 import subprocess
 import shutil
+import warnings
 
 
 DESCRIPTION = """\
@@ -68,6 +69,7 @@ Links
 
 """
 
+warnings.simplefilter("ignore", UserWarning)
 
 LIBNAME = "libxnd.so"
 LIBSONAME = "libxnd.so.0"
@@ -217,6 +219,7 @@ setup (
         "Topic :: Scientific/Engineering :: Mathematics",
         "Topic :: Software Development"
     ],
+    install_requires = ["ndtypes == v0.2.0b1"],
     package_dir = {"": "python"},
     packages = ["xnd"],
     package_data = {"xnd": ["libxnd*", "xnd.h"]},
