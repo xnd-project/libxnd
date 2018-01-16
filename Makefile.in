@@ -29,7 +29,9 @@ endif
 
 default: FORCE
 	cd libxnd && $(MAKE)
-	cp libxnd/@LIBSHARED@ python/xnd/@LIBSONAME@
+	$(INSTALL) -m 644 libxnd/xnd.h python/xnd
+	$(INSTALL) -m 755 libxnd/$(LIBSHARED) python/xnd
+	cd python/xnd && ln -sf $(LIBSHARED) $(LIBSONAME) && ln -sf $(LIBSHARED) $(LIBNAME)
 
 runtest: default
 	cd libxnd/tests && $(MAKE)

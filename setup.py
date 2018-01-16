@@ -69,15 +69,21 @@ Links
 """
 
 
+LIBNAME = "libxnd.so"
+LIBSONAME = "libxnd.so.0"
+LIBSHARED = "libxnd.so.0.2.0b1"
+
+if "install" in sys.argv:
+    LIBNDTYPESDIR = "%s/ndtypes" % get_python_lib()
+    LIBXNDDIR = "%s/xnd" % get_python_lib()
+else:
+    LIBNDTYPESDIR = "../python/ndtypes"
+    LIBXNDDIR = "../python/xnd"
+
 PY_MAJOR = sys.version_info[0]
 PY_MINOR = sys.version_info[1]
 ARCH = platform.architecture()[0]
 BUILD_ALL = True
-
-if "install" in sys.argv:
-    LIBNDTYPESDIR = "%s/ndtypes" % get_python_lib()
-else:
-    LIBNDTYPESDIR = "../python/ndtypes"
 
 
 if PY_MAJOR < 3:
@@ -98,6 +104,14 @@ def copy_ext():
         pathlist = glob("build/lib.*/xnd/_xnd.*.so")
     if pathlist:
         shutil.copy2(pathlist[0], "python/xnd")
+
+def make_symlinks():
+    if sys.platform == "win32" or "install" not in sys.argv:
+        return
+    os.chdir(LIBXNDDIR)
+    os.chmod(LIBSHARED, 0o755)
+    os.system("ln -sf %s %s" % (LIBSHARED, LIBSONAME))
+    os.system("ln -sf %s %s" % (LIBSHARED, LIBNAME))
 
 
 if len(sys.argv) == 2:
@@ -204,8 +218,9 @@ setup (
     ],
     package_dir = {"": "python"},
     packages = ["xnd"],
-    package_data = {"xnd": ["libxnd*"]},
+    package_data = {"xnd": ["libxnd*", "xnd.h"]},
     ext_modules = [ndtypes_ext()],
 )
 
 copy_ext()
+make_symlinks()
