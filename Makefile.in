@@ -70,7 +70,7 @@ distclean: FORCE
 	rm -f config.h config.log config.status Makefile
 	rm -rf build ndtypes
 	cd python && rm -rf ndtypes *.egg-info __pycache__
-	cd python/xnd && rm -f *.so $(LIBSTATIC) $(LIBSHARED) $(LIBSONAME) $(LIBNAME)
+	cd python/xnd && rm -f *.so $(LIBSTATIC) $(LIBSHARED) $(LIBSONAME) $(LIBNAME) xnd.h
 	cd python/xnd && rm -rf __pycache__
 
 FORCE:
