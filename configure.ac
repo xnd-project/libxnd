@@ -71,12 +71,15 @@ AC_ARG_WITH(ndtypes,
 AC_MSG_RESULT($with_ndtypes)
 
 if test "$with_ndtypes" = "none"; then
-    LIBNDTYPESDIR=
+    LIBNDTYPESDIR=../ndtypes/libndtypes
+    LIBNDTYPESDIR_TEST=../../ndtypes/libndtypes
 else
-    LIBNDTYPESDIR=$with_ndtypes/ndtypes/libndtypes
+    LIBNDTYPESDIR=$with_ndtypes
+    LIBNDTYPESDIR_TEST=$with_ndtypes
 fi
 
 AC_SUBST(LIBNDTYPESDIR)
+AC_SUBST(LIBNDTYPESDIR_TEST)
 
 
 # Compiler dependent settings:

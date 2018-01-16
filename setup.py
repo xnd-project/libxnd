@@ -31,6 +31,7 @@
 #
 
 from distutils.core import setup, Extension
+from distutils.sysconfig import get_python_lib
 from glob import glob
 import platform
 import sys, os
@@ -72,6 +73,11 @@ PY_MAJOR = sys.version_info[0]
 PY_MINOR = sys.version_info[1]
 ARCH = platform.architecture()[0]
 BUILD_ALL = True
+
+if "install" in sys.argv:
+    LIBNDTYPESDIR = "%s/ndtypes" % get_python_lib()
+else:
+    LIBNDTYPESDIR = "../python/ndtypes"
 
 
 if PY_MAJOR < 3:
@@ -125,8 +131,8 @@ if len(sys.argv) == 2:
 
 
 def ndtypes_ext():
-    include_dirs = ["libxnd", "ndtypes/libndtypes", "ndtypes/python/ndtypes"]
-    library_dirs = ["libxnd", "ndtypes/libndtypes"]
+    include_dirs = ["libxnd", "ndtypes/python/ndtypes", LIBNDTYPESDIR]
+    library_dirs = ["libxnd", "ndtypes/libndtypes", LIBNDTYPESDIR]
     depends = ["libxnd/xnd.h", "python/xnd/util.h"]
     sources = ["python/xnd/_xnd.c"]
 
@@ -157,7 +163,7 @@ def ndtypes_ext():
             runtime_library_dirs = ["$ORIGIN"]
 
         if BUILD_ALL:
-            os.system("./configure --with-ndtypes=. && make")
+            os.system("./configure --with-ndtypes='%s' && make" % LIBNDTYPESDIR)
 
     return Extension (
       "xnd._xnd",

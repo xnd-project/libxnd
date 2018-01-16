@@ -592,6 +592,7 @@ CONFIGURE_CFLAGS
 XND_OPT
 XND_WARN
 LD
+LIBNDTYPESDIR_TEST
 LIBNDTYPESDIR
 INSTALL
 INSTALL_DATA
@@ -3472,10 +3473,13 @@ fi
 $as_echo "$with_ndtypes" >&6; }
 
 if test "$with_ndtypes" = "none"; then
-    LIBNDTYPESDIR=
+    LIBNDTYPESDIR=../ndtypes/libndtypes
+    LIBNDTYPESDIR_TEST=../../ndtypes/libndtypes
 else
-    LIBNDTYPESDIR=$with_ndtypes/ndtypes/libndtypes
+    LIBNDTYPESDIR=$with_ndtypes
+    LIBNDTYPESDIR_TEST=$with_ndtypes
 fi
+
 
 
 
