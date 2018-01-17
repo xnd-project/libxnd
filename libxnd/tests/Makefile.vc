@@ -3,7 +3,11 @@ SRCDIR = ..
 
 LIBSTATIC = libxnd-0.2.0b1.lib
 LIBSHARED = libxnd-0.2.0b1.dll.lib
-LIBNDTYPESDIR = ../../ndtypes/libndtypes
+!if "%LIBNDTYPESDIR%" == ""
+LIBNDTYPESDIR = ..\..\ndtypes\libndtypes
+!else
+LIBNDTYPESDIR = "$(LIBNDTYPESDIR)"
+!endif
 LIBNDTYPESIMPORT = $(LIBNDTYPESDIR)\libndtypes-0.2.0b1.dll.lib
 
 
