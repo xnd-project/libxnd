@@ -34,8 +34,8 @@ import sys, unittest, argparse
 from math import isinf, isnan
 from ndtypes import ndt
 from xnd import xnd, XndEllipsis
-from support import *
-from randvalue import *
+from xnd_support import *
+from xnd_randvalue import *
 from _testbuffer import ndarray, ND_WRITABLE
 
 

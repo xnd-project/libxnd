@@ -34,7 +34,7 @@
 
 from itertools import accumulate, count, product
 from random import randrange
-from support import R
+from xnd_support import R
 
 
 # ======================================================================
