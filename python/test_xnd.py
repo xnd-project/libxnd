@@ -214,6 +214,8 @@ class TestFixedDim(unittest.TestCase):
                 x[i, j] = v[i][j] = -8.33e1 * i + j
         self.assertEqual(x.value, v)
 
+    @unittest.skipIf(sys.platform == "darwin",
+                     "mach_vm_map message defeats the purpose of this test")
     def test_fixed_dim_overflow(self):
         # Type cannot be created.
         s = "2147483648 * 2147483648 * 2 * uint8"
@@ -347,6 +349,8 @@ class TestFortran(unittest.TestCase):
                 x[i, j] = v[i][j] = -8.33e1 * i + j
         self.assertEqual(x.value, v)
 
+    @unittest.skipIf(sys.platform == "darwin",
+                     "mach_vm_map message defeats the purpose of this test")
     def test_fortran_overflow(self):
         # Type cannot be created.
         s = "!2147483648 * 2147483648 * 2 * uint8"
