@@ -1,0 +1,19 @@
+package:
+  name: xnd
+  version: 0.2.0.b1
+
+requirements:
+  build:
+    - python >=3.6
+    - ndtypes ==0.2.0.b1
+  run:
+    - python >=3.6
+    - ndtypes ==0.2.0.b1
+
+test:
+  imports:
+    - xnd
+
+about:
+  home: https://github.com/plures/
+  license: BSD
