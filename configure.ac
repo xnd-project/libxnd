@@ -16,7 +16,7 @@ case $ac_sys_system in
         LIBNAME="libxnd.dylib"
         LIBSONAME="libxnd.0.dylib"
         LIBSHARED="libxnd.0.2.0b1.dylib"
-        CONFIGURE_LDFLAGS="-dynamiclib -install_name @rpath/$LIBSONAME -undefined dynamic_lookup -compatibility_version 0.2 -current_version 0.2.0b1"
+        CONFIGURE_LDFLAGS="-dynamiclib -install_name @rpath/$LIBSONAME -undefined dynamic_lookup -compatibility_version 0.2 -current_version 0.2.0"
         ;;
     *)
         LIBRARY_PATH="LD_LIBRARY_PATH"
