@@ -1,3 +1,3 @@
-global-include *.ac *.guess *.in *.sub *.supp *.vc *.bat
-global-include *.c *.h *.y *.l *.py *.txt *.rst *.js
+global-include *.ac *.guess *.in *.sub *.vc *.bat
+global-include *.c *.h *.py *.txt *.rst *.js
 global-include configure install-sh doc/Makefile
