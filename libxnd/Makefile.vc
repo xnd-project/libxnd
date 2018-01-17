@@ -18,6 +18,8 @@ CFLAGS_SHARED = $(COMMON_CFLAGS) $(OPT_SHARED)
 
 
 default: $(LIBSTATIC) $(LIBSHARED)
+	copy /y xnd.h ..\python\xnd
+	copy /y $(LIBIMPORT) ..\python\xnd
 	copy /y $(LIBSHARED) ..\python\xnd
 
 
