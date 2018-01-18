@@ -30,6 +30,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+import sys, os
+
 if "bdist_wheel" in sys.argv:
     from setuptools import setup, Extension
 else:
@@ -38,7 +40,6 @@ else:
 from distutils.sysconfig import get_python_lib
 from glob import glob
 import platform
-import sys, os
 import subprocess
 import shutil
 import warnings
