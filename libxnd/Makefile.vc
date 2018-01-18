@@ -75,6 +75,7 @@ clean: FORCE
 	if exist "..\build\" rd /q /s "..\build\"
 	if exist "..\dist\" rd /q /s "..\dist\"
 	if exist "..\MANIFEST" del "..\MANIFEST"
+	if exist "..\record.txt" del "..\record.txt"
 	cd ..\python\xnd && del *.lib *.dll *.pyd xnd.h 2>NUL
 
 distclean: clean
