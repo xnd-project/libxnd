@@ -30,6 +30,7 @@ endif
 default: FORCE
 	cd libxnd && $(MAKE)
 	$(INSTALL) -m 644 libxnd/xnd.h python/xnd
+	$(INSTALL) -m 644 libxnd/$(LIBSTATIC) python/xnd
 	$(INSTALL) -m 755 libxnd/$(LIBSHARED) python/xnd
 	cd python/xnd && ln -sf $(LIBSHARED) $(LIBSONAME) && ln -sf $(LIBSHARED) $(LIBNAME)
 
