@@ -30,7 +30,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from distutils.core import setup, Extension
+from setuptools import setup, Extension
 from distutils.sysconfig import get_python_lib
 from glob import glob
 import platform
@@ -80,7 +80,7 @@ else:
     LIBSONAME = "libxnd.so.0"
     LIBSHARED = "libxnd.so.0.2.0b1"
 
-if "install" in sys.argv:
+if "install" in sys.argv or "bdist_wheel" in sys.argv:
     LIBNDTYPESDIR = "%s/ndtypes" % get_python_lib()
     LIBXNDDIR = "%s/xnd" % get_python_lib()
 else:
@@ -90,7 +90,8 @@ else:
 PY_MAJOR = sys.version_info[0]
 PY_MINOR = sys.version_info[1]
 ARCH = platform.architecture()[0]
-BUILD_ALL = "build" in sys.argv or "install" in sys.argv
+BUILD_ALL = \
+    "build" in sys.argv or "install" in sys.argv or "bdist_wheel" in sys.argv
 
 
 if PY_MAJOR < 3:
