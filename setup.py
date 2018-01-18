@@ -30,7 +30,11 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from setuptools import setup, Extension
+if "bdist_wheel" in sys.argv:
+    from setuptools import setup, Extension
+else:
+    from distutils.core import setup, Extension
+
 from distutils.sysconfig import get_python_lib
 from glob import glob
 import platform
