@@ -70,7 +70,7 @@ distclean: FORCE
 	cd libxnd/tests && if [ -f Makefile ]; then $(MAKE) distclean; else exit 0; fi
 	rm -f config.h config.log config.status Makefile
 	rm -rf build dist MANIFEST ndtypes record.txt
-	cd python && rm -rf ndtypes *.egg-info __pycache__
+	cd python && rm -rf ndtypes *.egg-info __pycache__ ndtypes.egg-info
 	cd python/xnd && rm -f *.so $(LIBSTATIC) $(LIBSHARED) $(LIBSONAME) $(LIBNAME) xnd.h
 	cd python/xnd && rm -rf __pycache__
 
