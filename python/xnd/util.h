@@ -52,7 +52,7 @@ safe_downcast(int64_t size)
         return -1;
     }
 #endif
-    return size;
+    return (Py_ssize_t)size;
 }
 
 static inline bool

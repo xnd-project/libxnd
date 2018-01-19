@@ -1874,7 +1874,7 @@ pyxnd_len(xnd_t x)
 
     switch (t->tag) {
     case FixedDim: {
-        return t->FixedDim.shape;
+        return safe_downcast(t->FixedDim.shape);
     }
 
     case VarDim: {
@@ -1885,15 +1885,15 @@ pyxnd_len(xnd_t x)
             return seterr_int(&ctx);
         }
 
-        return shape;
+        return safe_downcast(shape);
     }
 
     case Tuple: {
-        return t->Tuple.shape;
+        return safe_downcast(t->Tuple.shape);
     }
 
     case Record: {
-        return t->Record.shape;
+        return safe_downcast(t->Record.shape);
     }
 
     case Ref: {
