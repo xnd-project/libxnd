@@ -110,6 +110,12 @@ def get_module_path():
         return pathlist[0]
     raise RuntimeError("cannot find xnd module in build directory")
 
+def copy_tests():
+    os.makedirs("python/xnd/test", exist_ok=True)
+    shutil.copy("python/test_xnd.py", "python/xnd/test")
+    shutil.copy("python/xnd_support.py", "python/xnd/test")
+    shutil.copy("python/xnd_randvalue.py", "python/xnd/test")
+
 def copy_ext():
     if sys.platform == "win32":
         pathlist = glob("build/lib.*/xnd/_xnd.*.pyd")
@@ -204,6 +210,8 @@ def ndtypes_ext():
       runtime_library_dirs = runtime_library_dirs
     )
 
+copy_tests()
+
 setup (
     name = "xnd",
     version = "v0.2.0b1",
@@ -234,7 +242,7 @@ setup (
     install_requires = ["ndtypes == v0.2.0b1"],
     package_dir = {"": "python"},
     packages = ["xnd"],
-    package_data = {"xnd": ["libxnd*", "xnd.h"]},
+    package_data = {"xnd": ["libxnd*", "xnd.h", "test/*"]},
     ext_modules = [ndtypes_ext()],
 )
 
