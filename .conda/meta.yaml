@@ -11,8 +11,8 @@ requirements:
     - ndtypes ==0.2.0.b1
 
 test:
-  commands:
-    - python -m xnd.test.test_xnd
+  imports:
+    - xnd
 
 about:
   home: https://github.com/plures/
