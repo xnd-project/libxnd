@@ -77,9 +77,9 @@ Links
 warnings.simplefilter("ignore", UserWarning)
 
 if sys.platform == "darwin":
-    LIBNAME = "libndtypes.dylib"
-    LIBSONAME = "libndtypes.0.dylib"
-    LIBSHARED = "libndtypes.0.2.0b1.dylib"
+    LIBNAME = "libxnd.dylib"
+    LIBSONAME = "libxnd.0.dylib"
+    LIBSHARED = "libxnd.0.2.0b1.dylib"
 else:
     LIBNAME = "libxnd.so"
     LIBSONAME = "libxnd.so.0"
