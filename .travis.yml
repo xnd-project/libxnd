@@ -55,6 +55,10 @@ matrix:
     - language: objective-c
       os: osx
       compiler: clang
+      before_install:
+        - brew update
+        - brew install bison; brew link bison --force
+        - brew install python3
       before_script:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
@@ -67,7 +71,22 @@ matrix:
         - python3 setup.py module
         - python3 setup.py test
 
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install bison; brew link bison --force; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install python3; fi
+    - language: objective-c
+      os: osx
+      compiler: clang-conda
+      before_install:
+        - brew update
+        - brew install bison; brew link bison --force
+        - brew install python3
+      install:
+        - wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+        - bash Miniconda3-latest-MacOSX-x86_64.sh -b
+        - git clone https://github.com/plures/ndtypes.git
+        - export PATH=$HOME/miniconda3/bin:$PATH
+        - export CC=clang
+        - conda install --yes conda-build
+      script:
+        - cd ndtypes
+        - conda build .conda
+        - cd ..
+        - conda build .conda
