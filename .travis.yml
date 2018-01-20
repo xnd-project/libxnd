@@ -73,7 +73,7 @@ matrix:
 
     - language: objective-c
       os: osx
-      compiler: clang-conda
+      compiler: conda
       before_install:
         - brew update
         - brew install bison; brew link bison --force
