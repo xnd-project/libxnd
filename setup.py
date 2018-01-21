@@ -206,7 +206,7 @@ def ndtypes_ext():
 
 setup (
     name = "xnd",
-    version = "v0.2.0b1",
+    version = "0.2.0b1",
     description = DESCRIPTION,
     long_description = LONG_DESCRIPTION,
     url = "https://github.com/plures/xnd",
