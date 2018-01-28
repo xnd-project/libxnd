@@ -3,15 +3,15 @@
 #                  Visual C (nmake) Makefile for libxnd
 # ======================================================================
 
-LIBSTATIC = libxnd-0.2.0b1.lib
-LIBIMPORT = libxnd-0.2.0b1.dll.lib
-LIBSHARED = libxnd-0.2.0b1.dll
+LIBSTATIC = libxnd-0.2.0b2.lib
+LIBIMPORT = libxnd-0.2.0b2.dll.lib
+LIBSHARED = libxnd-0.2.0b2.dll
 !ifndef LIBNDTYPESDIR
 LIBNDTYPESDIR = ..\ndtypes\libndtypes
 !else
 LIBNDTYPESDIR = "$(LIBNDTYPESDIR)"
 !endif
-LIBNDTYPESIMPORT = $(LIBNDTYPESDIR)\libndtypes-0.2.0b1.dll.lib
+LIBNDTYPESIMPORT = $(LIBNDTYPESDIR)\libndtypes-0.2.0b2.dll.lib
 
 OPT = /MT /Ox /GS /EHsc
 OPT_SHARED = /DEXPORT /MD /Ox /GS /EHsc /Fo.objs^\

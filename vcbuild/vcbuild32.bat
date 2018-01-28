@@ -9,10 +9,10 @@ copy /y Makefile.vc Makefile
 nmake /nologo clean
 nmake /nologo
 
-copy /y libxnd-0.2.0b1.lib ..\vcbuild\dist32
-copy /y libxnd-0.2.0b1.dll ..\vcbuild\dist32
-copy /y libxnd-0.2.0b1.dll.lib ..\vcbuild\dist32
-copy /y libxnd-0.2.0b1.dll.exp ..\vcbuild\dist32
+copy /y libxnd-0.2.0b2.lib ..\vcbuild\dist32
+copy /y libxnd-0.2.0b2.dll ..\vcbuild\dist32
+copy /y libxnd-0.2.0b2.dll.lib ..\vcbuild\dist32
+copy /y libxnd-0.2.0b2.dll.exp ..\vcbuild\dist32
 copy /y xnd.h ..\vcbuild\dist32
 
 cd tests

@@ -1,14 +1,14 @@
 
 SRCDIR = ..
 
-LIBSTATIC = libxnd-0.2.0b1.lib
-LIBSHARED = libxnd-0.2.0b1.dll.lib
+LIBSTATIC = libxnd-0.2.0b2.lib
+LIBSHARED = libxnd-0.2.0b2.dll.lib
 !ifndef LIBNDTYPESDIR
 LIBNDTYPESDIR = ..\..\ndtypes\libndtypes
 !else
 LIBNDTYPESDIR = "$(LIBNDTYPESDIR)"
 !endif
-LIBNDTYPESIMPORT = $(LIBNDTYPESDIR)\libndtypes-0.2.0b1.dll.lib
+LIBNDTYPESIMPORT = $(LIBNDTYPESDIR)\libndtypes-0.2.0b2.dll.lib
 
 
 CC = cl.exe
@@ -21,7 +21,7 @@ default: runtest runtest_shared
 runtest:\
 Makefile runtest.c test_fixed.c test.h $(SRCDIR)\xnd.h $(SRCDIR)\$(LIBSTATIC)
 	$(CC) -I$(SRCDIR) -I$(LIBNDTYPESDIR) $(CFLAGS) /Feruntest runtest.c \
-	test_fixed.c $(SRCDIR)\$(LIBSTATIC) $(LIBNDTYPESDIR)\libndtypes-0.2.0b1.lib
+	test_fixed.c $(SRCDIR)\$(LIBSTATIC) $(LIBNDTYPESDIR)\libndtypes-0.2.0b2.lib
 
 runtest_shared:\
 Makefile runtest.c test_fixed.c test.h $(SRCDIR)\xnd.h $(SRCDIR)\$(LIBSHARED)

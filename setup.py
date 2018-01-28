@@ -79,11 +79,11 @@ warnings.simplefilter("ignore", UserWarning)
 if sys.platform == "darwin":
     LIBNAME = "libxnd.dylib"
     LIBSONAME = "libxnd.0.dylib"
-    LIBSHARED = "libxnd.0.2.0b1.dylib"
+    LIBSHARED = "libxnd.0.2.0b2.dylib"
 else:
     LIBNAME = "libxnd.so"
     LIBSONAME = "libxnd.so.0"
-    LIBSHARED = "libxnd.so.0.2.0b1"
+    LIBSHARED = "libxnd.so.0.2.0b2"
 
 if "install" in sys.argv or "bdist_wheel" in sys.argv:
     LIBNDTYPESDIR = "%s/ndtypes" % get_python_lib()
@@ -163,7 +163,7 @@ def ndtypes_ext():
     sources = ["python/xnd/_xnd.c"]
 
     if sys.platform == "win32":
-        libraries = ["libxnd-0.2.0b1.dll", "libndtypes-0.2.0b1.dll"]
+        libraries = ["libxnd-0.2.0b2.dll", "libndtypes-0.2.0b2.dll"]
         extra_compile_args = ["/DIMPORT"]
         extra_link_args = []
         runtime_library_dirs = []
@@ -206,7 +206,7 @@ def ndtypes_ext():
 
 setup (
     name = "xnd",
-    version = "0.2.0b1",
+    version = "0.2.0b2",
     description = DESCRIPTION,
     long_description = LONG_DESCRIPTION,
     url = "https://github.com/plures/xnd",
@@ -231,7 +231,7 @@ setup (
         "Topic :: Scientific/Engineering :: Mathematics",
         "Topic :: Software Development"
     ],
-    install_requires = ["ndtypes == v0.2.0b1"],
+    install_requires = ["ndtypes == v0.2.0b2"],
     package_dir = {"": "python"},
     packages = ["xnd"],
     package_data = {"xnd": ["libxnd*", "xnd.h"]},

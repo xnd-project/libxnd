@@ -1,14 +1,16 @@
 package:
   name: xnd
-  version: 0.2.0b1
+  version: 0.2.0b2
 
 requirements:
   build:
     - python >=3.6
-    - ndtypes ==0.2.0b1
+    - libndtypes ==0.2.0b2
+    - ndtypes ==0.2.0b2
   run:
     - python >=3.6
-    - ndtypes ==0.2.0b1
+    - libndtypes ==0.2.0b2
+    - ndtypes ==0.2.0b2
 
 about:
   home: https://github.com/plures/
