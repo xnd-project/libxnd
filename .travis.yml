@@ -46,6 +46,8 @@ matrix:
     - language: objective-c
       os: osx
       compiler: clang
+      before_install:
+        - brew install python3
       before_script:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
