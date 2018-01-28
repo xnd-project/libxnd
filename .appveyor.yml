@@ -10,11 +10,11 @@ environment:
     - PLATFORM: "x64"
       VCBUILD: "vcbuild64.bat"
       RUNTEST: "runtest64.bat"
-      PYTHON: "C:\\Python35-x64"
+      PYTHON: "C:\\Python36-x64"
     - PLATFORM: "x86"
       VCBUILD: "vcbuild32.bat"
       RUNTEST: "runtest32.bat"
-      PYTHON: "C:\\Python35"
+      PYTHON: "C:\\Python36"
 
 before_build:
   "\"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat\" %PLATFORM%"
