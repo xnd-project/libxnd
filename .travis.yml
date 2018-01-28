@@ -70,8 +70,10 @@ matrix:
         - export PATH=$HOME/miniconda3/bin:$PATH
         - export CC=clang
         - conda install --yes conda-build
+        - conda update --yes -n base conda
       script:
         - cd ndtypes
-        - conda build .conda
+        - conda build .conda/libndtypes
+        - conda build .conda/ndtypes
         - cd ..
         - conda build .conda
