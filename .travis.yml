@@ -1,13 +1,5 @@
 sudo: required
-dist: trusty
-
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    packages:
-    - gcc-4.9
-    - valgrind
+python: 3.6
 
 language: C
 
@@ -16,7 +8,6 @@ matrix:
     - compiler: gcc
       before_script:
         - git clone https://github.com/plures/ndtypes.git
-        - export CC=gcc-4.9
         - cd ndtypes
         - python3 setup.py install --local=../python
         - cd ..
@@ -28,8 +19,8 @@ matrix:
 
     - compiler: gcc
       before_script:
+        - sudo apt-get install valgrind
         - git clone https://github.com/plures/ndtypes.git
-        - export CC=gcc-4.9
         - cd ndtypes
         - python3 setup.py install --local=../python
         - cd ..
@@ -55,10 +46,6 @@ matrix:
     - language: objective-c
       os: osx
       compiler: clang
-      before_install:
-        - brew update
-        - brew install bison; brew link bison --force
-        - brew install python3
       before_script:
         - git clone https://github.com/plures/ndtypes.git
         - export CC=clang
@@ -74,10 +61,6 @@ matrix:
     - language: objective-c
       os: osx
       compiler: conda
-      before_install:
-        - brew update
-        - brew install bison; brew link bison --force
-        - brew install python3
       install:
         - wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
         - bash Miniconda3-latest-MacOSX-x86_64.sh -b
