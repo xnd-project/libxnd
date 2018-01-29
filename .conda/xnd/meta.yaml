@@ -1,0 +1,21 @@
+package:
+  name: xnd
+  version: 0.2.0b2
+
+test:
+  files:
+    - test
+  commands:
+    - python test/test_xnd.py --long
+
+requirements:
+  build:
+    - libndtypes ==0.2.0b2
+    - python >=3.6
+  run:
+    - libndtypes ==0.2.0b2
+    - python >=3.6
+
+about:
+  home: https://github.com/plures/
+  license: BSD 3-clause

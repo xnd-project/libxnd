@@ -60,6 +60,25 @@ matrix:
         - python3 setup.py module
         - python3 setup.py test
 
+    - compiler: conda
+      install:
+        - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+        - bash Miniconda3-latest-Linux-x86_64.sh -b
+        - git clone https://github.com/plures/ndtypes.git
+        - export PATH=$HOME/miniconda3/bin:$PATH
+        - conda update --yes conda
+        - conda install --yes conda-build
+        - conda update --yes -n base conda
+      script:
+        - cd ndtypes
+        - conda build .conda/libndtypes
+        - conda build .conda/ndtypes
+        - export LIBNDTYPES=`conda build --output .conda/libndtypes`
+        - export NDTYPES=`conda build --output .conda/ndtypes`
+        - cd ..
+        - conda build .conda/libxnd
+        - conda build .conda/xnd
+
     - language: objective-c
       os: osx
       compiler: conda
@@ -69,6 +88,7 @@ matrix:
         - git clone https://github.com/plures/ndtypes.git
         - export PATH=$HOME/miniconda3/bin:$PATH
         - export CC=clang
+        - conda update --yes conda
         - conda install --yes conda-build
         - conda update --yes -n base conda
       script:
@@ -76,4 +96,5 @@ matrix:
         - conda build .conda/libndtypes
         - conda build .conda/ndtypes
         - cd ..
-        - conda build .conda
+        - conda build .conda/libxnd
+        - conda build .conda/xnd

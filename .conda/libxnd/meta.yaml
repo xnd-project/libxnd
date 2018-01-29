@@ -1,17 +1,16 @@
 package:
-  name: xnd
+  name: libxnd
   version: 0.2.0b2
+
+test:
+  skip: True  # tests are in build.sh
 
 requirements:
   build:
-    - python >=3.6
     - libndtypes ==0.2.0b2
-    - ndtypes ==0.2.0b2
   run:
-    - python >=3.6
     - libndtypes ==0.2.0b2
-    - ndtypes ==0.2.0b2
 
 about:
   home: https://github.com/plures/
-  license: BSD
+  license: BSD 3-clause
