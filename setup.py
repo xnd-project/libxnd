@@ -88,11 +88,11 @@ else:
 if "install" in sys.argv or "bdist_wheel" in sys.argv:
     LIBNDTYPESDIR = "%s/ndtypes" % get_python_lib()
     LIBXNDDIR = "%s/xnd" % get_python_lib()
-    MAKE_SYMLINKS = True
+    INSTALL_LIBS = True
 else:
     LIBNDTYPESDIR = "../python/ndtypes"
     LIBXNDDIR = "../python/xnd"
-    MAKE_SYMLINKS = False
+    INSTALL_LIBS = False
 
 PY_MAJOR = sys.version_info[0]
 PY_MINOR = sys.version_info[1]
@@ -237,9 +237,11 @@ setup (
     install_requires = ["ndtypes == v0.2.0b2"],
     package_dir = {"": "python"},
     packages = ["xnd"],
-    package_data = {"xnd": ["libxnd*", "xnd.h"]},
+    package_data = {"xnd": ["libxnd*", "xnd.h"] if INSTALL_LIBS else []},
     ext_modules = [ndtypes_ext()],
 )
 
 copy_ext()
-make_symlinks()
+
+if INSTALL_LIBS:
+    make_symlinks()
