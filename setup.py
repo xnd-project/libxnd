@@ -166,7 +166,7 @@ def ndtypes_ext():
     sources = ["python/xnd/_xnd.c"]
 
     if sys.platform == "win32":
-        libraries = ["libxnd-0.2.0b2.dll", "libndtypes-0.2.0b2.dll"]
+        libraries = ["libndtypes-0.2.0b2.dll", "libxnd-0.2.0b2.dll"]
         extra_compile_args = ["/DIMPORT"]
         extra_link_args = []
         runtime_library_dirs = []
@@ -183,7 +183,7 @@ def ndtypes_ext():
             os.chdir("..")
 
     else:
-        libraries = ["xnd", "ndtypes"]
+        libraries = [":libndtypes.so.0.2.0b2", ":libxnd.so.0.2.0b2"]
         extra_compile_args = ["-Wextra", "-Wno-missing-field-initializers", "-std=c11"]
         if sys.platform == "darwin":
             extra_link_args = ["-Wl,-rpath,@loader_path"]
