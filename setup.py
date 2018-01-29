@@ -130,6 +130,8 @@ def make_symlinks():
 if len(sys.argv) == 2:
     if sys.argv[1] == 'module':
        sys.argv[1] = 'build'
+    if sys.argv[1] == 'module_install':
+       sys.argv[1] = 'install'
     if sys.argv[1] == 'test':
         module_path = get_module_path()
         python_path = os.getenv('PYTHONPATH')
