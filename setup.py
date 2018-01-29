@@ -80,7 +80,6 @@ if sys.platform == "darwin":
     LIBNAME = "libxnd.dylib"
     LIBSONAME = "libxnd.0.dylib"
     LIBSHARED = "libxnd.0.2.0b2.dylib"
-    LIBNDTYPES = "libndtypes.0.2.0b2.dylib"
 else:
     LIBNAME = "libxnd.so"
     LIBSONAME = "libxnd.so.0"
@@ -186,11 +185,12 @@ def ndtypes_ext():
 
     else:
         extra_compile_args = ["-Wextra", "-Wno-missing-field-initializers", "-std=c11"]
-        libraries = [":%s" % LIBNDTYPES, ":%s" % LIBSHARED]
         if sys.platform == "darwin":
+            libraries = ["ndtypes", "xnd"]
             extra_link_args = ["-Wl,-rpath,@loader_path"]
             runtime_library_dirs = []
         else:
+            libraries = [":%s" % LIBNDTYPES, ":%s" % LIBSHARED]
             extra_link_args = []
             runtime_library_dirs = ["$ORIGIN"]
 
