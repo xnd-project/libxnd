@@ -80,10 +80,12 @@ if sys.platform == "darwin":
     LIBNAME = "libxnd.dylib"
     LIBSONAME = "libxnd.0.dylib"
     LIBSHARED = "libxnd.0.2.0b2.dylib"
+    LIBNDTYPES = "libndtypes.0.2.0b2.dylib"
 else:
     LIBNAME = "libxnd.so"
     LIBSONAME = "libxnd.so.0"
     LIBSHARED = "libxnd.so.0.2.0b2"
+    LIBNDTYPES = "libndtypes.so.0.2.0b2"
 
 if "install" in sys.argv or "bdist_wheel" in sys.argv:
     LIBNDTYPESDIR = "%s/ndtypes" % get_python_lib()
@@ -183,8 +185,8 @@ def ndtypes_ext():
             os.chdir("..")
 
     else:
-        libraries = [":libndtypes.so.0.2.0b2", ":libxnd.so.0.2.0b2"]
         extra_compile_args = ["-Wextra", "-Wno-missing-field-initializers", "-std=c11"]
+        libraries = [":%s" % LIBNDTYPES, ":%s" % LIBSHARED]
         if sys.platform == "darwin":
             extra_link_args = ["-Wl,-rpath,@loader_path"]
             runtime_library_dirs = []
