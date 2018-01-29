@@ -47,14 +47,17 @@ memcheck: runtest
 	@printf "\n\n"
 	cd libxnd/tests && @LIBRARY_PATH@=$(LDPATH) valgrind --leak-check=full --show-leak-kinds=all ./runtest_shared
 
+install: install_libs @NDT_INSTALL_DOCS@
 
-install: FORCE
+install_libs: FORCE
 	$(INSTALL) -d -m 755 $(DESTDIR)$(includedir)
 	$(INSTALL) -m 644 libxnd/xnd.h $(DESTDIR)$(includedir)
 	$(INSTALL) -d -m 755 $(DESTDIR)$(libdir)
 	$(INSTALL) -m 644 libxnd/$(LIBSTATIC) $(DESTDIR)$(libdir)
 	$(INSTALL) -m 755 libxnd/$(LIBSHARED) $(DESTDIR)$(libdir)
 	cd $(DESTDIR)$(libdir) && ln -sf $(LIBSHARED) $(LIBSONAME) && ln -sf $(LIBSHARED) $(LIBNAME)
+
+install_docs: FORCE
 	$(INSTALL) -d -m 755 $(DESTDIR)$(docdir)
 	cp -R doc/* $(DESTDIR)$(docdir)
 
