@@ -88,9 +88,11 @@ else:
 if "install" in sys.argv or "bdist_wheel" in sys.argv:
     LIBNDTYPESDIR = "%s/ndtypes" % get_python_lib()
     LIBXNDDIR = "%s/xnd" % get_python_lib()
+    MAKE_SYMLINKS = True
 else:
     LIBNDTYPESDIR = "../python/ndtypes"
     LIBXNDDIR = "../python/xnd"
+    MAKE_SYMLINKS = False
 
 PY_MAJOR = sys.version_info[0]
 PY_MINOR = sys.version_info[1]
@@ -119,12 +121,11 @@ def copy_ext():
         shutil.copy2(pathlist[0], "python/xnd")
 
 def make_symlinks():
-    if sys.platform == "win32" or "install" not in sys.argv:
-        return
-    os.chdir(LIBXNDDIR)
-    os.chmod(LIBSHARED, 0o755)
-    os.system("ln -sf %s %s" % (LIBSHARED, LIBSONAME))
-    os.system("ln -sf %s %s" % (LIBSHARED, LIBNAME))
+    if MAKE_SYMLINKS and sys.platform != "win32":
+        os.chdir(LIBXNDDIR)
+        os.chmod(LIBSHARED, 0o755)
+        os.system("ln -sf %s %s" % (LIBSHARED, LIBSONAME))
+        os.system("ln -sf %s %s" % (LIBSHARED, LIBNAME))
 
 
 if len(sys.argv) == 2:
