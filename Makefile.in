@@ -76,6 +76,7 @@ distclean: FORCE
 	cd python && rm -rf ndtypes *.egg-info __pycache__ ndtypes.egg-info
 	cd python/xnd && rm -f *.so $(LIBSTATIC) $(LIBSHARED) $(LIBSONAME) $(LIBNAME) xnd.h
 	cd python/xnd && rm -rf __pycache__
+	cd .conda/xnd && rm -rf test
 
 FORCE:
 
