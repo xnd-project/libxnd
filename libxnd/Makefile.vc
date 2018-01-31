@@ -6,12 +6,11 @@
 LIBSTATIC = libxnd-0.2.0b2.lib
 LIBIMPORT = libxnd-0.2.0b2.dll.lib
 LIBSHARED = libxnd-0.2.0b2.dll
+LIBNDTYPESIMPORT = libndtypes-0.2.0b2.dll.lib
+
 !ifndef LIBNDTYPESDIR
 LIBNDTYPESDIR = ..\ndtypes\libndtypes
-!else
-LIBNDTYPESDIR = "$(LIBNDTYPESDIR)"
 !endif
-LIBNDTYPESIMPORT = $(LIBNDTYPESDIR)\libndtypes-0.2.0b2.dll.lib
 
 OPT = /MT /Ox /GS /EHsc
 OPT_SHARED = /DEXPORT /MD /Ox /GS /EHsc /Fo.objs^\
@@ -41,24 +40,24 @@ Makefile $(OBJS)
 $(LIBSHARED):\
 Makefile $(SHARED_OBJS)
 	-@if exist $@ del $(LIBSHARED)
-	link /nologo /DLL /MANIFEST /out:$(LIBSHARED) /implib:$(LIBIMPORT) $(SHARED_OBJS) $(LIBNDTYPESIMPORT)
+	link /nologo /DLL /MANIFEST /out:$(LIBSHARED) /implib:$(LIBIMPORT) $(SHARED_OBJS) "/LIBPATH:$(LIBNDTYPESDIR)" $(LIBNDTYPESIMPORT)
 	mt /nologo -manifest $(LIBSHARED).manifest -outputresource:$(LIBSHARED);2
 
 bitmaps.obj:\
 Makefile bitmaps.c xnd.h
-	$(CC) -I $(LIBNDTYPESDIR) $(CFLAGS) -c bitmaps.c
+	$(CC) "-I$(LIBNDTYPESDIR)" $(CFLAGS) -c bitmaps.c
 
 .objs\bitmaps.obj:\
 Makefile bitmaps.c xnd.h
-	$(CC) -I $(LIBNDTYPESDIR) $(CFLAGS_SHARED) -c bitmaps.c
+	$(CC) "-I$(LIBNDTYPESDIR)" $(CFLAGS_SHARED) -c bitmaps.c
 
 xnd.obj:\
 Makefile xnd.c xnd.h
-	$(CC) -I $(LIBNDTYPESDIR) $(CFLAGS) -c xnd.c
+	$(CC) "-I$(LIBNDTYPESDIR)" $(CFLAGS) -c xnd.c
 
 .objs\xnd.obj:\
 Makefile xnd.c xnd.h
-	$(CC) -I $(LIBNDTYPESDIR) $(CFLAGS_SHARED) -c xnd.c
+	$(CC) "-I$(LIBNDTYPESDIR)" $(CFLAGS_SHARED) -c xnd.c
 
 check:\
 Makefile default
