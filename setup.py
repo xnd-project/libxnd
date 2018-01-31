@@ -122,11 +122,10 @@ def copy_ext():
         shutil.copy2(pathlist[0], "python/xnd")
 
 def make_symlinks():
-    if MAKE_SYMLINKS and sys.platform != "win32":
-        os.chdir(LIBXNDDIR)
-        os.chmod(LIBSHARED, 0o755)
-        os.system("ln -sf %s %s" % (LIBSHARED, LIBSONAME))
-        os.system("ln -sf %s %s" % (LIBSHARED, LIBNAME))
+    os.chdir(LIBXNDDIR)
+    os.chmod(LIBSHARED, 0o755)
+    os.system("ln -sf %s %s" % (LIBSHARED, LIBSONAME))
+    os.system("ln -sf %s %s" % (LIBSHARED, LIBNAME))
 
 
 if len(sys.argv) == 2:
@@ -245,5 +244,5 @@ setup (
 
 copy_ext()
 
-if INSTALL_LIBS:
+if INSTALL_LIBS and sys.platform != "win32":
     make_symlinks()
