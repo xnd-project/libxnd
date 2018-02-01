@@ -81,6 +81,7 @@ matrix:
         - export LIBXND=`conda build --output .conda/libxnd`
         - export XND=`conda build --output .conda/xnd`
       deploy:
+        provider: script
         skip_cleanup: true
         on:
           branch: master
@@ -106,9 +107,23 @@ matrix:
         - cd ndtypes
         - conda build .conda/libndtypes
         - conda build .conda/ndtypes
+        - export LIBNDTYPES=`conda build --output .conda/libndtypes`
+        - export NDTYPES=`conda build --output .conda/ndtypes`
         - cd ../xnd
         - conda build .conda/libxnd
         - conda build .conda/xnd
+        - export LIBXND=`conda build --output .conda/libxnd`
+        - export XND=`conda build --output .conda/xnd`
+      deploy:
+        provider: script
+        skip_cleanup: true
+        on:
+          branch: master
+        script:
+          - anaconda --token $ANACONDA_NDTYPES_TOKEN upload $LIBNDTYPES --user plures --channel plures
+          - anaconda --token $ANACONDA_NDTYPES_TOKEN upload $NDTYPES --user plures --channel plures
+          - anaconda --token $ANACONDA_XND_TOKEN upload $LIBXND --user plures --channel plures
+          - anaconda --token $ANACONDA_XND_TOKEN upload $XND --user plures --channel plures
 
 env:
   global:
