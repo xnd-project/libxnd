@@ -95,7 +95,8 @@ if "install" in sys.argv or "bdist_wheel" in sys.argv:
 elif "conda_install" in sys.argv:
     site = "%s/ndtypes" % get_python_lib()
     sys_includes = os.path.join(os.environ['PREFIX'], "include")
-    sys_libs = os.path.join(os.environ['PREFIX'], "lib")
+    libdir = "Library/bin" if sys.platform == "win32" else "lib"
+    sys_libs = os.path.join(os.environ['PREFIX'], libdir)
     INCLUDES = [sys_includes, site]
     LIBS = [sys_libs, site]
     LIBXNDDIR = "%s/xnd" % get_python_lib()

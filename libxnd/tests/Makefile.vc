@@ -6,6 +6,10 @@ LIBSHARED = libxnd-0.2.0b2.dll.lib
 LIBNDTYPESSTATIC = libndtypes-0.2.0b2.lib
 LIBNDTYPESIMPORT = libndtypes-0.2.0b2.dll.lib
 
+!ifndef LIBNDTYPESINCLUDE
+LIBNDTYPESINCLUDE = ..\..\ndtypes\libndtypes
+!endif
+
 !ifndef LIBNDTYPESDIR
 LIBNDTYPESDIR = ..\..\ndtypes\libndtypes
 !endif
@@ -20,12 +24,12 @@ default: runtest runtest_shared
 
 runtest:\
 Makefile runtest.c test_fixed.c test.h $(SRCDIR)\xnd.h $(SRCDIR)\$(LIBSTATIC)
-	$(CC) "-I$(SRCDIR)" "-I$(LIBNDTYPESDIR)" $(CFLAGS) /Feruntest runtest.c \
+	$(CC) "-I$(SRCDIR)" "-I$(LIBNDTYPESINCLUDE)" $(CFLAGS) /Feruntest runtest.c \
 	test_fixed.c $(SRCDIR)\$(LIBSTATIC) /link "/LIBPATH:$(LIBNDTYPESDIR)" $(LIBNDTYPESSTATIC)
 
 runtest_shared:\
 Makefile runtest.c test_fixed.c test.h $(SRCDIR)\xnd.h $(SRCDIR)\$(LIBSHARED)
-	$(CC) "-I$(SRCDIR)" "-I$(LIBNDTYPESDIR)" $(CFLAGS_SHARED) /Feruntest_shared \
+	$(CC) "-I$(SRCDIR)" "-I$(LIBNDTYPESINCLUDE)" $(CFLAGS_SHARED) /Feruntest_shared \
 	runtest.c test_fixed.c $(SRCDIR)\$(LIBSHARED) /link "/LIBPATH:$(LIBNDTYPESDIR)" $(LIBNDTYPESIMPORT)
 
 
