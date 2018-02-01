@@ -93,8 +93,8 @@ if test "$with_libs" = "none"; then
     CONFIGURE_LIBS=../ndtypes/libndtypes
     CONFIGURE_LIBS_TEST=../../ndtypes/libndtypes
 else
-    CONFIGURE_LIBS=$with_libndtypes
-    CONFIGURE_LIBS_TEST=$with_libndtypes
+    CONFIGURE_LIBS=$with_libs
+    CONFIGURE_LIBS_TEST=$with_libs
 fi
 
 AC_SUBST(CONFIGURE_LIBS)

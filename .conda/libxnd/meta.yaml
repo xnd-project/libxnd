@@ -10,7 +10,6 @@ requirements:
     - libndtypes ==0.2.0b2
   run:
     - libndtypes ==0.2.0b2
-    - ndtypes ==0.2.0b2
 
 about:
   home: https://github.com/plures/
