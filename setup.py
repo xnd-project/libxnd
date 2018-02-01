@@ -101,7 +101,7 @@ elif "conda_install" in sys.argv:
     LIBXNDDIR = "%s/xnd" % get_python_lib()
     INSTALL_LIBS = False
 else:
-    INCLUDES = "../python/ndtypes"
+    INCLUDES = ["../python/ndtypes"]
     LIBS = INCLUDES
     LIBXNDDIR = "../python/xnd"
     INSTALL_LIBS = False
