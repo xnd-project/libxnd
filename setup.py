@@ -87,11 +87,22 @@ else:
     LIBNDTYPES = "libndtypes.so.0.2.0b2"
 
 if "install" in sys.argv or "bdist_wheel" in sys.argv:
-    LIBNDTYPESDIR = "%s/ndtypes" % get_python_lib()
+    CONFIGURE_INCLUDES = "%s/ndtypes" % get_python_lib()
+    CONFIGURE_LIBS = CONFIGURE_INCLUDES
+    INCLUDES = LIBS = [CONFIGURE_INCLUDES]
     LIBXNDDIR = "%s/xnd" % get_python_lib()
     INSTALL_LIBS = True
+elif "conda_install" in sys.argv:
+    site = "%s/ndtypes" % get_python_lib()
+    sys_includes = os.path.join(os.environ['PREFIX'], "include")
+    sys_libs = os.path.join(os.environ['PREFIX'], "lib")
+    INCLUDES = [sys_includes, site]
+    LIBS = [sys_libs, site]
+    LIBXNDDIR = "%s/xnd" % get_python_lib()
+    INSTALL_LIBS = False
 else:
-    LIBNDTYPESDIR = "../python/ndtypes"
+    INCLUDES = "../python/ndtypes"
+    LIBS = INCLUDES
     LIBXNDDIR = "../python/xnd"
     INSTALL_LIBS = False
 
@@ -131,7 +142,7 @@ def make_symlinks():
 if len(sys.argv) == 2:
     if sys.argv[1] == 'module':
        sys.argv[1] = 'build'
-    if sys.argv[1] == 'module_install':
+    if sys.argv[1] == 'module_install' or sys.argv[1] == 'conda_install':
        sys.argv[1] = 'install'
     if sys.argv[1] == 'test':
         module_path = get_module_path()
@@ -160,8 +171,8 @@ if len(sys.argv) == 2:
 
 
 def ndtypes_ext():
-    include_dirs = ["libxnd", "ndtypes/python/ndtypes", LIBNDTYPESDIR]
-    library_dirs = ["libxnd", "ndtypes/libndtypes", LIBNDTYPESDIR]
+    include_dirs = ["libxnd", "ndtypes/python/ndtypes"] + INCLUDES
+    library_dirs = ["libxnd", "ndtypes/libndtypes"] + LIBS
     depends = ["libxnd/xnd.h", "python/xnd/util.h"]
     sources = ["python/xnd/_xnd.c"]
 
@@ -175,7 +186,7 @@ def ndtypes_ext():
             from distutils.msvc9compiler import MSVCCompiler
             MSVCCompiler().initialize()
             os.chdir("vcbuild")
-            os.environ['LIBNDTYPESDIR'] = os.path.normpath(LIBNDTYPESDIR)
+            os.environ['LIBS'] = os.path.normpath(LIBS)
             if ARCH == "64bit":
                   os.system("vcbuild64.bat")
             else:
@@ -196,7 +207,7 @@ def ndtypes_ext():
         if BUILD_ALL:
             os.system(
               "./configure --with-includes='%s' --with-libs='%s' && make" %
-              (LIBNDTYPESDIR, LIBNDTYPESDIR))
+              (CONFIGURE_INCLUDES, CONFIGURE_LIBS))
 
     return Extension (
       "xnd._xnd",
