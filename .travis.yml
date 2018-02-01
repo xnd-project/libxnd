@@ -78,6 +78,17 @@ matrix:
         - cd ../xnd
         - conda build .conda/libxnd
         - conda build .conda/xnd
+        - export LIBXND=`conda build --output .conda/libxnd`
+        - export XND=`conda build --output .conda/xnd`
+      deploy:
+        skip_cleanup: true
+        on:
+          branch: master
+        script:
+          - anaconda --token $ANACONDA_NDTYPES_TOKEN upload $LIBNDTYPES --user plures --channel plures
+          - anaconda --token $ANACONDA_NDTYPES_TOKEN upload $NDTYPES --user plures --channel plures
+          - anaconda --token $ANACONDA_XND_TOKEN upload $LIBXND --user plures --channel plures
+          - anaconda --token $ANACONDA_XND_TOKEN upload $XND --user plures --channel plures
 
     - language: objective-c
       os: osx
@@ -98,3 +109,9 @@ matrix:
         - cd ../xnd
         - conda build .conda/libxnd
         - conda build .conda/xnd
+
+env:
+  global:
+    secure: "AtfKUGkK6KIPMmWBvZ1C9F3GwbIaLhh1fR67QLxoKv1U77QMXYBYVLUp0iWm/rTLGUuUqsq0kmpqAkr6wjVFax2GbavUVpiCaHo4K/1p/gt9v0v8wEU58ulK6bua+3xDp1d0LZeVkTvGEIfywjONtZ+1dlbUmdQzumpat/5FEhk/IeMtdjmJ7DtBc04LIzZANf0/o+IRoNXBLI26nkPzyVfTO2ao+tKAmDunDsFDTzoL69PgE0X/CaWtiqJ90IOx4bHVwr9Z00QW1JUzdkuCcypffVbkRqSnuIWW96COA9Him3zVG6XNg8gTnVRDCirHxhSXdbt11jCd/OaZsgneb1avH5A0eNyoqyvde/ZUAR8iW4zWRgtKrWe7Qg/C90nM465R3+guUqXa+uAr2QsVPrxsLdYr9v+JTvVzOyX2PzsWRHCb1thvsMSZa22wE7rC4NHw2bypKvRDCwFLxv/lb5m1CWVXPqmGzA4D/POAV7TmELgoeLVodUdy3WATGpBw263jaGVnRR0dAiMgT/DUeS+dz0bd92sKFxjoarnEUmtqEA39+YzG3PvwLz3kb13NJY7MU0rme+JB/kRfF7ArdmY//Q8zgfzWnRUubeMNFuImx+kFBB53AQH4593eLqQ3nXlNjA9j9JYhBDsSVhqCaui8RdVeatnXIN3IRzzncEo="
+
+    secure: "CSM9uk66L178aJiSiUvZ2o0ERWOjerlzmOrxvVb361lH/rQVvMjfiy4lczvBlmg1vJhNH4SUDIgt3D303hQl8mmqqUmUY9Fp8naxc1iwisqY1GgRorw7unjsMP2FbL5x2qmYB5zONnYL1BRhSIkdDGfCI0Jt6HmR9JCRxH/0qvMvb4YFwqiZLJJ2ycBK5wKoJo1DOKTV51L/DNVE0fWMIEAT0MV99VFAbKc4ch1QxwKaBBPSxSn1/MadSihR6/PEDFJhhLOl47KQEReQ7MLWlVTiDuVyUNvvMUXk3yLi0/EQlVJzhz+p0G2PeiRfvCj3SwjpPu77OqbZNC9jr9HTtcxu3h8c2fgsE3HKBRqCSriWZ7syNB1/7WbpeHVw8HC4H6ndiDR0GXxZQHrKzx3lEu3+r9R6zcjFpYhzabkDdiM+D1KMwWCOoSdK3uQ0gLPnX5yD9sQhF4fD37FW8id53LBNMvGQBwRrnCQvGBTdP2PvQz9euLSkfn8q7of+Sjmk5iK1N7BA+BqiOg96qYbFQpTEKkvWSaG1bFt3X438ZZWFTeS+zzTj7a4cSkrcNQs4K+NgL4R4mkKHfix4rY5R9HLRnrUqTrrHK0+NdPNT+8k8+aLmHJ3NojRLM35hsdoeAsjMp20MSBCsm+6N+OMh1Drfr/vVRTncpiSd8YcCoQY="
