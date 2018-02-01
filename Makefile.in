@@ -9,7 +9,8 @@ LIBSTATIC = @LIBSTATIC@
 LIBNAME = @LIBNAME@
 LIBSONAME = @LIBSONAME@
 LIBSHARED = @LIBSHARED@
-LIBNDTYPESDIR = @LIBNDTYPESDIR@
+
+LIBRARY_PATH = ..:@CONFIGURE_LIBS_TEST@
 INSTALL = @INSTALL@
 
 prefix = @prefix@
@@ -18,13 +19,6 @@ includedir = @includedir@
 libdir = @libdir@
 datarootdir = @datarootdir@
 docdir = @docdir@
-
-
-ifdef LIBNDTYPESDIR
-    LDPATH = "..:../$(LIBNDTYPESDIR)"
-else
-    LDPATH = ".."
-endif
 
 
 default: FORCE
@@ -40,12 +34,12 @@ runtest: default
 check: runtest
 	cd libxnd/tests && ./runtest
 	@printf "\n\n"
-	cd libxnd/tests && @LIBRARY_PATH@=$(LDPATH) ./runtest_shared
+	cd libxnd/tests && @LIBRARY_PATH@=$(LIBRARY_PATH) ./runtest_shared
 
 memcheck: runtest
 	cd libxnd/tests && valgrind --leak-check=full --show-leak-kinds=all ./runtest
 	@printf "\n\n"
-	cd libxnd/tests && @LIBRARY_PATH@=$(LDPATH) valgrind --leak-check=full --show-leak-kinds=all ./runtest_shared
+	cd libxnd/tests && @LIBRARY_PATH@=$(LIBRARY_PATH) valgrind --leak-check=full --show-leak-kinds=all ./runtest_shared
 
 install: install_libs @NDT_INSTALL_DOCS@
 

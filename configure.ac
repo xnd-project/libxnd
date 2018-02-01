@@ -58,28 +58,47 @@ AC_HEADER_STDC
 AC_PROG_INSTALL
 AC_SUBST(INSTALL)
 
-
-# Set the prefix of a local ndtypes directory.  If unset, libndtypes is
-# assumed to be installed in the system library directories.
-AC_MSG_CHECKING(for --with-ndtypes)
-AC_ARG_WITH(ndtypes,
-            AS_HELP_STRING([--with-ndtypes=".."],
-            [relative path to a local ndtypes directory]),
+# Add an explicit include directory.
+AC_MSG_CHECKING(for --with-includes)
+AC_ARG_WITH(includes,
+            AS_HELP_STRING([--with-includes="/usr/local/include"],
+            [absolute path to an include directory]),
             [],
-            [with_ndtypes="none"])
+            [with_includes="none"])
 
-AC_MSG_RESULT($with_ndtypes)
+AC_MSG_RESULT($with_includes)
 
-if test "$with_ndtypes" = "none"; then
-    LIBNDTYPESDIR=../ndtypes/libndtypes
-    LIBNDTYPESDIR_TEST=../../ndtypes/libndtypes
+if test "$with_includes" = "none"; then
+    CONFIGURE_INCLUDES=../ndtypes/libndtypes
+    CONFIGURE_INCLUDES_TEST=../../ndtypes/libndtypes
 else
-    LIBNDTYPESDIR=$with_ndtypes
-    LIBNDTYPESDIR_TEST=$with_ndtypes
+    CONFIGURE_INCLUDES=$with_includes
+    CONFIGURE_INCLUDES_TEST=$with_includes
 fi
 
-AC_SUBST(LIBNDTYPESDIR)
-AC_SUBST(LIBNDTYPESDIR_TEST)
+AC_SUBST(CONFIGURE_INCLUDES)
+AC_SUBST(CONFIGURE_INCLUDES_TEST)
+
+# Add an explicit library path.
+AC_MSG_CHECKING(for --with-libs)
+AC_ARG_WITH(libs,
+            AS_HELP_STRING([--with-libs="/usr/local/lib"],
+            [absolute path to a library directory]),
+            [],
+            [with_libs="none"])
+
+AC_MSG_RESULT($with_libs)
+
+if test "$with_libs" = "none"; then
+    CONFIGURE_LIBS=../ndtypes/libndtypes
+    CONFIGURE_LIBS_TEST=../../ndtypes/libndtypes
+else
+    CONFIGURE_LIBS=$with_libndtypes
+    CONFIGURE_LIBS_TEST=$with_libndtypes
+fi
+
+AC_SUBST(CONFIGURE_LIBS)
+AC_SUBST(CONFIGURE_LIBS_TEST)
 
 # Without documentation:
 AC_MSG_CHECKING([for --with-docs])

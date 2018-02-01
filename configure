@@ -593,8 +593,10 @@ XND_OPT
 XND_WARN
 LD
 NDT_INSTALL_DOCS
-LIBNDTYPESDIR_TEST
-LIBNDTYPESDIR
+CONFIGURE_LIBS_TEST
+CONFIGURE_LIBS
+CONFIGURE_INCLUDES_TEST
+CONFIGURE_INCLUDES
 INSTALL
 INSTALL_DATA
 INSTALL_SCRIPT
@@ -665,7 +667,8 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
-with_ndtypes
+with_includes
+with_libs
 with_docs
 '
       ac_precious_vars='build_alias
@@ -1289,7 +1292,10 @@ if test -n "$ac_init_help"; then
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-ndtypes=".."     relative path to a local ndtypes directory
+  --with-includes="/usr/local/include"
+                          absolute path to an include directory
+  --with-libs="/usr/local/lib"
+                          absolute path to a library directory
   --with-docs             install documentation - enabled by default
 
 Some influential environment variables:
@@ -3458,29 +3464,53 @@ test -z "$INSTALL_DATA" && INSTALL_DATA='${INSTALL} -m 644'
 
 
 
+# Add an explicit include directory.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for --with-includes" >&5
+$as_echo_n "checking for --with-includes... " >&6; }
 
-# Set the prefix of a local ndtypes directory.  If unset, libndtypes is
-# assumed to be installed in the system library directories.
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for --with-ndtypes" >&5
-$as_echo_n "checking for --with-ndtypes... " >&6; }
-
-# Check whether --with-ndtypes was given.
-if test "${with_ndtypes+set}" = set; then :
-  withval=$with_ndtypes;
+# Check whether --with-includes was given.
+if test "${with_includes+set}" = set; then :
+  withval=$with_includes;
 else
-  with_ndtypes="none"
+  with_includes="none"
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_ndtypes" >&5
-$as_echo "$with_ndtypes" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_includes" >&5
+$as_echo "$with_includes" >&6; }
 
-if test "$with_ndtypes" = "none"; then
-    LIBNDTYPESDIR=../ndtypes/libndtypes
-    LIBNDTYPESDIR_TEST=../../ndtypes/libndtypes
+if test "$with_includes" = "none"; then
+    CONFIGURE_INCLUDES=../ndtypes/libndtypes
+    CONFIGURE_INCLUDES_TEST=../../ndtypes/libndtypes
 else
-    LIBNDTYPESDIR=$with_ndtypes
-    LIBNDTYPESDIR_TEST=$with_ndtypes
+    CONFIGURE_INCLUDES=$with_includes
+    CONFIGURE_INCLUDES_TEST=$with_includes
+fi
+
+
+
+
+# Add an explicit library path.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for --with-libs" >&5
+$as_echo_n "checking for --with-libs... " >&6; }
+
+# Check whether --with-libs was given.
+if test "${with_libs+set}" = set; then :
+  withval=$with_libs;
+else
+  with_libs="none"
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_libs" >&5
+$as_echo "$with_libs" >&6; }
+
+if test "$with_libs" = "none"; then
+    CONFIGURE_LIBS=../ndtypes/libndtypes
+    CONFIGURE_LIBS_TEST=../../ndtypes/libndtypes
+else
+    CONFIGURE_LIBS=$with_libndtypes
+    CONFIGURE_LIBS_TEST=$with_libndtypes
 fi
 
 

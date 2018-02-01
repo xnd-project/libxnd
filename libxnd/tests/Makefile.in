@@ -4,7 +4,9 @@ SRCDIR = ..
 CC = @CC@
 LIBSTATIC = @LIBSTATIC@
 LIBSHARED = @LIBSHARED@
-LIBNDTYPESDIR = @LIBNDTYPESDIR_TEST@
+
+INCLUDES = @CONFIGURE_INCLUDES_TEST@
+LIBS = @CONFIGURE_LIBS_TEST@
 
 CONFIGURE_CFLAGS = @CONFIGURE_CFLAGS@
 XND_CFLAGS = $(strip $(CONFIGURE_CFLAGS) $(CFLAGS))
@@ -15,13 +17,13 @@ default: runtest runtest_shared
 
 runtest:\
 Makefile runtest.c test_fixed.c test.h $(SRCDIR)/xnd.h $(SRCDIR)/$(LIBSTATIC)
-	$(CC) -I$(SRCDIR) -I$(LIBNDTYPESDIR) $(XND_CFLAGS) \
+	$(CC) -I$(SRCDIR) -I$(INCLUDES) $(XND_CFLAGS) \
 	-o runtest runtest.c test_fixed.c $(SRCDIR)/libxnd.a \
-	$(LIBNDTYPESDIR)/libndtypes.a
+	$(LIBS)/libndtypes.a
 
 runtest_shared:\
 Makefile runtest.c test_fixed.c test.h $(SRCDIR)/xnd.h $(SRCDIR)/$(LIBSHARED)
-	$(CC) -I$(SRCDIR) -I$(LIBNDTYPESDIR) -L$(SRCDIR) -L$(LIBNDTYPESDIR) \
+	$(CC) -I$(SRCDIR) -I$(INCLUDES) -L$(SRCDIR) -L$(LIBS) \
 	$(XND_CFLAGS) -o runtest_shared runtest.c test_fixed.c -lxnd -lndtypes
 
 
