@@ -114,13 +114,7 @@ matrix:
         - conda build .conda/xnd
         - export LIBXND=`conda build --output .conda/libxnd`
         - export XND=`conda build --output .conda/xnd`
-      deploy:
-        provider: script
-        skip_cleanup: true
-        on:
-          branch: master
-        script:
-          - .deploy.sh
+        - ./.maybe_deploy.sh
 
 env:
   global:
