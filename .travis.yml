@@ -69,6 +69,7 @@ matrix:
         - conda update --yes conda
         - conda install --yes conda-build
         - conda install --yes anaconda-client
+        - conda install --yes -c plures ndtypes
       script:
         - cd xnd
         - git fetch --unshallow
@@ -91,6 +92,7 @@ matrix:
         - conda update --yes conda
         - conda install --yes conda-build
         - conda install --yes anaconda-client
+        - conda install --yes -c plures ndtypes
       script:
         - cd xnd
         - git fetch --unshallow
