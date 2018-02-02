@@ -15,19 +15,16 @@ test:
     - libndtypes ==0.2.0b2
     - libxnd ==0.2.0b2
     - ndtypes ==0.2.0b2
-    - python >=3.6
 
 requirements:
   build:
     - libndtypes ==0.2.0b2
     - libxnd ==0.2.0b2
     - ndtypes ==0.2.0b2
-    - python >=3.6.0
   run:
     - libndtypes ==0.2.0b2
     - libxnd ==0.2.0b2
     - ndtypes ==0.2.0b2
-    - python >=3.6.0
 
 about:
   home: https://github.com/plures/
