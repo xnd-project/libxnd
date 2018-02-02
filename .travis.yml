@@ -81,7 +81,7 @@ matrix:
         - conda build .conda/xnd
         - export LIBXND=`conda build --output .conda/libxnd`
         - export XND=`conda build --output .conda/xnd`
-        - ./.maybe_deploy.sh
+        - ANACONDA_NDTYPES_TOKEN=$ANACONDA_NDTYPES_TOKEN ANACONDA_XND_TOKEN=$ANACONDA_XND_TOKEN ./.maybe_deploy.sh
 
     - language: objective-c
       os: osx
@@ -107,7 +107,7 @@ matrix:
         - conda build .conda/xnd
         - export LIBXND=`conda build --output .conda/libxnd`
         - export XND=`conda build --output .conda/xnd`
-        - ANACONDA_NDTYPES_TOKEN=$ANACONDA_NDTYPES_TOKEN ANACONDA_XND_TOKEN=$ANACONDA_XND_TOKEN./.maybe_deploy.sh
+        - ANACONDA_NDTYPES_TOKEN=$ANACONDA_NDTYPES_TOKEN ANACONDA_XND_TOKEN=$ANACONDA_XND_TOKEN ./.maybe_deploy.sh
 
 env:
   global:
