@@ -75,8 +75,8 @@ matrix:
         - git fetch --unshallow
         - conda build .conda/libxnd -c plures
         - conda build .conda/xnd -c plures
-        - export LIBXND=`conda build --output .conda/libxnd`
-        - export XND=`conda build --output .conda/xnd`
+        - export LIBXND=`conda build --output .conda/libxnd` -c plures
+        - export XND=`conda build --output .conda/xnd` -c plures
         - if test X"$TRAVIS_BRANCH" = X"master" && test X"$TRAVIS_PULL_REQUEST" = X"false"; then anaconda --token $ANACONDA_TOKEN upload $LIBXND --user plures --channel main; fi
         - if test X"$TRAVIS_BRANCH" = X"master" && test X"$TRAVIS_PULL_REQUEST" = X"false"; then anaconda --token $ANACONDA_TOKEN upload $XND --user plures --channel main; fi
 
@@ -98,8 +98,8 @@ matrix:
         - git fetch --unshallow
         - conda build .conda/libxnd -c plures
         - conda build .conda/xnd -c plures
-        - export LIBXND=`conda build --output .conda/libxnd`
-        - export XND=`conda build --output .conda/xnd`
+        - export LIBXND=`conda build --output .conda/libxnd` -c plures
+        - export XND=`conda build --output .conda/xnd` -c plures
         - if test X"$TRAVIS_BRANCH" = X"master" && test X"$TRAVIS_PULL_REQUEST" = X"false"; then anaconda --token $ANACONDA_TOKEN upload $LIBXND --user plures --channel main; fi
         - if test X"$TRAVIS_BRANCH" = X"master" && test X"$TRAVIS_PULL_REQUEST" = X"false"; then anaconda --token $ANACONDA_TOKEN upload $XND --user plures --channel main; fi
 
