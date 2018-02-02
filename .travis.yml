@@ -107,8 +107,7 @@ matrix:
         - conda build .conda/xnd
         - export LIBXND=`conda build --output .conda/libxnd`
         - export XND=`conda build --output .conda/xnd`
-        - export TRAVIS_BRANCH TRAVIS_PULL_REQUEST ANACONDA_NDTYPES_TOKEN ANACONDA_XND_TOKEN
-        - ./.maybe_deploy.sh
+        - ANACONDA_NDTYPES_TOKEN=$ANACONDA_NDTYPES_TOKEN ANACONDA_XND_TOKEN=$ANACONDA_XND_TOKEN./.maybe_deploy.sh
 
 env:
   global:
