@@ -69,12 +69,11 @@ matrix:
         - conda update --yes conda
         - conda install --yes conda-build
         - conda install --yes anaconda-client
-        - conda install --yes -c plures ndtypes
       script:
         - cd xnd
         - git fetch --unshallow
-        - conda build .conda/libxnd
-        - conda build .conda/xnd
+        - conda build .conda/libxnd -c plures
+        - conda build .conda/xnd -c plures
         - export LIBXND=`conda build --output .conda/libxnd`
         - export XND=`conda build --output .conda/xnd`
         - if test X"$TRAVIS_BRANCH" = X"master" && test X"$TRAVIS_PULL_REQUEST" = X"false"; then anaconda --token $ANACONDA_TOKEN upload $LIBXND --user plures --channel main; fi
@@ -92,12 +91,11 @@ matrix:
         - conda update --yes conda
         - conda install --yes conda-build
         - conda install --yes anaconda-client
-        - conda install --yes -c plures ndtypes
       script:
         - cd xnd
         - git fetch --unshallow
-        - conda build .conda/libxnd
-        - conda build .conda/xnd
+        - conda build .conda/libxnd -c plures
+        - conda build .conda/xnd -c plures
         - export LIBXND=`conda build --output .conda/libxnd`
         - export XND=`conda build --output .conda/xnd`
         - if test X"$TRAVIS_BRANCH" = X"master" && test X"$TRAVIS_PULL_REQUEST" = X"false"; then anaconda --token $ANACONDA_TOKEN upload $LIBXND --user plures --channel main; fi
