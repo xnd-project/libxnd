@@ -13,8 +13,8 @@ build_script:
   - conda install --yes conda-build
   - conda install --yes anaconda-client
   - conda install --yes ndtypes -c plures
-  - conda-build .conda/libxnd
-  - conda-build .conda/xnd
+  - conda-build .conda/libxnd -c plures
+  - conda-build .conda/xnd -c plures
   - ps: $env:LIBXND = (conda build --output .conda/libxnd -c plures)
   - ps: $env:XND = (conda build --output .conda/xnd -c plures)
 
