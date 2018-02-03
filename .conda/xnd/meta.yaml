@@ -3,8 +3,8 @@ package:
   version: 0.2.0b2
 
 build:
-  number: {{ GIT_DESCRIBE_NUMBER|int }}
-  string: py{{ CONDA_PY }}_{{ GIT_BUILD_STR }}
+  number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
+  string: py{{ environ.get('CONDA_PY', 'NA') }}_{{ environ.get('GIT_BUID_STR', 'NA') }}
 
 test:
   files:
