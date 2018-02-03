@@ -1,0 +1,27 @@
+skip_tags: true
+
+matrix:
+  fast_finish: true
+
+os: Visual Studio 2015
+
+build_script:
+  - ps: Start-FileDownload "https://repo.continuum.io/miniconda/Miniconda3-latest-Windows-x86_64.exe" C:\Miniconda.exe
+  - cmd: C:\Miniconda.exe /S /D=C:\Py
+  - set PATH=C:\Py;C:\Py\Scripts;C:\Py\Library\bin;%PATH%
+  - conda update --yes conda
+  - conda install --yes conda-build
+  - conda install --yes anaconda-client
+  - conda install --yes ndtypes -c plures
+  - conda-build .conda/libxnd
+  - conda-build .conda/xnd
+  - ps: $env:LIBXND = (conda build --output .conda/libxnd -c plures)
+  - ps: $env:XND = (conda build --output .conda/xnd -c plures)
+
+on_success:
+  - ps: if(-not $env:APPVEYOR_PULL_REQUEST_NUMBER) { cmd /C anaconda --token $env:anaconda_token upload $env:LIBXND --user plures --channel main "2>&1" }
+  - ps: if(-not $env:APPVEYOR_PULL_REQUEST_NUMBER) { cmd /C anaconda --token $env:anaconda_token upload $env:XND --user plures --channel main "2>&1" }
+
+environment:
+  anaconda_token:
+    secure: rTnsCbMjHi/mOYo8Tz2SzaungqlrdypPkMMzuMniN06Gv2fgCizppeKw2gz/kQ7T
