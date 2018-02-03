@@ -3,8 +3,8 @@ package:
   version: 0.2.0b2
 
 build:
-  number: {{ GIT_DESCRIBE_NUMBER }}
-  string: {{ GIT_BUILD_STR }}
+  number: {{ GIT_DESCRIBE_NUMBER|int }}
+  string: py{{ CONDA_PY }}_{{ GIT_BUILD_STR }}
 
 test:
   files:
