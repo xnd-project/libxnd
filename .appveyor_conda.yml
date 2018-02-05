@@ -19,8 +19,8 @@ build_script:
   - ps: $env:XND = (conda build --output .conda/xnd -c plures)
 
 on_success:
-  - ps: if(-not $env:APPVEYOR_PULL_REQUEST_NUMBER) { cmd /C anaconda --token $env:anaconda_token upload $env:LIBXND --user plures --channel main "2>&1" }
-  - ps: if(-not $env:APPVEYOR_PULL_REQUEST_NUMBER) { cmd /C anaconda --token $env:anaconda_token upload $env:XND --user plures --channel main "2>&1" }
+  - ps: if(-not $env:APPVEYOR_PULL_REQUEST_NUMBER) { cmd /C anaconda --token $env:anaconda_token upload $env:LIBXND --user plures --label dev "2>&1" }
+  - ps: if(-not $env:APPVEYOR_PULL_REQUEST_NUMBER) { cmd /C anaconda --token $env:anaconda_token upload $env:XND --user plures --label dev "2>&1" }
 
 environment:
   anaconda_token:
