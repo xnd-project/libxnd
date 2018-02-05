@@ -258,5 +258,5 @@ setup (
 
 copy_ext()
 
-if INSTALL_LIBS and sys.platform != "win32":
+if INSTALL_LIBS and sys.platform != "win32" and not "bdist_wheel" in sys.argv:
     make_symlinks()
