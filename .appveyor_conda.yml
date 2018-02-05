@@ -12,11 +12,11 @@ build_script:
   - conda update --yes conda
   - conda install --yes conda-build
   - conda install --yes anaconda-client
-  - conda install --yes ndtypes -c plures
-  - conda-build .conda/libxnd -c plures
-  - conda-build .conda/xnd -c plures
-  - ps: $env:LIBXND = (conda build --output .conda/libxnd -c plures)
-  - ps: $env:XND = (conda build --output .conda/xnd -c plures)
+  - conda install --yes ndtypes -c plures/label/dev
+  - conda-build .conda/libxnd -c plures/label/dev
+  - conda-build .conda/xnd -c plures/label/dev
+  - ps: $env:LIBXND = (conda build --output .conda/libxnd -c plures/label/dev)
+  - ps: $env:XND = (conda build --output .conda/xnd -c plures/label/dev)
 
 on_success:
   - ps: if(-not $env:APPVEYOR_PULL_REQUEST_NUMBER) { cmd /C anaconda --token $env:anaconda_token upload $env:LIBXND --user plures --label dev "2>&1" }

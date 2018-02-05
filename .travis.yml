@@ -69,14 +69,14 @@ matrix:
         - conda update --yes conda
         - conda install --yes conda-build
         - conda install --yes anaconda-client
-        - conda install --yes -c plures ndtypes
+        - conda install --yes -c plures/label/dev ndtypes
       script:
         - cd xnd
         - git fetch --unshallow
-        - conda build .conda/libxnd -c plures
-        - conda build .conda/xnd -c plures
-        - export LIBXND=`conda build --output .conda/libxnd -c plures`
-        - export XND=`conda build --output .conda/xnd -c plures`
+        - conda build .conda/libxnd -c plures/label/dev
+        - conda build .conda/xnd -c plures/label/dev
+        - export LIBXND=`conda build --output .conda/libxnd -c plures/label/dev`
+        - export XND=`conda build --output .conda/xnd -c plures/label/dev`
         - if test X"$TRAVIS_BRANCH" = X"master" && test X"$TRAVIS_PULL_REQUEST" = X"false"; then anaconda --token $ANACONDA_TOKEN upload $LIBXND --user plures --label dev; fi
         - if test X"$TRAVIS_BRANCH" = X"master" && test X"$TRAVIS_PULL_REQUEST" = X"false"; then anaconda --token $ANACONDA_TOKEN upload $XND --user plures --label dev; fi
 
@@ -92,14 +92,14 @@ matrix:
         - conda update --yes conda
         - conda install --yes conda-build
         - conda install --yes anaconda-client
-        - conda install --yes -c plures ndtypes
+        - conda install --yes -c plures/label/dev ndtypes
       script:
         - cd xnd
         - git fetch --unshallow
-        - conda build .conda/libxnd -c plures
-        - conda build .conda/xnd -c plures
-        - export LIBXND=`conda build --output .conda/libxnd -c plures`
-        - export XND=`conda build --output .conda/xnd -c plures`
+        - conda build .conda/libxnd -c plures/label/dev
+        - conda build .conda/xnd -c plures/label/dev
+        - export LIBXND=`conda build --output .conda/libxnd -c plures/label/dev`
+        - export XND=`conda build --output .conda/xnd -c plures/label/dev`
         - if test X"$TRAVIS_BRANCH" = X"master" && test X"$TRAVIS_PULL_REQUEST" = X"false"; then anaconda --token $ANACONDA_TOKEN upload $LIBXND --user plures --label dev; fi
         - if test X"$TRAVIS_BRANCH" = X"master" && test X"$TRAVIS_PULL_REQUEST" = X"false"; then anaconda --token $ANACONDA_TOKEN upload $XND --user plures --label dev; fi
 
