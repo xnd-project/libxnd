@@ -1,6 +1,6 @@
 
 AC_PREREQ([2.67])
-AC_INIT(xnd, 0.2.0b2, plures@anaconda.com, xnd, https://github.com/plures/)
+AC_INIT(xnd, 0.2.0dev3, plures@anaconda.com, xnd, https://github.com/plures/)
 AC_CONFIG_HEADER(config.h)
 AC_CONFIG_FILES([Makefile libxnd/Makefile libxnd/tests/Makefile])
 
@@ -15,14 +15,14 @@ case $ac_sys_system in
         LIBRARY_PATH="DYLD_LIBRARY_PATH"
         LIBNAME="libxnd.dylib"
         LIBSONAME="libxnd.0.dylib"
-        LIBSHARED="libxnd.0.2.0b2.dylib"
+        LIBSHARED="libxnd.0.2.0dev3.dylib"
         CONFIGURE_LDFLAGS="-dynamiclib -install_name @rpath/$LIBSONAME -undefined dynamic_lookup -compatibility_version 0.2 -current_version 0.2.0"
         ;;
     *)
         LIBRARY_PATH="LD_LIBRARY_PATH"
         LIBNAME="libxnd.so"
         LIBSONAME="libxnd.so.0"
-        LIBSHARED="libxnd.so.0.2.0b2"
+        LIBSHARED="libxnd.so.0.2.0dev3"
         CONFIGURE_LDFLAGS="-shared -Wl,-soname,$LIBSONAME"
         ;;
 esac

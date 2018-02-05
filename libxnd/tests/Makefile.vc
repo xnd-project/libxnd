@@ -1,10 +1,10 @@
 
 SRCDIR = ..
 
-LIBSTATIC = libxnd-0.2.0b2.lib
-LIBSHARED = libxnd-0.2.0b2.dll.lib
-LIBNDTYPESSTATIC = libndtypes-0.2.0b2.lib
-LIBNDTYPESIMPORT = libndtypes-0.2.0b2.dll.lib
+LIBSTATIC = libxnd-0.2.0dev3.lib
+LIBSHARED = libxnd-0.2.0dev3.dll.lib
+LIBNDTYPESSTATIC = libndtypes-0.2.0dev3.lib
+LIBNDTYPESIMPORT = libndtypes-0.2.0dev3.dll.lib
 
 !ifndef LIBNDTYPESINCLUDE
 LIBNDTYPESINCLUDE = ..\..\ndtypes\libndtypes

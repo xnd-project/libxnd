@@ -1,6 +1,6 @@
 package:
   name: xnd
-  version: 0.2.0b2
+  version: 0.2.0dev3
 
 build:
   number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
@@ -12,19 +12,19 @@ test:
   commands:
     - python test/test_xnd.py --long
   requires:
-    - libndtypes ==0.2.0b2
-    - libxnd ==0.2.0b2
-    - ndtypes ==0.2.0b2
+    - libndtypes ==0.2.0dev3
+    - libxnd ==0.2.0dev3
+    - ndtypes ==0.2.0dev3
 
 requirements:
   build:
-    - libndtypes ==0.2.0b2
-    - libxnd ==0.2.0b2
-    - ndtypes ==0.2.0b2
+    - libndtypes ==0.2.0dev3
+    - libxnd ==0.2.0dev3
+    - ndtypes ==0.2.0dev3
   run:
-    - libndtypes ==0.2.0b2
-    - libxnd ==0.2.0b2
-    - ndtypes ==0.2.0b2
+    - libndtypes ==0.2.0dev3
+    - libxnd ==0.2.0dev3
+    - ndtypes ==0.2.0dev3
 
 about:
   home: https://github.com/plures/
