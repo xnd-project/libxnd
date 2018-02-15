@@ -97,7 +97,7 @@ elif "conda_install" in sys.argv:
     sys_includes = os.path.join(os.environ['PREFIX'], "include")
     libdir = "Library/bin" if sys.platform == "win32" else "lib"
     sys_libs = os.path.join(os.environ['PREFIX'], libdir)
-    CONFIGURE_INCLUDES = [sys_includes, site]
+    CONFIGURE_INCLUDES = INCLUDES = [sys_includes, site]
     LIBS = [sys_libs, site]
     LIBXNDDIR = "%s/xnd" % get_python_lib()
     INSTALL_LIBS = False
