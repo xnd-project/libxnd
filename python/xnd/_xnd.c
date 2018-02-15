@@ -1168,7 +1168,7 @@ mblock_init(xnd_t x, PyObject *v)
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
     case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
     case ComplexKind: case FixedStringKind: case FixedBytesKind:
-    case Void: case Function:
+    case Function:
         PyErr_SetString(PyExc_RuntimeError, "unexpected abstract type");
         return -1;
     }
@@ -1787,7 +1787,7 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
     case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
     case ComplexKind: case FixedStringKind: case FixedBytesKind:
-    case Void: case Function:
+    case Function:
         PyErr_SetString(PyExc_RuntimeError, "unexpected abstract type");
         return NULL;
     }
