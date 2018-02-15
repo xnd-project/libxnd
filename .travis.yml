@@ -60,6 +60,16 @@ matrix:
         - python3 setup.py module
         - python3 setup.py test
 
+    - compiler: gcc
+      before_script:
+        - git clone https://github.com/plures/ndtypes.git
+        - cd ndtypes
+        - python3 setup.py install --local=../python
+        - cd ..
+      script:
+        - python3 setup.py build
+        - python3 setup.py test
+
     - compiler: conda
       install:
         - cd ..
