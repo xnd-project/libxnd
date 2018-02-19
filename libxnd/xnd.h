@@ -143,4 +143,19 @@ XND_API int xnd_is_na(const xnd_t *x);
 XND_API extern const xnd_t xnd_error;
 
 
+/*****************************************************************************/
+/*                               Unstable API                                */
+/*****************************************************************************/
+
+/* For gumath -- likely to change */
+typedef struct {
+    char *ptr;
+    int ndim;
+    int64_t itemsize;
+    int64_t shape[NDT_MAX_DIM];
+    int64_t strides[NDT_MAX_DIM];
+} xnd_ndarray_t;
+
+
+
 #endif /* XND_H */

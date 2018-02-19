@@ -745,3 +745,46 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
 
     return xnd_subtree(next, indices+1, len-1, ctx);
 }
+
+
+/*****************************************************************************/
+/*                               Unstable API                                */
+/*****************************************************************************/
+
+/* For gumath -- likely to change */
+
+int
+xnd_as_ndarray(xnd_ndarray_t *a, const xnd_t *x, ndt_context_t *ctx)
+{
+    const ndt_t *t = x->type;
+    int i;
+
+    assert(t->ndim <= NDT_MAX_DIM);
+
+    if (ndt_is_abstract(t)) {
+        ndt_err_format(ctx, NDT_TypeError, "type is not an ndarray");
+        return -1;
+    }
+
+    if (!ndt_is_ndarray(t)) {
+        if (t->ndim == 0) {
+            a->ndim = t->ndim;
+            a->itemsize = t->datasize;
+            a->ptr = x->ptr + x->index * t->datasize;
+            return 0;
+        }
+        ndt_err_format(ctx, NDT_TypeError, "type is not an ndarray");
+        return -1;
+    }
+
+    a->ndim = t->ndim;
+    a->itemsize = t->Concrete.FixedDim.itemsize;
+    a->ptr = x->ptr + x->index * a->itemsize;
+
+    for (i=0; t->ndim > 0; i++, t=t->FixedDim.type) {
+        a->shape[i] = t->FixedDim.shape;
+        a->strides[i] = t->Concrete.FixedDim.step * a->itemsize;
+    }
+
+    return 0;
+}
