@@ -156,6 +156,7 @@ typedef struct {
     int64_t strides[NDT_MAX_DIM];
 } xnd_ndarray_t;
 
+int xnd_as_ndarray(xnd_ndarray_t *a, const xnd_t *x, ndt_context_t *ctx);
 
 
 #endif /* XND_H */
