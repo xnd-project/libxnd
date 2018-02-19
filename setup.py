@@ -141,7 +141,28 @@ def make_symlinks():
     os.system("ln -sf %s %s" % (LIBSHARED, LIBNAME))
 
 
-if len(sys.argv) == 2:
+if len(sys.argv) == 3 and sys.argv[1] == "install" and \
+    sys.argv[2].startswith("--local"):
+    localdir = sys.argv[2].split("=")[1]
+    sys.argv = sys.argv[:2] + [
+        "--install-base=" + localdir,
+        "--install-purelib=" + localdir,
+        "--install-platlib=" + localdir,
+        "--install-scripts=" + localdir,
+        "--install-data=" + localdir,
+        "--install-headers=" + localdir]
+
+    LIBNDTYPESDIR = "%s/ndtypes" % localdir
+    CONFIGURE_INCLUDES = "%s/ndtypes" % localdir
+    CONFIGURE_LIBS = CONFIGURE_INCLUDES
+    INCLUDES = LIBS = [CONFIGURE_INCLUDES]
+    LIBXNDDIR = "%s/xnd" % localdir
+    INSTALL_LIBS = False
+
+    if sys.platform == "darwin": # homebrew bug
+        sys.argv.append("--prefix=")
+
+elif len(sys.argv) == 2:
     if sys.argv[1] == 'module':
        sys.argv[1] = 'build'
     if sys.argv[1] == 'module_install' or sys.argv[1] == 'conda_install':
