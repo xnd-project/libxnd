@@ -2689,11 +2689,32 @@ CONST_XND(const PyObject *v)
 }
 
 static PyObject *
+Xnd_EmptyFromType(ndt_t *t)
+{
+    MemoryBlockObject *mblock;
+    PyObject *type;
+
+    type = Ndt_FromType(t);
+    if (type == NULL) {
+        return NULL;
+    }
+
+    mblock = mblock_empty(type);
+    Py_DECREF(type);
+    if (mblock == NULL) {
+        return NULL;
+    }
+
+    return pyxnd_from_mblock(&Xnd_Type, mblock);
+}
+
+static PyObject *
 init_api(void)
 {
     xnd_api[Xnd_CheckExact_INDEX] = (void *)Xnd_CheckExact;
     xnd_api[Xnd_Check_INDEX] = (void *)Xnd_Check;
     xnd_api[CONST_XND_INDEX] = (void *)CONST_XND;
+    xnd_api[Xnd_EmptyFromType_INDEX] = (void *)Xnd_EmptyFromType;
 
     return PyCapsule_New(xnd_api, "xnd._xnd._API", NULL);
 }

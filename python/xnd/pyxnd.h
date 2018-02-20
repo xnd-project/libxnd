@@ -38,6 +38,7 @@ extern "C" {
 #endif
 
 
+#include "ndtypes.h"
 #include "xnd.h"
 
 
@@ -53,13 +54,18 @@ extern "C" {
 #define CONST_XND_RETURN const xnd_t *
 #define CONST_XND_ARGS (const PyObject *)
 
-#define XND_MAX_API 3
+#define Xnd_EmptyFromType_INDEX 3
+#define Xnd_EmptyFromType_RETURN PyObject *
+#define Xnd_EmptyFromType_ARGS (ndt_t *t)
+
+#define XND_MAX_API 4
 
 
 #ifdef XND_MODULE
 static Xnd_CheckExact_RETURN Xnd_CheckExact Xnd_CheckExact_ARGS;
 static Xnd_Check_RETURN Xnd_Check Xnd_Check_ARGS;
 static CONST_XND_RETURN CONST_XND CONST_XND_ARGS;
+static Xnd_EmptyFromType_RETURN Xnd_EmptyFromType Xnd_EmptyFromType_ARGS;
 #else
 static void **_xnd_api;
 
@@ -71,6 +77,9 @@ static void **_xnd_api;
 
 #define CONST_XND \
     (*(CONST_XND_RETURN (*)CONST_XND_ARGS) _xnd_api[CONST_XND_INDEX])
+
+#define Xnd_EmptyFromType \
+    (*(Xnd_EmptyFromType_RETURN (*)Xnd_EmptyFromType_ARGS) _xnd_api[Xnd_EmptyFromType_INDEX])
 
 static int
 import_xnd(void)
