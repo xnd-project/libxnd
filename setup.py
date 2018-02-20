@@ -196,7 +196,7 @@ elif len(sys.argv) == 2:
 def ndtypes_ext():
     include_dirs = ["libxnd", "ndtypes/python/ndtypes"] + INCLUDES
     library_dirs = ["libxnd", "ndtypes/libndtypes"] + LIBS
-    depends = ["libxnd/xnd.h", "python/xnd/util.h"]
+    depends = ["libxnd/xnd.h", "python/xnd/util.h", "python/xnd/pyxnd.h"]
     sources = ["python/xnd/_xnd.c"]
 
     if sys.platform == "win32":
@@ -274,7 +274,9 @@ setup (
     install_requires = ["ndtypes == v0.2.0dev3"],
     package_dir = {"": "python"},
     packages = ["xnd"],
-    package_data = {"xnd": ["libxnd*", "xnd.h"] if INSTALL_LIBS else []},
+    package_data = {"xnd": ["libxnd*", "xnd.h", "pyxnd.h"]
+                           if INSTALL_LIBS
+                           else ["pyxnd.h"]},
     ext_modules = [ndtypes_ext()],
 )
 

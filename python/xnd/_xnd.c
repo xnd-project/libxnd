@@ -43,6 +43,9 @@
 #include "util.h"
 #include "docstrings.h"
 
+#define XND_MODULE
+#include "pyxnd.h"
+
 
 #ifdef _MSC_VER
   #ifndef UNUSED
@@ -1191,8 +1194,6 @@ typedef struct {
 } XndObject;
 
 static PyTypeObject Xnd_Type;
-#define Xnd_CheckExact(v) (Py_TYPE(v) == &Xnd_Type)
-#define Xnd_Check(v) PyObject_TypeCheck(v, &Xnd_Type)
 
 #define TYPE_OWNER(v) (((XndObject *)v)->type)
 #define XND(v) (((XndObject *)v)->xnd)
@@ -2661,6 +2662,49 @@ static PyTypeObject Xnd_Type =
     PyObject_GC_Del,                        /* tp_free */
 };
 
+
+/****************************************************************************/
+/*                                   C-API                                  */
+/****************************************************************************/
+
+static void **xnd_api[XND_MAX_API];
+
+static int
+Xnd_CheckExact(const PyObject *v)
+{
+    return Py_TYPE(v) == &Xnd_Type;
+}
+
+static int
+Xnd_Check(const PyObject *v)
+{
+    return PyObject_TypeCheck(v, &Xnd_Type);
+}
+
+static const xnd_t *
+CONST_XND(const PyObject *v)
+{
+    assert(Xnd_Check(v));
+    return &((XndObject *)v)->xnd;
+}
+
+static PyObject *
+init_api(void)
+{
+    xnd_api[Xnd_CheckExact_INDEX] = (void *)Xnd_CheckExact;
+    xnd_api[Xnd_Check_INDEX] = (void *)Xnd_Check;
+    xnd_api[CONST_XND_INDEX] = (void *)CONST_XND;
+
+    return PyCapsule_New(xnd_api, "xnd._xnd._API", NULL);
+}
+
+
+/****************************************************************************/
+/*                                  Module                                  */
+/****************************************************************************/
+
+
+
 static struct PyModuleDef xnd_module = {
     PyModuleDef_HEAD_INIT,        /* m_base */
     "_xnd",                       /* m_name */
@@ -2678,10 +2722,15 @@ PyMODINIT_FUNC
 PyInit__xnd(void)
 {
     PyObject *m = NULL;
+    static PyObject *capsule = NULL;
     static int initialized = 0;
 
     if (!initialized) {
         if (import_ndtypes() < 0) {
+            return NULL;
+        }
+        capsule = init_api();
+        if (capsule == NULL) {
             return NULL;
         }
         initialized = 1;
