@@ -157,7 +157,7 @@ if len(sys.argv) == 3 and sys.argv[1] == "install" and \
     CONFIGURE_LIBS = CONFIGURE_INCLUDES
     INCLUDES = LIBS = [CONFIGURE_INCLUDES]
     LIBXNDDIR = "%s/xnd" % localdir
-    INSTALL_LIBS = False
+    INSTALL_LIBS = True
 
     if sys.platform == "darwin": # homebrew bug
         sys.argv.append("--prefix=")
