@@ -46,7 +46,7 @@ Importing PEP-3118 buffers is supported.
 
 # Ensure that libndtypes is loaded and initialized.
 from ndtypes import ndt, MAX_DIM
-from ._xnd import _xnd, XndEllipsis
+from ._xnd import Xnd, XndEllipsis
 from itertools import accumulate
 from pprint import pformat
 
@@ -57,7 +57,7 @@ __all__ = ['xnd', 'XndEllipsis', 'typeof', '_typeof']
 #                              xnd object
 # ======================================================================
 
-class xnd(_xnd):
+class xnd(Xnd):
     """General container type for unboxing a wide range of Python values
        to typed memory blocks.
 
