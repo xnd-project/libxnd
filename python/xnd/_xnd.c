@@ -2784,6 +2784,11 @@ PyInit__xnd(void)
         goto error;
     }
 
+    Py_INCREF(capsule);
+    if (PyModule_AddObject(m, "_API", capsule) < 0) {
+        goto error;
+    }
+
     return m;
 
 error:
