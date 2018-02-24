@@ -2689,7 +2689,7 @@ CONST_XND(const PyObject *v)
 }
 
 static PyObject *
-Xnd_EmptyFromType(ndt_t *t)
+Xnd_EmptyFromType(PyTypeObject *tp, ndt_t *t)
 {
     MemoryBlockObject *mblock;
     PyObject *type;
@@ -2705,7 +2705,7 @@ Xnd_EmptyFromType(ndt_t *t)
         return NULL;
     }
 
-    return pyxnd_from_mblock(&Xnd_Type, mblock);
+    return pyxnd_from_mblock(tp, mblock);
 }
 
 static PyObject *

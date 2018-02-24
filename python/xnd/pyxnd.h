@@ -56,7 +56,7 @@ extern "C" {
 
 #define Xnd_EmptyFromType_INDEX 3
 #define Xnd_EmptyFromType_RETURN PyObject *
-#define Xnd_EmptyFromType_ARGS (ndt_t *t)
+#define Xnd_EmptyFromType_ARGS (PyTypeObject *, ndt_t *t)
 
 #define XND_MAX_API 4
 
