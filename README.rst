@@ -29,3 +29,8 @@ data.
 
 
 http://xnd.readthedocs.io/en/latest/
+
+
+.. image:: https://badges.gitter.im/Plures/xnd.svg
+   :alt: Join the chat at https://gitter.im/Plures/xnd
+   :target: https://gitter.im/Plures/xnd?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
