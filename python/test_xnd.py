@@ -475,10 +475,9 @@ class TestEllipsisDim(unittest.TestCase):
                (ValueError, "... * %s" % s),
                (ValueError, "Dims... * %s" % s),
                (ValueError, "... * 10 * %s" % s),
-               (ValueError, "10 * A... * 10 * %s" % s),
-               (ValueError, "10 * 10 * B... * ref(%s)" % s),
-               (ValueError, "10 * A... * 10 * Some(ref(%s))" % s),
-               (ValueError, "10 * 10 * B... * Some(ref(ref(%s)))" % s)]:
+               (ValueError, "B... *2 * 3 * ref(%s)" % s),
+               (ValueError, "A... * 10 * Some(ref(%s))" % s),
+               (ValueError, "B... * 2 * 3 * Some(ref(ref(%s)))" % s)]:
 
                 t = ndt(ss)
                 self.assertRaises(err, xnd.empty, t)
