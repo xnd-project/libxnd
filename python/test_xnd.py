@@ -475,7 +475,6 @@ class TestEllipsisDim(unittest.TestCase):
                (ValueError, "... * %s" % s),
                (ValueError, "Dims... * %s" % s),
                (ValueError, "... * 10 * %s" % s),
-               (ValueError, "10 * ... * 10 * %s" % s),
                (ValueError, "10 * A... * 10 * %s" % s),
                (ValueError, "10 * 10 * B... * ref(%s)" % s),
                (ValueError, "10 * A... * 10 * Some(ref(%s))" % s),
