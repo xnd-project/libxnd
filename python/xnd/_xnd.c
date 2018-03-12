@@ -2709,12 +2709,46 @@ Xnd_EmptyFromType(PyTypeObject *tp, ndt_t *t)
 }
 
 static PyObject *
+Xnd_ViewMoveNdt(const PyObject *v, ndt_t *t)
+{
+    XndObject *src = (XndObject *)v;
+    XndObject *view;
+    PyObject *type;
+
+    if (!Xnd_Check(v)) {
+        PyErr_SetString(PyExc_TypeError, "expected xnd object");
+        ndt_del(t);
+        return NULL;
+    }
+
+    type = Ndt_MoveSubtree(src->type, t);
+    if (type == NULL) {
+        return NULL;
+    }
+
+    view = pyxnd_alloc(Py_TYPE(src));
+    if (view == NULL) {
+        Py_DECREF(type);
+        return NULL;
+    }
+
+    Py_INCREF(src->mblock);
+    view->mblock = src->mblock;
+    view->type = type;
+    view->xnd = src->xnd;
+    view->xnd.type = t;
+
+    return (PyObject *)view;
+}
+
+static PyObject *
 init_api(void)
 {
     xnd_api[Xnd_CheckExact_INDEX] = (void *)Xnd_CheckExact;
     xnd_api[Xnd_Check_INDEX] = (void *)Xnd_Check;
     xnd_api[CONST_XND_INDEX] = (void *)CONST_XND;
     xnd_api[Xnd_EmptyFromType_INDEX] = (void *)Xnd_EmptyFromType;
+    xnd_api[Xnd_ViewMoveNdt_INDEX] = (void *)Xnd_ViewMoveNdt;
 
     return PyCapsule_New(xnd_api, "xnd._xnd._API", NULL);
 }
