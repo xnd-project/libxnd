@@ -3480,8 +3480,8 @@ fi
 $as_echo "$with_includes" >&6; }
 
 if test "$with_includes" = "none"; then
-    CONFIGURE_INCLUDES=../ndtypes/libndtypes
-    CONFIGURE_INCLUDES_TEST=../../ndtypes/libndtypes
+    CONFIGURE_INCLUDES="../ndtypes/libndtypes -I../libplasma"
+    CONFIGURE_INCLUDES_TEST="../../ndtypes/libndtypes -I../../libplasma"
 else
     CONFIGURE_INCLUDES=$with_includes
     CONFIGURE_INCLUDES_TEST=$with_includes
@@ -3506,8 +3506,8 @@ fi
 $as_echo "$with_libs" >&6; }
 
 if test "$with_libs" = "none"; then
-    CONFIGURE_LIBS=../ndtypes/libndtypes
-    CONFIGURE_LIBS_TEST=../../ndtypes/libndtypes
+    CONFIGURE_LIBS="../ndtypes/libndtypes -I../libplasma"
+    CONFIGURE_LIBS_TEST="../../ndtypes/libndtypes -I../../libplasma"
 else
     CONFIGURE_LIBS=$with_libs
     CONFIGURE_LIBS_TEST=$with_libs
