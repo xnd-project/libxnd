@@ -29,7 +29,7 @@ default: $(LIBSTATIC) $(LIBSHARED)
 
 OBJS = bitmaps.o xnd.o
 
-SHARED_OBJS = .objs/bitmaps.o .objs/xnd.o
+SHARED_OBJS = .objs/bitmaps.o .objs/xnd.o .objs/xndp.o
 
 
 $(LIBSTATIC): Makefile $(OBJS)
@@ -56,6 +56,14 @@ Makefile xnd.c xnd.h
 .objs/xnd.o:\
 Makefile xnd.c xnd.h
 	$(CC) $(XND_CFLAGS_SHARED) -c xnd.c -o .objs/xnd.o
+
+xndp.o:\
+Makefile xndp.c xndp.h
+	$(CC) $(XND_CFLAGS) -c xndp.c
+
+.objs/xndp.o:\
+Makefile xndp.c xndp.h
+	$(CC) $(XND_CFLAGS_SHARED) -c xndp.c -o .objs/xndp.o
 
 
 # Coverage
