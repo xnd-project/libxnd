@@ -770,6 +770,7 @@ xnd_as_ndarray(xnd_ndarray_t *a, const xnd_t *x, ndt_context_t *ctx)
         if (t->ndim == 0) {
             a->ndim = t->ndim;
             a->itemsize = t->datasize;
+            a->nelem = 1;
             a->ptr = x->ptr + x->index * t->datasize;
             return 0;
         }
@@ -779,6 +780,7 @@ xnd_as_ndarray(xnd_ndarray_t *a, const xnd_t *x, ndt_context_t *ctx)
 
     a->ndim = t->ndim;
     a->itemsize = t->Concrete.FixedDim.itemsize;
+    a->nelem = t->datasize / t->Concrete.FixedDim.itemsize;
     a->ptr = x->ptr + x->index * a->itemsize;
 
     for (i=0; t->ndim > 0; i++, t=t->FixedDim.type) {
