@@ -253,11 +253,19 @@ xnd_init(xnd_t x, const uint32_t flags, ndt_context_t *ctx)
         return 0;
     }
 
-    /* Nominal represents an opaque piece of memory that just has a size
-       and an alignment. If it represents a pointer, the pointer needs to
-       be externally initialized and does not belong to the memory block. */
-    case Nominal:
+    /* Nominal is a globally unique typedef. */
+    case Nominal: {
+        next.index = 0;
+        next.type = t->Nominal.type;
+        next.ptr = x.ptr;
+
+        if (xnd_init(next, flags, ctx) < 0) {
+            xnd_clear(next, flags);
+            return -1;
+        }
+
         return 0;
+    }
 
     /* Categorical is already initialized by calloc(). */
     case Categorical:
@@ -538,9 +546,13 @@ xnd_clear(xnd_t x, const uint32_t flags)
         return;
     }
 
-    case Nominal:
-        /* The Nominal type is opaque: no deallocation strategy is known. */
+    case Nominal: {
+        next.index = 0;
+        next.type = t->Nominal.type;
+        next.ptr = x.ptr;
+        xnd_clear(next, flags);
         return;
+    }
 
     case Bool:
     case Int8: case Int16: case Int32: case Int64:
@@ -733,6 +745,19 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
 
         next.index = 0;
         next.type = t->Constr.type;
+        next.ptr = x.ptr;
+
+        return xnd_subtree(next, indices, len, ctx);
+    }
+
+   case Nominal: {
+        next.bitmap = xnd_bitmap_next(&x, 0, ctx);
+        if (ndt_err_occurred(ctx)) {
+            return xnd_error;
+        }
+
+        next.index = 0;
+        next.type = t->Nominal.type;
         next.ptr = x.ptr;
 
         return xnd_subtree(next, indices, len, ctx);

@@ -732,9 +732,15 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case Nominal: {
-        PyErr_SetString(PyExc_NotImplementedError,
-            "the 'nominal' type is opaque and only useful on the C level");
-        return -1;
+        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
+        if (ndt_err_occurred(&ctx)) {
+            return seterr_int(&ctx);
+        }
+
+        next.index = 0;
+        next.type = t->Nominal.type;
+        next.ptr = x.ptr;
+        return mblock_init(next, v);
     }
 
     case Bool: {
@@ -1555,9 +1561,15 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
     }
 
     case Nominal: {
-        PyErr_SetString(PyExc_NotImplementedError,
-            "the 'nominal' type is opaque and only useful on the C level");
-        return NULL;
+        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
+        if (ndt_err_occurred(&ctx)) {
+            return seterr(&ctx);
+        }
+
+        next.index = 0;
+        next.type = t->Nominal.type;
+        next.ptr = x.ptr;
+        return _pyxnd_value(next, maxshape);
     }
 
     case Bool: {
@@ -1923,6 +1935,19 @@ pyxnd_len(xnd_t x)
         return pyxnd_len(next);
     }
 
+    case Nominal: {
+        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
+        if (ndt_err_occurred(&ctx)) {
+            return seterr_int(&ctx);
+        }
+
+        next.index = 0;
+        next.type = t->Nominal.type;
+        next.ptr = x.ptr;
+
+        return pyxnd_len(next);
+    }
+
     default:
         PyErr_SetString(PyExc_TypeError, "type has no len()");
         return -1;
@@ -2112,6 +2137,19 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len, bool indexable)
 
         next.index = 0;
         next.type = t->Constr.type;
+        next.ptr = x.ptr;
+
+        return pyxnd_subtree(next, indices, len, false);
+    }
+
+    case Nominal: {
+        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
+        if (ndt_err_occurred(&ctx)) {
+            return seterr_xnd(&ctx);
+        }
+
+        next.index = 0;
+        next.type = t->Nominal.type;
         next.ptr = x.ptr;
 
         return pyxnd_subtree(next, indices, len, false);
@@ -2375,7 +2413,7 @@ value_or_view_copy(XndObject *self, xnd_t x)
 
     if (x.type->ndim == 0) {
         switch (x.type->tag) {
-        case Tuple: case Record: case Ref: case Constr:
+        case Tuple: case Record: case Ref: case Constr: case Nominal:
             return pyxnd_view_copy_type(self, x);
         default:
             return _pyxnd_value(x, INT64_MAX);
@@ -2394,7 +2432,7 @@ value_or_view_move(XndObject *self, xnd_t x)
 
     if (x.type->ndim == 0) {
         switch (x.type->tag) {
-        case Tuple: case Record: case Ref: case Constr:
+        case Tuple: case Record: case Ref: case Constr: case Nominal:
             return pyxnd_view_move_type(self, x);
         default:
             return _pyxnd_value(x, INT64_MAX);

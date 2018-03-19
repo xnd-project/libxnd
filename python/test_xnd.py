@@ -32,7 +32,7 @@
 
 import sys, unittest, argparse
 from math import isinf, isnan
-from ndtypes import ndt
+from ndtypes import ndt, typedef
 from xnd import xnd, XndEllipsis
 from xnd_support import *
 from xnd_randvalue import *
@@ -784,7 +784,89 @@ class TestConstr(unittest.TestCase):
 
 class TestNominal(unittest.TestCase):
 
-    def test_nominal(self):
+    def test_nominal_empty(self):
+        c = 0
+        for v, s in DTYPE_EMPTY_TEST_CASES:
+            typedef("some%d" % c, s)
+            typedef("just%d" % c, "some%d" %c)
+
+            for vv, ss in [
+               (v, "some%d" % c),
+               (v, "just%d" % c)]:
+
+                t = ndt(ss)
+                x = xnd.empty(ss)
+                self.assertEqual(x.type, t)
+                self.assertEqual(x.value, vv)
+                assertEqualWithEx(self, len, x, vv)
+
+            c += 1
+
+    def test_nominal_empty_view(self):
+        # If a typedef is a dtype but contains an array itself, indexing should
+        # return a view and not a Python value.
+        typedef("inner_array", "4 * 5 * string")
+        inner = 4 * [5 * [""]]
+        x = xnd.empty("2 * 3 * inner_array")
+
+        y = x[1][2]
+        self.assertIsInstance(y, xnd)
+        self.assertEqual(y.value, inner)
+
+        y = x[1, 2]
+        self.assertIsInstance(y, xnd)
+        self.assertEqual(y.value, inner)
+
+    def test_nominal_indexing(self):
+        # If a typedef is a dtype but contains an array itself, indexing through
+        # the constructor should work transparently.
+        typedef("inner", "4 * 5 * string")
+        inner = [['a', 'b', 'c', 'd', 'e'],
+                 ['f', 'g', 'h', 'i', 'j'],
+                 ['k', 'l', 'm', 'n', 'o'],
+                 ['p', 'q', 'r', 's', 't']]
+
+        v = 2 * [3 * [inner]]
+
+        x = xnd(v, type="2 * 3 * inner")
+
+        for i in range(2):
+            for j in range(3):
+                for k in range(4):
+                    for l in range(5):
+                        self.assertEqual(x[i][j][k][l], inner[k][l])
+                        self.assertEqual(x[i, j, k, l], inner[k][l])
+
+    def test_nominal_assign(self):
+        # If a typedef is a dtype but contains an array itself, assigning through
+        # the constructor should work transparently.
+        typedef("in", "4 * 5 * string")
+        inner = [['a', 'b', 'c', 'd', 'e'],
+                 ['f', 'g', 'h', 'i', 'j'],
+                 ['k', 'l', 'm', 'n', 'o'],
+                 ['p', 'q', 'r', 's', 't']]
+
+        v = 2 * [3 * [inner]]
+
+        x = xnd(v, type="2 * 3 * in")
+
+        for i in range(2):
+            for j in range(3):
+                for k in range(4):
+                    for l in range(5):
+                        x[i][j][k][l] = inner[k][l] = "%d" % (k * 5 + l)
+
+        self.assertEqual(x.value, v)
+
+        for i in range(2):
+            for j in range(3):
+                for k in range(4):
+                    for l in range(5):
+                        x[i][j][k][l] = inner[k][l] = "%d" % (k * 5 + l + 1)
+
+        self.assertEqual(x.value, v)
+
+    def test_nominal_error(self):
         self.assertRaises(ValueError, xnd.empty, "undefined_t")
 
 
