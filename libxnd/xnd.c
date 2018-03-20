@@ -123,7 +123,6 @@ xnd_init(xnd_t x, const uint32_t flags, ndt_context_t *ctx)
     /* Add and reset the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
-        x.index = 0;
     }
 
     switch (t->tag) {
@@ -459,7 +458,6 @@ xnd_clear(xnd_t x, const uint32_t flags)
     /* Add and reset the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
-        x.index = 0;
     }
 
     switch (t->tag) {
@@ -648,7 +646,6 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
     /* Add and reset the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
-        x.index = 0;
     }
 
     i = indices[0];

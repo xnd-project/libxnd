@@ -557,7 +557,6 @@ mblock_init(xnd_t x, PyObject *v)
     /* Add and reset the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
-        x.index = 0;
     }
 
     switch (t->tag) {
@@ -1365,7 +1364,6 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
     /* Add and reset the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
-        x.index = 0;
     }
 
     switch (t->tag) {
@@ -2040,7 +2038,6 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len, bool indexable)
     /* Add and reset the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
-        x.index = 0;
     }
 
     key = indices[0];
@@ -2227,7 +2224,6 @@ pyxnd_index(xnd_t x, PyObject *indices[], int len)
     /* Add and reset the linear index. */
     if (t->ndim == 0) {
         x.ptr += x.index * t->datasize;
-        x.index = 0;
     }
 
     key = indices[0];

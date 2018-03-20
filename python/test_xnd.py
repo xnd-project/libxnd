@@ -550,6 +550,11 @@ class TestTuple(unittest.TestCase):
             s = "(1073741824 * uint8, 1073741823 * uint8)"
             self.assertRaises(MemoryError, xnd.empty, s)
 
+    def test_tuple_optional_values(self):
+        lst = [(None, 1, 2), (3, None, 4), (5, 6, None)]
+        x = xnd(lst, dtype="(?int64, ?int64, ?int64)")
+        self.assertEqual(x.value, lst)
+
 
 class TestRecord(unittest.TestCase):
 
@@ -614,6 +619,12 @@ class TestRecord(unittest.TestCase):
             # Allocation fails.
             s = "{a: 1073741824 * uint8, b: 1073741823 * uint8}"
             self.assertRaises(MemoryError, xnd.empty, s)
+
+    def test_record_optional_values(self):
+        lst = [R['a': None, 'b': 2, 'c': 3], R['a': 4, 'b': None, 'c': 5],
+               R['a': 5, 'b': 6, 'c': None]]
+        x = xnd(lst, dtype="{a: ?int64, b: ?int64, c: ?int64}")
+        self.assertEqual(x.value, lst)
 
 
 class TestRef(unittest.TestCase):
