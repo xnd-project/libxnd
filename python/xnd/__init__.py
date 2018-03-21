@@ -48,7 +48,7 @@ Importing PEP-3118 buffers is supported.
 from ndtypes import ndt, MAX_DIM
 from ._xnd import Xnd, XndEllipsis
 from itertools import accumulate
-from pprint import pformat
+from .contrib.pretty import pretty
 
 __all__ = ['xnd', 'XndEllipsis', 'typeof', '_typeof']
 
@@ -118,9 +118,11 @@ class xnd(Xnd):
 
     def __repr__(self):
         value = self.short_value(maxshape=10)
-        fmt = pformat(value, compact=True)
-        value_fmt = fmt.replace("\n", "\n    ")
-        return "xnd(%s, type=\"%s\")" % (value_fmt, self.type)
+        fmt = pretty((value, "@type='%s'@" % self.type), max_width=120)
+        fmt = fmt.replace('"@', "")
+        fmt = fmt.replace('@"', "")
+        fmt = fmt.replace("\n", "\n   ")
+        return "xnd%s" % fmt
 
 
 # ======================================================================
