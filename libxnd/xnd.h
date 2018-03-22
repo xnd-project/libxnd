@@ -144,6 +144,136 @@ XND_API extern const xnd_t xnd_error;
 
 
 /*****************************************************************************/
+/*                           Static inline functions                         */
+/*****************************************************************************/
+
+/*
+ * This looks inefficient, but both gcc and clang clean up unused xnd_t members.
+ */
+static inline xnd_t
+xnd_fixed_dim_next(const xnd_t *x, const int64_t i)
+{
+    const ndt_t *t = x->type;
+    const ndt_t *u = t->FixedDim.type;
+    const int64_t step = i * t->Concrete.FixedDim.step;
+    xnd_t next;
+
+    next.bitmap = x->bitmap;
+    next.index = x->index + step;
+    next.type = u;
+    next.ptr = u->ndim==0 ? x->ptr + next.index * next.type->datasize : x->ptr;
+
+    return next;
+}
+
+static inline xnd_t
+xnd_var_dim_next(const xnd_t *x, const int64_t start, const int64_t step,
+                 const int64_t i)
+{
+    const ndt_t *t = x->type;
+    const ndt_t *u = t->VarDim.type;
+    xnd_t next;
+
+    next.bitmap = x->bitmap;
+    next.index = start + i * step;
+    next.type = u;
+    next.ptr = u->ndim==0 ? x->ptr + next.index * next.type->datasize : x->ptr;
+
+    return next;
+}
+
+static inline xnd_t
+xnd_tuple_next(const xnd_t *x, const int64_t i, ndt_context_t *ctx)
+{
+    const ndt_t *t = x->type;
+    xnd_t next;
+
+    next.bitmap = xnd_bitmap_next(x, i, ctx);
+    if (ndt_err_occurred(ctx)) {
+        return xnd_error;
+    }
+
+    next.index = 0;
+    next.type = t->Tuple.types[i];
+    next.ptr = x->ptr + t->Concrete.Tuple.offset[i];
+
+    return next;
+}
+
+static inline xnd_t
+xnd_record_next(const xnd_t *x, const int64_t i, ndt_context_t *ctx)
+{
+    const ndt_t *t = x->type;
+    xnd_t next;
+
+    next.bitmap = xnd_bitmap_next(x, i, ctx);
+    if (ndt_err_occurred(ctx)) {
+        return xnd_error;
+    }
+
+    next.index = 0;
+    next.type = t->Record.types[i];
+    next.ptr = x->ptr + t->Concrete.Record.offset[i];
+
+    return next;
+}
+
+static inline xnd_t
+xnd_ref_next(const xnd_t *x, ndt_context_t *ctx)
+{
+    const ndt_t *t = x->type;
+    xnd_t next;
+
+    next.bitmap = xnd_bitmap_next(x, 0, ctx);
+    if (ndt_err_occurred(ctx)) {
+        return xnd_error;
+    }
+
+    next.index = 0;
+    next.type = t->Ref.type;
+    next.ptr = XND_POINTER_DATA(x->ptr);
+
+    return next;
+}
+
+static inline xnd_t
+xnd_constr_next(const xnd_t *x, ndt_context_t *ctx)
+{
+    const ndt_t *t = x->type;
+    xnd_t next;
+
+    next.bitmap = xnd_bitmap_next(x, 0, ctx);
+    if (ndt_err_occurred(ctx)) {
+        return xnd_error;
+    }
+
+    next.index = 0;
+    next.type = t->Constr.type;
+    next.ptr = x->ptr;
+
+    return next;
+}
+
+static inline xnd_t
+xnd_nominal_next(const xnd_t *x, ndt_context_t *ctx)
+{
+    const ndt_t *t = x->type;
+    xnd_t next;
+
+    next.bitmap = xnd_bitmap_next(x, 0, ctx);
+    if (ndt_err_occurred(ctx)) {
+        return xnd_error;
+    }
+
+    next.index = 0;
+    next.type = t->Nominal.type;
+    next.ptr = x->ptr;
+
+    return next;
+}
+
+
+/*****************************************************************************/
 /*                               Unstable API                                */
 /*****************************************************************************/
 

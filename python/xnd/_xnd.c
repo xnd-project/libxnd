@@ -147,7 +147,7 @@ typedef struct {
     Py_buffer *view;   /* PEP-3118 imports */
 } MemoryBlockObject;
 
-static int mblock_init(xnd_t x, PyObject *v);
+static int mblock_init(xnd_t *x, PyObject *v);
 static PyTypeObject MemoryBlock_Type;
 
 
@@ -231,7 +231,7 @@ mblock_from_typed_value(PyObject *type, PyObject *value)
         return NULL;
     }
 
-    if (mblock_init(self->xnd->master, value) < 0) {
+    if (mblock_init(&self->xnd->master, value) < 0) {
         Py_DECREF(self);
         return NULL;
     }
@@ -523,11 +523,10 @@ get_uint(PyObject *v, uint64_t max)
 }
 
 static int
-mblock_init(xnd_t x, PyObject *v)
+mblock_init(xnd_t *x, PyObject *v)
 {
     NDT_STATIC_CONTEXT(ctx);
-    const ndt_t *t = x.type;
-    xnd_t next;
+    const ndt_t *t = x->type;
 
     if (!check_invariants(t)) {
         return -1;
@@ -547,21 +546,17 @@ mblock_init(xnd_t x, PyObject *v)
         }
 
         if (v == Py_None) {
-            xnd_set_na(&x);
+            xnd_set_na(x);
             return 0;
         }
 
-        xnd_set_valid(&x);
-    }
-
-    /* Add and reset the linear index. */
-    if (t->ndim == 0) {
-        x.ptr += x.index * t->datasize;
+        xnd_set_valid(x);
     }
 
     switch (t->tag) {
     case FixedDim: {
-        int64_t shape, i;
+        const int64_t shape = t->FixedDim.shape;
+        int64_t i;
 
         if (!PyList_Check(v)) {
             PyErr_Format(PyExc_TypeError,
@@ -569,19 +564,15 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        shape = t->FixedDim.shape;
         if (PyList_GET_SIZE(v) != shape) {
             PyErr_Format(PyExc_ValueError,
                 "xnd: expected list with size %" PRIi64, shape);
             return -1;
         }
 
-        next = x;
-        next.type = t->FixedDim.type;
-
         for (i = 0; i < shape; i++) {
-            next.index = x.index + i * t->Concrete.FixedDim.step;
-            if (mblock_init(next, PyList_GET_ITEM(v, i)) < 0) {
+            xnd_t next = xnd_fixed_dim_next(x, i);
+            if (mblock_init(&next, PyList_GET_ITEM(v, i)) < 0) {
                 return -1;
             }
         }
@@ -599,7 +590,7 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        shape = ndt_var_indices(&start, &step, t, x.index, &ctx);
+        shape = ndt_var_indices(&start, &step, t, x->index, &ctx);
         if (shape < 0) {
             return seterr_int(&ctx);
         }
@@ -610,12 +601,9 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        next = x;
-        next.type = t->VarDim.type;
-
         for (i = 0; i < shape; i++) {
-            next.index =  start + i * step;
-            if (mblock_init(next, PyList_GET_ITEM(v, i)) < 0) {
+            xnd_t next = xnd_var_dim_next(x, start, step, i);
+            if (mblock_init(&next, PyList_GET_ITEM(v, i)) < 0) {
                 return -1;
             }
         }
@@ -624,7 +612,8 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case Tuple: {
-        int64_t shape, i;
+        const int64_t shape = t->Tuple.shape;
+        int64_t i;
 
         if (!PyTuple_Check(v)) {
             PyErr_Format(PyExc_TypeError,
@@ -632,25 +621,19 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        shape = t->Tuple.shape;
         if (PyTuple_GET_SIZE(v) != shape) {
             PyErr_Format(PyExc_ValueError,
                 "xnd: expected tuple with size %" PRIi64, shape);
             return -1;
         }
 
-        next.index = 0;
-
         for (i = 0; i < shape; i++) {
-            next.bitmap = xnd_bitmap_next(&x, i, &ctx);
-            if (ndt_err_occurred(&ctx)) {
+            xnd_t next = xnd_tuple_next(x, i, &ctx);
+            if (next.ptr == NULL) {
                 return seterr_int(&ctx);
             }
 
-            next.type = t->Tuple.types[i];
-            next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
-
-            if (mblock_init(next, PyTuple_GET_ITEM(v, i)) < 0) {
+            if (mblock_init(&next, PyTuple_GET_ITEM(v, i)) < 0) {
                 return -1;
             }
         }
@@ -659,8 +642,9 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case Record: {
+        const int64_t shape = t->Record.shape;
         PyObject *tmp;
-        int64_t shape, i;
+        int64_t i;
         int ret;
 
         if (!PyDict_Check(v)) {
@@ -669,23 +653,17 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        shape = t->Record.shape;
         if (PyDict_Size(v) != shape) {
             PyErr_Format(PyExc_ValueError,
                 "xnd: expected dict with size %" PRIi64, shape);
             return -1;
         }
 
-        next.index = 0;
-
         for (i = 0; i < shape; i++) {
-            next.bitmap = xnd_bitmap_next(&x, i, &ctx);
-            if (ndt_err_occurred(&ctx)) {
+            xnd_t next = xnd_record_next(x, i, &ctx);
+            if (next.ptr == NULL) {
                 return seterr_int(&ctx);
             }
-
-            next.type = t->Record.types[i];
-            next.ptr = x.ptr + t->Concrete.Record.offset[i];
 
             tmp = PyMapping_GetItemString(v, t->Record.names[i]);
             if (tmp == NULL) {
@@ -696,7 +674,7 @@ mblock_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            ret = mblock_init(next, tmp);
+            ret = mblock_init(&next, tmp);
             Py_DECREF(tmp);
             if (ret < 0) {
                 return -1;
@@ -707,39 +685,30 @@ mblock_init(xnd_t x, PyObject *v)
     }
 
     case Ref: {
-        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
-        if (ndt_err_occurred(&ctx)) {
+        xnd_t next = xnd_ref_next(x, &ctx);
+        if (next.ptr == NULL) {
             return seterr_int(&ctx);
         }
 
-        next.index = 0;
-        next.type = t->Ref.type;
-        next.ptr = XND_POINTER_DATA(x.ptr);
-        return mblock_init(next, v);
+        return mblock_init(&next, v);
     }
 
     case Constr: {
-        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
-        if (ndt_err_occurred(&ctx)) {
+        xnd_t next = xnd_constr_next(x, &ctx);
+        if (next.ptr == NULL) {
             return seterr_int(&ctx);
         }
 
-        next.index = 0;
-        next.type = t->Constr.type;
-        next.ptr = x.ptr;
-        return mblock_init(next, v);
+        return mblock_init(&next, v);
     }
 
     case Nominal: {
-        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
-        if (ndt_err_occurred(&ctx)) {
+        xnd_t next = xnd_nominal_next(x, &ctx);
+        if (next.ptr == NULL) {
             return seterr_int(&ctx);
         }
 
-        next.index = 0;
-        next.type = t->Nominal.type;
-        next.ptr = x.ptr;
-        return mblock_init(next, v);
+        return mblock_init(&next, v);
     }
 
     case Bool: {
@@ -758,7 +727,7 @@ mblock_init(xnd_t x, PyObject *v)
         }
         b = (bool)tmp;
 
-        PACK_SINGLE(x.ptr, b, bool, t->flags);
+        PACK_SINGLE(x->ptr, b, bool, t->flags);
         return 0;
     }
 
@@ -767,7 +736,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, int8_t, t->flags);
+        PACK_SINGLE(x->ptr, tmp, int8_t, t->flags);
         return 0;
     }
 
@@ -776,7 +745,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, int16_t, t->flags);
+        PACK_SINGLE(x->ptr, tmp, int16_t, t->flags);
         return 0;
     }
 
@@ -785,7 +754,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, int32_t, t->flags);
+        PACK_SINGLE(x->ptr, tmp, int32_t, t->flags);
         return 0;
     }
 
@@ -794,7 +763,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, int64_t, t->flags);
+        PACK_SINGLE(x->ptr, tmp, int64_t, t->flags);
         return 0;
     }
 
@@ -803,7 +772,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == UINT8_MAX && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, uint8_t, t->flags);
+        PACK_SINGLE(x->ptr, tmp, uint8_t, t->flags);
         return 0;
     }
 
@@ -812,7 +781,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == UINT16_MAX && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, uint16_t, t->flags);
+        PACK_SINGLE(x->ptr, tmp, uint16_t, t->flags);
         return 0;
     }
 
@@ -821,7 +790,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == UINT32_MAX && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, uint32_t, t->flags);
+        PACK_SINGLE(x->ptr, tmp, uint32_t, t->flags);
         return 0;
     }
 
@@ -830,7 +799,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == UINT64_MAX && PyErr_Occurred()) {
             return -1;
         }
-        PACK_SINGLE(x.ptr, tmp, uint64_t, t->flags);
+        PACK_SINGLE(x->ptr, tmp, uint64_t, t->flags);
         return 0;
     }
 
@@ -840,7 +809,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        return _PyFloat_Pack2(tmp, (unsigned char *)x.ptr, le(t->flags));
+        return _PyFloat_Pack2(tmp, (unsigned char *)x->ptr, le(t->flags));
 #else
         PyErr_SetString(PyExc_NotImplementedError,
             "half-float not implemented in Python versions < 3.6");
@@ -853,7 +822,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        return _PyFloat_Pack4(tmp, (unsigned char *)x.ptr, le(t->flags));
+        return _PyFloat_Pack4(tmp, (unsigned char *)x->ptr, le(t->flags));
     }
 
     case Float64: {
@@ -861,7 +830,7 @@ mblock_init(xnd_t x, PyObject *v)
         if (tmp == -1 && PyErr_Occurred()) {
             return -1;
         }
-        return _PyFloat_Pack8(tmp, (unsigned char *)x.ptr, le(t->flags));
+        return _PyFloat_Pack8(tmp, (unsigned char *)x->ptr, le(t->flags));
     }
 
     case Complex32: {
@@ -870,10 +839,10 @@ mblock_init(xnd_t x, PyObject *v)
         if (c.real == -1.0 && PyErr_Occurred()) {
             return -1;
         }
-        if (_PyFloat_Pack2(c.real, (unsigned char *)x.ptr, le(t->flags)) < 0) {
+        if (_PyFloat_Pack2(c.real, (unsigned char *)x->ptr, le(t->flags)) < 0) {
             return -1;
         }
-        return _PyFloat_Pack2(c.imag, (unsigned char *)(x.ptr+2), le(t->flags));
+        return _PyFloat_Pack2(c.imag, (unsigned char *)(x->ptr+2), le(t->flags));
 #else
         PyErr_SetString(PyExc_NotImplementedError,
             "half-float not implemented in Python versions < 3.6");
@@ -886,10 +855,10 @@ mblock_init(xnd_t x, PyObject *v)
         if (c.real == -1.0 && PyErr_Occurred()) {
             return -1;
         }
-        if (_PyFloat_Pack4(c.real, (unsigned char *)x.ptr, le(t->flags)) < 0) {
+        if (_PyFloat_Pack4(c.real, (unsigned char *)x->ptr, le(t->flags)) < 0) {
             return -1;
         }
-        return _PyFloat_Pack4(c.imag, (unsigned char *)(x.ptr+4), le(t->flags));
+        return _PyFloat_Pack4(c.imag, (unsigned char *)(x->ptr+4), le(t->flags));
     }
 
     case Complex128: {
@@ -897,10 +866,10 @@ mblock_init(xnd_t x, PyObject *v)
         if (c.real == -1.0 && PyErr_Occurred()) {
             return -1;
         }
-        if (_PyFloat_Pack8(c.real, (unsigned char *)x.ptr, le(t->flags)) < 0) {
+        if (_PyFloat_Pack8(c.real, (unsigned char *)x->ptr, le(t->flags)) < 0) {
             return -1;
         }
-        return _PyFloat_Pack8(c.imag, (unsigned char *)(x.ptr+8), le(t->flags));
+        return _PyFloat_Pack8(c.imag, (unsigned char *)(x->ptr+8), le(t->flags));
     }
 
     case FixedString: {
@@ -932,7 +901,7 @@ mblock_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            _strncpy(x.ptr, PyUnicode_1BYTE_DATA(v), (size_t)len, (size_t)t->datasize);
+            _strncpy(x->ptr, PyUnicode_1BYTE_DATA(v), (size_t)len, (size_t)t->datasize);
             return 0;
         }
 
@@ -950,7 +919,7 @@ mblock_init(xnd_t x, PyObject *v)
                 return -1;
             }
 
-            _strncpy(x.ptr, PyUnicode_1BYTE_DATA(v), (size_t)len, (size_t)t->datasize);
+            _strncpy(x->ptr, PyUnicode_1BYTE_DATA(v), (size_t)len, (size_t)t->datasize);
             return 0;
         }
 
@@ -971,7 +940,7 @@ mblock_init(xnd_t x, PyObject *v)
             /* skip byte order mark */
             assert(len >= 2);
 
-            _strncpy(x.ptr, PyBytes_AS_STRING(b)+2, (size_t)(len-2), (size_t)t->datasize);
+            _strncpy(x->ptr, PyBytes_AS_STRING(b)+2, (size_t)(len-2), (size_t)t->datasize);
             Py_DECREF(b);
 
             return 0;
@@ -994,7 +963,7 @@ mblock_init(xnd_t x, PyObject *v)
             /* skip byte order mark */
             assert(len >= 4);
 
-            _strncpy(x.ptr, PyBytes_AS_STRING(b)+4, (size_t)(len-4), (size_t)t->datasize);
+            _strncpy(x->ptr, PyBytes_AS_STRING(b)+4, (size_t)(len-4), (size_t)t->datasize);
             Py_DECREF(b);
 
             return 0;
@@ -1028,7 +997,7 @@ mblock_init(xnd_t x, PyObject *v)
             return -1;
         }
 
-        _strncpy(x.ptr, PyBytes_AS_STRING(v), (size_t)len, (size_t)size);
+        _strncpy(x->ptr, PyBytes_AS_STRING(v), (size_t)len, (size_t)size);
 
         return 0;
     }
@@ -1048,11 +1017,11 @@ mblock_init(xnd_t x, PyObject *v)
             return seterr_int(&ctx);
         }
 
-        if (XND_POINTER_DATA(x.ptr)) {
-            ndt_free(XND_POINTER_DATA(x.ptr));
+        if (XND_POINTER_DATA(x->ptr)) {
+            ndt_free(XND_POINTER_DATA(x->ptr));
         }
 
-        XND_POINTER_DATA(x.ptr) = s;
+        XND_POINTER_DATA(x->ptr) = s;
         return 0;
     }
 
@@ -1073,12 +1042,12 @@ mblock_init(xnd_t x, PyObject *v)
 
         memcpy(s, cp, size);
 
-        if (XND_BYTES_DATA(x.ptr)) {
-            ndt_aligned_free(XND_BYTES_DATA(x.ptr));
+        if (XND_BYTES_DATA(x->ptr)) {
+            ndt_aligned_free(XND_BYTES_DATA(x->ptr));
         }
 
-        XND_BYTES_SIZE(x.ptr) = size;
-        XND_BYTES_DATA(x.ptr) = (uint8_t *)s;
+        XND_BYTES_SIZE(x->ptr) = size;
+        XND_BYTES_DATA(x->ptr) = (uint8_t *)s;
         return 0;
     }
 
@@ -1094,7 +1063,7 @@ mblock_init(xnd_t x, PyObject *v)
             for (k = 0; k < t->Categorical.ntypes; k++) {
                 if (t->Categorical.types[k].tag == ValBool &&
                     tmp == t->Categorical.types[k].ValBool) {
-                    PACK_SINGLE(x.ptr, k, int64_t, t->flags);
+                    PACK_SINGLE(x->ptr, k, int64_t, t->flags);
                     return 0;
                 }
             }
@@ -1110,7 +1079,7 @@ mblock_init(xnd_t x, PyObject *v)
             for (k = 0; k < t->Categorical.ntypes; k++) {
                 if (t->Categorical.types[k].tag == ValInt64 &&
                     tmp == t->Categorical.types[k].ValInt64) {
-                    PACK_SINGLE(x.ptr, k, int64_t, t->flags);
+                    PACK_SINGLE(x->ptr, k, int64_t, t->flags);
                     return 0;
                 }
             }
@@ -1127,7 +1096,7 @@ mblock_init(xnd_t x, PyObject *v)
                 /* XXX: DBL_EPSILON? */
                 if (t->Categorical.types[k].tag == ValFloat64 &&
                     tmp == t->Categorical.types[k].ValFloat64) {
-                    PACK_SINGLE(x.ptr, k, int64_t, t->flags);
+                    PACK_SINGLE(x->ptr, k, int64_t, t->flags);
                     return 0;
                 }
             }
@@ -1143,7 +1112,7 @@ mblock_init(xnd_t x, PyObject *v)
             for (k = 0; k < t->Categorical.ntypes; k++) {
                 if (t->Categorical.types[k].tag == ValString &&
                     strcmp(tmp, t->Categorical.types[k].ValString) == 0) {
-                    PACK_SINGLE(x.ptr, k, int64_t, t->flags);
+                    PACK_SINGLE(x->ptr, k, int64_t, t->flags);
                     return 0;
                 }
             }
@@ -1153,7 +1122,7 @@ mblock_init(xnd_t x, PyObject *v)
     not_found:
         for (k = 0; k < t->Categorical.ntypes; k++) {
             if (t->Categorical.types[k].tag == ValNA) {
-                PACK_SINGLE(x.ptr, k, int64_t, t->flags);
+                PACK_SINGLE(x->ptr, k, int64_t, t->flags);
                 return 0;
             }
         }
@@ -1201,7 +1170,7 @@ typedef struct {
 static PyTypeObject Xnd_Type;
 
 #define TYPE_OWNER(v) (((XndObject *)v)->type)
-#define XND(v) (((XndObject *)v)->xnd)
+#define XND(v) (&(((XndObject *)v)->xnd))
 #define XND_INDEX(v) (((XndObject *)v)->xnd.index)
 #define XND_TYPE(v) (((XndObject *)v)->xnd.type)
 #define XND_PTR(v) (((XndObject *)v)->xnd.ptr)
@@ -1348,22 +1317,16 @@ dict_set_item(PyObject *dict, const char *k, PyObject *value)
 }
 
 static PyObject *
-_pyxnd_value(xnd_t x, const int64_t maxshape)
+_pyxnd_value(const xnd_t *x, const int64_t maxshape)
 {
     NDT_STATIC_CONTEXT(ctx);
-    const ndt_t *t = x.type;
-    xnd_t next;
+    const ndt_t *t = x->type;
 
     assert(ndt_is_concrete(t));
 
     /* Bitmap access needs the linear index. */
-    if (xnd_is_na(&x)) {
+    if (xnd_is_na(x)) {
         Py_RETURN_NONE;
-    }
-
-    /* Add and reset the linear index. */
-    if (t->ndim == 0) {
-        x.ptr += x.index * t->datasize;
     }
 
     switch (t->tag) {
@@ -1381,17 +1344,14 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
             return NULL;
         }
 
-        next = x;
-        next.type = t->FixedDim.type;
-
         for (i = 0; i < shape; i++) {
             if (i == maxshape-1) {
                 PyList_SET_ITEM(lst, i, xnd_ellipsis());
                 break;
             }
 
-            next.index = x.index + i * t->Concrete.FixedDim.step;
-            v = _pyxnd_value(next, maxshape);
+            const xnd_t next = xnd_fixed_dim_next(x, i);
+            v = _pyxnd_value(&next, maxshape);
             if (v == NULL) {
                 Py_DECREF(lst);
                 return NULL;
@@ -1407,7 +1367,7 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
         int64_t start, step, shape;
         int64_t i;
 
-        shape = ndt_var_indices(&start, &step, t, x.index, &ctx);
+        shape = ndt_var_indices(&start, &step, t, x->index, &ctx);
         if (shape < 0) {
             return seterr(&ctx);
         }
@@ -1420,17 +1380,14 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
             return NULL;
         }
 
-        next = x;
-        next.type = t->VarDim.type;
-
         for (i = 0; i < shape; i++) {
             if (i == maxshape-1) {
                 PyList_SET_ITEM(lst, i, xnd_ellipsis());
                 break;
             }
 
-            next.index = start + i * step;
-            v = _pyxnd_value(next, maxshape);
+            const xnd_t next = xnd_var_dim_next(x, start, step, i);
+            v = _pyxnd_value(&next, maxshape);
             if (v == NULL) {
                 Py_DECREF(lst);
                 return NULL;
@@ -1455,23 +1412,18 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
             return NULL;
         }
 
-        next.index = 0;
-
         for (i = 0; i < shape; i++) {
             if (i == maxshape-1) {
                 PyTuple_SET_ITEM(tuple, i, xnd_ellipsis());
                 break;
             }
 
-            next.bitmap = xnd_bitmap_next(&x, i, &ctx);
-            if (ndt_err_occurred(&ctx)) {
+            const xnd_t next = xnd_tuple_next(x, i, &ctx);
+            if (next.ptr == NULL) {
                 return seterr(&ctx);
             }
 
-            next.type = t->Tuple.types[i];
-            next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
-
-            v = _pyxnd_value(next, maxshape);
+            v = _pyxnd_value(&next, maxshape);
             if (v == NULL) {
                 Py_DECREF(tuple);
                 return NULL;
@@ -1497,8 +1449,6 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
             return NULL;
         }
 
-        next.index = 0;
-
         for (i = 0; i < shape; i++) {
             if (i == maxshape-1) {
                 ret = PyDict_SetItem(dict, &XndEllipsisObject, &XndEllipsisObject);
@@ -1509,15 +1459,12 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
                 break;
             }
 
-            next.bitmap = xnd_bitmap_next(&x, i, &ctx);
-            if (ndt_err_occurred(&ctx)) {
+            const xnd_t next = xnd_record_next(x, i, &ctx);
+            if (next.ptr == NULL) {
                 return seterr(&ctx);
             }
 
-            next.type = t->Record.types[i];
-            next.ptr = x.ptr + t->Concrete.Record.offset[i];
-
-            v = _pyxnd_value(next, maxshape);
+            v = _pyxnd_value(&next, maxshape);
             if (v == NULL) {
                 Py_DECREF(dict);
                 return NULL;
@@ -1535,98 +1482,89 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
     }
 
     case Ref: {
-        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
-        if (ndt_err_occurred(&ctx)) {
+        const xnd_t next = xnd_ref_next(x, &ctx);
+        if (next.ptr == NULL) {
             return seterr(&ctx);
         }
 
-        next.index = 0;
-        next.type = t->Ref.type;
-        next.ptr = XND_POINTER_DATA(x.ptr);
-        return _pyxnd_value(next, maxshape);
+        return _pyxnd_value(&next, maxshape);
     }
 
     case Constr: {
-        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
-        if (ndt_err_occurred(&ctx)) {
+        const xnd_t next = xnd_constr_next(x, &ctx);
+        if (next.ptr == NULL) {
             return seterr(&ctx);
         }
 
-        next.index = 0;
-        next.type = t->Constr.type;
-        next.ptr = x.ptr;
-        return _pyxnd_value(next, maxshape);
+        return _pyxnd_value(&next, maxshape);
     }
 
     case Nominal: {
-        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
-        if (ndt_err_occurred(&ctx)) {
+        const xnd_t next = xnd_nominal_next(x, &ctx);
+        if (next.ptr == NULL) {
             return seterr(&ctx);
         }
 
-        next.index = 0;
-        next.type = t->Nominal.type;
-        next.ptr = x.ptr;
-        return _pyxnd_value(next, maxshape);
+        return _pyxnd_value(&next, maxshape);
     }
 
     case Bool: {
         bool tmp;
-        UNPACK_SINGLE(tmp, x.ptr, bool, t->flags);
+        UNPACK_SINGLE(tmp, x->ptr, bool, t->flags);
         return PyBool_FromLong(tmp);
     }
 
     case Int8: {
         int8_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, int8_t, t->flags);
+        UNPACK_SINGLE(tmp, x->ptr, int8_t, t->flags);
         return PyLong_FromLong(tmp);
     }
 
     case Int16: {
         int16_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, int16_t, t->flags);
+        UNPACK_SINGLE(tmp, x->ptr, int16_t, t->flags);
         return PyLong_FromLong(tmp);
     }
 
     case Int32: {
         int32_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, int32_t, t->flags);
+        UNPACK_SINGLE(tmp, x->ptr, int32_t, t->flags);
         return PyLong_FromLong(tmp);
     }
 
     case Int64: {
         int64_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, int64_t, t->flags);
+        UNPACK_SINGLE(tmp, x->ptr, int64_t, t->flags);
         return PyLong_FromLongLong(tmp);
     }
 
     case Uint8: {
         uint8_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, uint8_t, t->flags);
+        UNPACK_SINGLE(tmp, x->ptr, uint8_t, t->flags);
         return PyLong_FromUnsignedLong(tmp);
     }
 
     case Uint16: {
         uint16_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, uint16_t, t->flags);
+        UNPACK_SINGLE(tmp, x->ptr, uint16_t, t->flags);
         return PyLong_FromUnsignedLong(tmp);
     }
 
     case Uint32: {
         uint32_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, uint32_t, t->flags);
+        UNPACK_SINGLE(tmp, x->ptr, uint32_t, t->flags);
         return PyLong_FromUnsignedLong(tmp);
     }
 
     case Uint64: {
         uint64_t tmp;
-        UNPACK_SINGLE(tmp, x.ptr, uint64_t, t->flags);
+        UNPACK_SINGLE(tmp, x->ptr, uint64_t, t->flags);
         return PyLong_FromUnsignedLongLong(tmp);
     }
 
     case Float16: {
 #if PY_VERSION_HEX >= 0x03060000
-        double tmp = _PyFloat_Unpack2((unsigned char *)x.ptr, le(t->flags));
+        double tmp = _PyFloat_Unpack2((unsigned char *)x->ptr, le(t->flags));
         if (tmp == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
@@ -1639,7 +1577,7 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
     }
 
     case Float32: {
-        double tmp = _PyFloat_Unpack4((unsigned char *)x.ptr, le(t->flags));
+        double tmp = _PyFloat_Unpack4((unsigned char *)x->ptr, le(t->flags));
         if (tmp == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
@@ -1647,7 +1585,7 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
     }
 
     case Float64: {
-        double tmp = _PyFloat_Unpack8((unsigned char *)x.ptr, le(t->flags));
+        double tmp = _PyFloat_Unpack8((unsigned char *)x->ptr, le(t->flags));
         if (tmp == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
@@ -1657,11 +1595,11 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
     case Complex32: {
 #if PY_VERSION_HEX >= 0x03060000
         Py_complex c;
-        c.real = _PyFloat_Unpack2((unsigned char *)x.ptr, le(t->flags));
+        c.real = _PyFloat_Unpack2((unsigned char *)x->ptr, le(t->flags));
         if (c.real == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
-        c.imag = _PyFloat_Unpack2((unsigned char *)x.ptr+2, le(t->flags));
+        c.imag = _PyFloat_Unpack2((unsigned char *)x->ptr+2, le(t->flags));
         if (c.imag == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
@@ -1675,11 +1613,11 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
 
     case Complex64: {
         Py_complex c;
-        c.real = _PyFloat_Unpack4((unsigned char *)x.ptr, le(t->flags));
+        c.real = _PyFloat_Unpack4((unsigned char *)x->ptr, le(t->flags));
         if (c.real == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
-        c.imag = _PyFloat_Unpack4((unsigned char *)x.ptr+4, le(t->flags));
+        c.imag = _PyFloat_Unpack4((unsigned char *)x->ptr+4, le(t->flags));
         if (c.imag == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
@@ -1688,11 +1626,11 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
 
     case Complex128: {
         Py_complex c;
-        c.real = _PyFloat_Unpack8((unsigned char *)x.ptr, le(t->flags));
+        c.real = _PyFloat_Unpack8((unsigned char *)x->ptr, le(t->flags));
         if (c.real == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
-        c.imag = _PyFloat_Unpack8((unsigned char *)x.ptr+8, le(t->flags));
+        c.imag = _PyFloat_Unpack8((unsigned char *)x->ptr+8, le(t->flags));
         if (c.imag == -1.0 && PyErr_Occurred()) {
             return NULL;
         }
@@ -1704,20 +1642,20 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
 
         switch (t->FixedString.encoding) {
         case Ascii:
-            codepoints = u8_skip_trailing_zero((uint8_t *)x.ptr, codepoints);
-            return unicode_from_kind_and_data(PyUnicode_1BYTE_KIND, x.ptr, codepoints);
+            codepoints = u8_skip_trailing_zero((uint8_t *)x->ptr, codepoints);
+            return unicode_from_kind_and_data(PyUnicode_1BYTE_KIND, x->ptr, codepoints);
 
         case Utf8:
-            codepoints = u8_skip_trailing_zero((uint8_t *)x.ptr, codepoints);
-            return unicode_from_kind_and_data(PyUnicode_1BYTE_KIND, x.ptr, codepoints);
+            codepoints = u8_skip_trailing_zero((uint8_t *)x->ptr, codepoints);
+            return unicode_from_kind_and_data(PyUnicode_1BYTE_KIND, x->ptr, codepoints);
 
         case Utf16:
-            codepoints = u16_skip_trailing_zero((uint16_t *)x.ptr, codepoints);
-            return unicode_from_kind_and_data(PyUnicode_2BYTE_KIND, x.ptr, codepoints);
+            codepoints = u16_skip_trailing_zero((uint16_t *)x->ptr, codepoints);
+            return unicode_from_kind_and_data(PyUnicode_2BYTE_KIND, x->ptr, codepoints);
 
         case Utf32:
-            codepoints = u32_skip_trailing_zero((uint32_t *)x.ptr, codepoints);
-            return unicode_from_kind_and_data(PyUnicode_4BYTE_KIND, x.ptr, codepoints);
+            codepoints = u32_skip_trailing_zero((uint32_t *)x->ptr, codepoints);
+            return unicode_from_kind_and_data(PyUnicode_4BYTE_KIND, x->ptr, codepoints);
 
         case Ucs2:
             PyErr_SetString(PyExc_NotImplementedError,
@@ -1731,19 +1669,19 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
     }
 
     case FixedBytes: {
-        return bytes_from_string_and_size(x.ptr, t->FixedBytes.size);
+        return bytes_from_string_and_size(x->ptr, t->FixedBytes.size);
     }
 
     case String: {
-        const char *s = XND_POINTER_DATA(x.ptr);
+        const char *s = XND_POINTER_DATA(x->ptr);
         Py_ssize_t size = s ? strlen(s) : 0;
 
         return PyUnicode_FromStringAndSize(s, size);
     }
 
     case Bytes: {
-        char *s = (char *)XND_BYTES_DATA(x.ptr);
-        int64_t size = XND_BYTES_SIZE(x.ptr);
+        char *s = (char *)XND_BYTES_DATA(x->ptr);
+        int64_t size = XND_BYTES_SIZE(x->ptr);
 
         return bytes_from_string_and_size(s, size);
     }
@@ -1751,7 +1689,7 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
     case Categorical: {
         int64_t k;
 
-        UNPACK_SINGLE(k, x.ptr, int64_t, t->flags);
+        UNPACK_SINGLE(k, x->ptr, int64_t, t->flags);
 
         switch (t->Categorical.types[k].tag) {
         case ValBool: {
@@ -1814,12 +1752,12 @@ _pyxnd_value(xnd_t x, const int64_t maxshape)
 /******************************************************************************/
 
 static PyObject *
-pyxnd_view_copy_type(const XndObject *src, const xnd_t x)
+pyxnd_view_copy_type(const XndObject *src, const xnd_t *x)
 {
     XndObject *view;
     PyObject *type;
 
-    type = Ndt_CopySubtree(src->type, x.type);
+    type = Ndt_CopySubtree(src->type, x->type);
     if (type == NULL) {
         return NULL;
     }
@@ -1833,19 +1771,19 @@ pyxnd_view_copy_type(const XndObject *src, const xnd_t x)
     Py_INCREF(src->mblock);
     view->mblock = src->mblock;
     view->type = type;
-    view->xnd = x;
+    view->xnd = *x;
     view->xnd.type = CONST_NDT(type);
 
     return (PyObject *)view;
 }
 
 static PyObject *
-pyxnd_view_move_type(const XndObject *src, xnd_t x)
+pyxnd_view_move_type(const XndObject *src, xnd_t *x)
 {
     XndObject *view;
     PyObject *type;
 
-    type = Ndt_MoveSubtree(src->type, (ndt_t *)x.type);
+    type = Ndt_MoveSubtree(src->type, (ndt_t *)x->type);
     if (type == NULL) {
         return NULL;
     }
@@ -1859,17 +1797,16 @@ pyxnd_view_move_type(const XndObject *src, xnd_t x)
     Py_INCREF(src->mblock);
     view->mblock = src->mblock;
     view->type = type;
-    view->xnd = x;
+    view->xnd = *x;
 
     return (PyObject *)view;
 }
 
 static Py_ssize_t
-pyxnd_len(xnd_t x)
+pyxnd_len(const xnd_t *x)
 {
     NDT_STATIC_CONTEXT(ctx);
-    const ndt_t *t = x.type;
-    xnd_t next;
+    const ndt_t *t = x->type;
 
     assert(ndt_is_concrete(t));
 
@@ -1879,7 +1816,7 @@ pyxnd_len(xnd_t x)
         return -1;
     }
 
-    if (xnd_is_na(&x)) {
+    if (xnd_is_na(x)) {
         return 0;
     }
 
@@ -1891,7 +1828,7 @@ pyxnd_len(xnd_t x)
     case VarDim: {
         int64_t start, step, shape;
 
-        shape = ndt_var_indices(&start, &step, t, x.index, &ctx);
+        shape = ndt_var_indices(&start, &step, t, x->index, &ctx);
         if (shape < 0) {
             return seterr_int(&ctx);
         }
@@ -1908,42 +1845,30 @@ pyxnd_len(xnd_t x)
     }
 
     case Ref: {
-        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
-        if (ndt_err_occurred(&ctx)) {
+        const xnd_t next = xnd_ref_next(x, &ctx);
+        if (next.ptr == NULL) {
             return seterr_int(&ctx);
         }
 
-        next.index = 0;
-        next.type = t->Ref.type;
-        next.ptr = XND_POINTER_DATA(x.ptr);
-
-        return pyxnd_len(next);
+        return pyxnd_len(&next);
     }
 
     case Constr: {
-        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
-        if (ndt_err_occurred(&ctx)) {
+        const xnd_t next = xnd_constr_next(x, &ctx);
+        if (next.ptr == NULL) {
             return seterr_int(&ctx);
         }
 
-        next.index = 0;
-        next.type = t->Constr.type;
-        next.ptr = x.ptr;
-
-        return pyxnd_len(next);
+        return pyxnd_len(&next);
     }
 
     case Nominal: {
-        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
-        if (ndt_err_occurred(&ctx)) {
+        const xnd_t next = xnd_nominal_next(x, &ctx);
+        if (next.ptr == NULL) {
             return seterr_int(&ctx);
         }
 
-        next.index = 0;
-        next.type = t->Nominal.type;
-        next.ptr = x.ptr;
-
-        return pyxnd_len(next);
+        return pyxnd_len(&next);
     }
 
     default:
@@ -2016,11 +1941,10 @@ set_index_exception(bool indexable)
  * descend into the dtype.
  */
 static xnd_t
-pyxnd_subtree(xnd_t x, PyObject *indices[], int len, bool indexable)
+pyxnd_subtree(const xnd_t *x, PyObject *indices[], int len, bool indexable)
 {
     NDT_STATIC_CONTEXT(ctx);
-    const ndt_t *t = x.type;
-    xnd_t next;
+    const ndt_t *t = x->type;
     PyObject *key;
 
     assert(ndt_is_concrete(t));
@@ -2032,12 +1956,7 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len, bool indexable)
     }
 
     if (len == 0) {
-        return x;
-    }
-
-    /* Add and reset the linear index. */
-    if (t->ndim == 0) {
-        x.ptr += x.index * t->datasize;
+        return *x;
     }
 
     key = indices[0];
@@ -2049,18 +1968,15 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len, bool indexable)
             return xnd_error;
         }
 
-        next = x;
-        next.type = t->FixedDim.type;
-        next.index = x.index + i * t->Concrete.FixedDim.step;
-
-        break;
+        const xnd_t next = xnd_fixed_dim_next(x, i);
+        return pyxnd_subtree(&next, indices+1, len-1, true);
     }
 
     case VarDim: {
         int64_t start, step, shape;
         int64_t i;
 
-        shape = ndt_var_indices(&start, &step, t, x.index, &ctx);
+        shape = ndt_var_indices(&start, &step, t, x->index, &ctx);
         if (shape < 0) {
             return seterr_xnd(&ctx);
         }
@@ -2070,29 +1986,22 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len, bool indexable)
             return xnd_error;
         }
 
-        next = x;
-        next.type = t->VarDim.type;
-        next.index = start + i * step;
-
-        break;
+        const xnd_t next = xnd_var_dim_next(x, start, step, i);
+        return pyxnd_subtree(&next, indices+1, len-1, true);
     }
 
     case Tuple: {
-        int64_t i = get_index(key, t->Tuple.shape);
+        const int64_t i = get_index(key, t->Tuple.shape);
         if (i < 0) {
             return xnd_error;
         }
 
-        next.bitmap = xnd_bitmap_next(&x, i, &ctx);
-        if (ndt_err_occurred(&ctx)) {
+        const xnd_t next = xnd_tuple_next(x, i, &ctx);
+        if (next.ptr == NULL) {
             return seterr_xnd(&ctx);
         }
 
-        next.index = 0;
-        next.type = t->Tuple.types[i];
-        next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
-
-        break;
+        return pyxnd_subtree(&next, indices+1, len-1, true);
     }
 
     case Record: {
@@ -2101,75 +2010,56 @@ pyxnd_subtree(xnd_t x, PyObject *indices[], int len, bool indexable)
             return xnd_error;
         }
 
-        next.bitmap = xnd_bitmap_next(&x, i, &ctx);
-        if (ndt_err_occurred(&ctx)) {
+        const xnd_t next = xnd_record_next(x, i, &ctx);
+        if (next.ptr == NULL) {
             return seterr_xnd(&ctx);
         }
 
-        next.index = 0;
-        next.type = t->Record.types[i];
-        next.ptr = x.ptr + t->Concrete.Record.offset[i];
-
-        break;
+        return pyxnd_subtree(&next, indices+1, len-1, true);
     }
 
     case Ref: {
-        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
-        if (ndt_err_occurred(&ctx)) {
+        const xnd_t next = xnd_ref_next(x, &ctx);
+        if (next.ptr == NULL) {
             return seterr_xnd(&ctx);
         }
 
-        next.index = 0;
-        next.type = t->Ref.type;
-        next.ptr = XND_POINTER_DATA(x.ptr);
-
-        return pyxnd_subtree(next, indices, len, false);
+        return pyxnd_subtree(&next, indices, len, false);
     }
 
     case Constr: {
-        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
-        if (ndt_err_occurred(&ctx)) {
+        const xnd_t next = xnd_constr_next(x, &ctx);
+        if (next.ptr == NULL) {
             return seterr_xnd(&ctx);
         }
 
-        next.index = 0;
-        next.type = t->Constr.type;
-        next.ptr = x.ptr;
-
-        return pyxnd_subtree(next, indices, len, false);
+        return pyxnd_subtree(&next, indices, len, false);
     }
 
     case Nominal: {
-        next.bitmap = xnd_bitmap_next(&x, 0, &ctx);
-        if (ndt_err_occurred(&ctx)) {
+        const xnd_t next = xnd_nominal_next(x, &ctx);
+        if (next.ptr == NULL) {
             return seterr_xnd(&ctx);
         }
 
-        next.index = 0;
-        next.type = t->Nominal.type;
-        next.ptr = x.ptr;
-
-        return pyxnd_subtree(next, indices, len, false);
+        return pyxnd_subtree(&next, indices, len, false);
     }
 
     default:
         set_index_exception(indexable);
         return xnd_error;
     }
-
-    return pyxnd_subtree(next, indices+1, len-1, true);
 }
 
-static xnd_t pyxnd_index(xnd_t x, PyObject *indices[], int len);
-static xnd_t pyxnd_slice(xnd_t x, PyObject *indices[], int len);
+static xnd_t pyxnd_index(const xnd_t *x, PyObject *indices[], int len);
+static xnd_t pyxnd_slice(const xnd_t *x, PyObject *indices[], int len);
 
 static xnd_t
-pyxnd_multikey(xnd_t x, PyObject *indices[], int len)
+pyxnd_multikey(const xnd_t *x, PyObject *indices[], int len)
 {
     NDT_STATIC_CONTEXT(ctx);
-    const ndt_t *t = x.type;
+    const ndt_t *t = x->type;
     PyObject *key;
-    xnd_t next;
 
     assert(len >= 0);
     assert(ndt_is_concrete(t));
@@ -2181,7 +2071,7 @@ pyxnd_multikey(xnd_t x, PyObject *indices[], int len)
     }
 
     if (len == 0) {
-        next = x;
+        xnd_t next = *x;
         next.type = ndt_copy(t, &ctx);
         if (next.type == NULL) {
             return seterr_xnd(&ctx);
@@ -2210,36 +2100,27 @@ pyxnd_multikey(xnd_t x, PyObject *indices[], int len)
  * not permitted.
  */
 static xnd_t
-pyxnd_index(xnd_t x, PyObject *indices[], int len)
+pyxnd_index(const xnd_t *x, PyObject *indices[], int len)
 {
-    const ndt_t *t = x.type;
-    xnd_t next;
+    const ndt_t *t = x->type;
     PyObject *key;
 
     assert(len > 0);
     assert(PyIndex_Check(indices[0]));
     assert(ndt_is_concrete(t));
-    assert(x.ptr != NULL);
-
-    /* Add and reset the linear index. */
-    if (t->ndim == 0) {
-        x.ptr += x.index * t->datasize;
-    }
+    assert(x->ptr != NULL);
 
     key = indices[0];
 
     switch (t->tag) {
     case FixedDim: {
-        int64_t i = get_index(key, t->FixedDim.shape);
+        const int64_t i = get_index(key, t->FixedDim.shape);
         if (i < 0) {
             return xnd_error;
         }
 
-        next = x;
-        next.type = t->FixedDim.type;
-        next.index = x.index + i * t->Concrete.FixedDim.step;
-
-        break;
+        const xnd_t next = xnd_fixed_dim_next(x, i);
+        return pyxnd_multikey(&next, indices+1, len-1);
     }
 
     case VarDim: {
@@ -2252,22 +2133,19 @@ pyxnd_index(xnd_t x, PyObject *indices[], int len)
         PyErr_SetString(PyExc_IndexError, "type is not indexable");
         return xnd_error;
     }
-
-    return pyxnd_multikey(next, indices+1, len-1);
 }
 
 static xnd_t
-pyxnd_slice(xnd_t x, PyObject *indices[], int len)
+pyxnd_slice(const xnd_t *x, PyObject *indices[], int len)
 {
     NDT_STATIC_CONTEXT(ctx);
-    const ndt_t *t = x.type;
-    xnd_t next;
+    const ndt_t *t = x->type;
     PyObject *key;
 
     assert(len > 0);
     assert(PySlice_Check(indices[0]));
     assert(ndt_is_concrete(t));
-    assert(x.ptr != NULL);
+    assert(x->ptr != NULL);
 
     key = indices[0];
 
@@ -2279,25 +2157,22 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
             return xnd_error;
         }
 
-        next = x;
-        next.type = t->FixedDim.type;
-        next.index = x.index + start * t->Concrete.FixedDim.step;
-
-        next = pyxnd_multikey(next, indices+1, len-1);
-        if (next.ptr == NULL) {
+        const xnd_t next = xnd_fixed_dim_next(x, start);
+        const xnd_t sliced = pyxnd_multikey(&next, indices+1, len-1);
+        if (sliced.ptr == NULL) {
             return xnd_error;
         }
 
-        x.type = ndt_fixed_dim((ndt_t *)next.type, shape,
-                               t->Concrete.FixedDim.step * step,
-                               &ctx);
-        if (x.type == NULL) {
+        xnd_t ret = *x;
+        ret.type = ndt_fixed_dim((ndt_t *)sliced.type, shape,
+                                 t->Concrete.FixedDim.step * step,
+                                 &ctx);
+        if (ret.type == NULL) {
             return seterr_xnd(&ctx);
         }
+        ret.index = sliced.index;
 
-        x.index = next.index;
-
-        return x;
+        return ret;
     }
 
     case VarDim: {
@@ -2315,10 +2190,10 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
             return xnd_error;
         }
 
-        next = x;
+        xnd_t next = *x;
         next.type = t->VarDim.type;
 
-        next = pyxnd_multikey(next, indices+1, len-1);
+        next = pyxnd_multikey(&next, indices+1, len-1);
         if (next.ptr == NULL) {
             return xnd_error;
         }
@@ -2328,18 +2203,19 @@ pyxnd_slice(xnd_t x, PyObject *indices[], int len)
             return seterr_xnd(&ctx);
         }
 
-        x.type = ndt_var_dim((ndt_t *)next.type,
-                             ExternalOffsets,
-                             t->Concrete.VarDim.noffsets, t->Concrete.VarDim.offsets,
-                             nslices, slices,
-                             &ctx);
-        if (x.type == NULL) {
+        xnd_t ret = *x;
+        ret.type = ndt_var_dim((ndt_t *)next.type,
+                                ExternalOffsets,
+                                t->Concrete.VarDim.noffsets, t->Concrete.VarDim.offsets,
+                                nslices, slices,
+                                &ctx);
+        if (ret.type == NULL) {
             return seterr_xnd(&ctx);
         }
 
-        x.index = next.index;
+        ret.index = next.index;
 
-        return x;
+        return ret;
     }
 
     case Tuple: {
@@ -2401,14 +2277,14 @@ is_multikey(const PyObject *key)
 }
 
 static PyObject *
-value_or_view_copy(XndObject *self, xnd_t x)
+value_or_view_copy(XndObject *self, const xnd_t *x)
 {
-    if (x.ptr == NULL) {
+    if (x->ptr == NULL) {
         return NULL;
     }
 
-    if (x.type->ndim == 0) {
-        switch (x.type->tag) {
+    if (x->type->ndim == 0) {
+        switch (x->type->tag) {
         case Tuple: case Record: case Ref: case Constr: case Nominal:
             return pyxnd_view_copy_type(self, x);
         default:
@@ -2420,14 +2296,14 @@ value_or_view_copy(XndObject *self, xnd_t x)
 }
 
 static PyObject *
-value_or_view_move(XndObject *self, xnd_t x)
+value_or_view_move(XndObject *self, xnd_t *x)
 {
-    if (x.ptr == NULL) {
+    if (x->ptr == NULL) {
         return NULL;
     }
 
-    if (x.type->ndim == 0) {
-        switch (x.type->tag) {
+    if (x->type->ndim == 0) {
+        switch (x->type->tag) {
         case Tuple: case Record: case Ref: case Constr: case Nominal:
             return pyxnd_view_move_type(self, x);
         default:
@@ -2441,12 +2317,10 @@ value_or_view_move(XndObject *self, xnd_t x)
 static PyObject *
 pyxnd_subscript(XndObject *self, PyObject *key)
 {
-    xnd_t x;
-
     if (PyIndex_Check(key) || PyUnicode_Check(key)) {
         PyObject *indices[1] = {key};
-        x = pyxnd_subtree(self->xnd, indices, 1, false);
-        return value_or_view_copy(self, x);
+        const xnd_t x = pyxnd_subtree(&self->xnd, indices, 1, false);
+        return value_or_view_copy(self, &x);
     }
     else if (is_multiindex(key)) {
         PyObject **indices = &PyTuple_GET_ITEM(key, 0);
@@ -2454,13 +2328,13 @@ pyxnd_subscript(XndObject *self, PyObject *key)
         if (n > INT_MAX) {
             goto value_error;
         }
-        x = pyxnd_subtree(self->xnd, indices, (int)n, false);
-        return value_or_view_copy(self, x);
+        const xnd_t x = pyxnd_subtree(&self->xnd, indices, (int)n, false);
+        return value_or_view_copy(self, &x);
     }
     else if (PySlice_Check(key)) {
         PyObject *indices[1] = {key};
-        x = pyxnd_multikey(self->xnd, indices, 1);
-        return value_or_view_move(self, x);
+        xnd_t x = pyxnd_multikey(&self->xnd, indices, 1);
+        return value_or_view_move(self, &x);
     }
     else if (is_multikey(key)) {
         PyObject **indices = &PyTuple_GET_ITEM(key, 0);
@@ -2468,8 +2342,8 @@ pyxnd_subscript(XndObject *self, PyObject *key)
         if (n > INT_MAX) {
             goto value_error;
         }
-        x = pyxnd_multikey(self->xnd, indices, (int)n);
-        return value_or_view_move(self, x);
+        xnd_t x = pyxnd_multikey(&self->xnd, indices, (int)n);
+        return value_or_view_move(self, &x);
     }
     else {
         PyErr_SetString(PyExc_TypeError, "invalid subscript key");
@@ -2500,7 +2374,7 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
 
     if (PyIndex_Check(key) || PyUnicode_Check(key)) {
         PyObject *indices[1] = {key};
-        x = pyxnd_subtree(self->xnd, indices, 1, false);
+        x = pyxnd_subtree(&self->xnd, indices, 1, false);
     }
     else if (is_multiindex(key)) {
         PyObject **indices = &PyTuple_GET_ITEM(key, 0);
@@ -2508,11 +2382,11 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
         if (n > INT_MAX) {
             goto value_error;
         }
-        x = pyxnd_subtree(self->xnd, indices, (int)n, false);
+        x = pyxnd_subtree(&self->xnd, indices, (int)n, false);
     }
     else if (PySlice_Check(key)) {
         PyObject *indices[1] = {key};
-        x = pyxnd_multikey(self->xnd, indices, 1);
+        x = pyxnd_multikey(&self->xnd, indices, 1);
         free_type = 1;
     }
     else if (is_multikey(key)) {
@@ -2521,7 +2395,7 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
         if (n > INT_MAX) {
             goto value_error;
         }
-        x = pyxnd_multikey(self->xnd, indices, (int)n);
+        x = pyxnd_multikey(&self->xnd, indices, (int)n);
         free_type = 1;
     }
     else {
@@ -2533,7 +2407,7 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
         return -1;
     }
 
-    ret = mblock_init(x, value);
+    ret = mblock_init(&x, value);
     if (free_type) {
         ndt_del((ndt_t *)x.type);
     }
