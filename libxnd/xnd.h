@@ -141,6 +141,7 @@ XND_API int xnd_is_na(const xnd_t *x);
 /*****************************************************************************/
 
 XND_API extern const xnd_t xnd_error;
+XND_API extern const xnd_bitmap_t xnd_bitmap_empty;
 
 
 /*****************************************************************************/

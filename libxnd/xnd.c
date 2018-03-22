@@ -37,9 +37,10 @@
 #include <assert.h>
 #include "ndtypes.h"
 #include "xnd.h"
+#include "inline.h"
 
 
-static int xnd_init(xnd_t x, const uint32_t flags, ndt_context_t *ctx);
+static int xnd_init(xnd_t *x, const uint32_t flags, ndt_context_t *ctx);
 static void xnd_clear(xnd_t xu, const uint32_t flags);
 
 
@@ -87,7 +88,7 @@ xnd_new(const ndt_t *t, const uint32_t flags, ndt_context_t *ctx)
         return NULL;
     }
 
-    if (xnd_init(x, flags, ctx) < 0) {
+    if (xnd_init(&x, flags, ctx) < 0) {
         ndt_aligned_free(x.ptr);
         return NULL;
     }
@@ -109,10 +110,9 @@ xnd_new(const ndt_t *t, const uint32_t flags, ndt_context_t *ctx)
  * At all times the data pointers must be NULL or pointers to valid memory.
  */
 static int
-xnd_init(xnd_t x, const uint32_t flags, ndt_context_t *ctx)
+xnd_init(xnd_t *x, const uint32_t flags, ndt_context_t *ctx)
 {
-    const ndt_t *t = x.type;
-    xnd_t next;
+    const ndt_t *t = x->type;
 
     if (ndt_is_abstract(t)) {
         ndt_err_format(ctx, NDT_ValueError,
@@ -120,20 +120,13 @@ xnd_init(xnd_t x, const uint32_t flags, ndt_context_t *ctx)
         return -1;
     }
 
-    /* Add and reset the linear index. */
-    if (t->ndim == 0) {
-        x.ptr += x.index * t->datasize;
-    }
-
     switch (t->tag) {
     case FixedDim: {
         int64_t i;
-        next.type = t->FixedDim.type;
-        next.ptr = x.ptr;
 
         for (i = 0; i < t->FixedDim.shape; i++) {
-            next.index = x.index + i * t->Concrete.FixedDim.step;
-            if (xnd_init(next, flags, ctx) < 0) {
+            xnd_t next = _fixed_dim_next(x, i);
+            if (xnd_init(&next, flags, ctx) < 0) {
                 return -1;
             }
         }
@@ -142,29 +135,17 @@ xnd_init(xnd_t x, const uint32_t flags, ndt_context_t *ctx)
     }
 
     case VarDim: {
-        const int32_t noffsets = t->Concrete.VarDim.noffsets;
-        int32_t start, stop;
-        int64_t shape, i;
+        int64_t start, step, shape;
+        int64_t i;
 
-        if (x.index < 0 || x.index+1 >= noffsets) {
-            ndt_err_format(ctx, NDT_RuntimeError,
-                "xnd: offset index out of range: index=%" PRIi32 ", noffsets=%" PRIi32,
-                x.index, noffsets);
+        shape = ndt_var_indices(&start, &step, t, x->index, ctx);
+        if (shape < 0) {
             return -1;
         }
 
-        start = t->Concrete.VarDim.offsets[x.index];
-        stop = t->Concrete.VarDim.offsets[x.index+1];
-
-        shape = stop - start;
-
-        next.type = t->VarDim.type;
-        next.ptr = x.ptr;
-
         for (i = 0; i < shape; i++) {
-            next.index = start + i;
-
-            if (xnd_init(next, flags, ctx) < 0) {
+            xnd_t next = _var_dim_next(x, start, step, i);
+            if (xnd_init(&next, flags, ctx) < 0) {
                 return -1;
             }
         }
@@ -175,13 +156,9 @@ xnd_init(xnd_t x, const uint32_t flags, ndt_context_t *ctx)
     case Tuple: {
         int64_t i;
 
-        next.index = 0;
-
         for (i = 0; i < t->Tuple.shape; i++) {
-            next.type = t->Tuple.types[i];
-            next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
-
-            if (xnd_init(next, flags, ctx) < 0) {
+            xnd_t next = _tuple_next(x, i);
+            if (xnd_init(&next, flags, ctx) < 0) {
                 xnd_clear(next, flags);
                 return -1;
             }
@@ -193,13 +170,9 @@ xnd_init(xnd_t x, const uint32_t flags, ndt_context_t *ctx)
     case Record: {
         int64_t i;
 
-        next.index = 0;
-
         for (i = 0; i < t->Record.shape; i++) {
-            next.type = t->Record.types[i];
-            next.ptr = x.ptr + t->Concrete.Record.offset[i];
-
-            if (xnd_init(next, flags, ctx) < 0) {
+            xnd_t next = _record_next(x, i);
+            if (xnd_init(&next, flags, ctx) < 0) {
                 xnd_clear(next, flags);
                 return -1;
             }
@@ -214,7 +187,7 @@ xnd_init(xnd_t x, const uint32_t flags, ndt_context_t *ctx)
      */
     case Ref: {
         if (flags & XND_OWN_POINTERS) {
-            ndt_t *u = t->Ref.type;
+            const ndt_t *u = t->Ref.type;
             void *ref;
 
             ref = ndt_aligned_calloc(u->align, u->datasize);
@@ -222,17 +195,13 @@ xnd_init(xnd_t x, const uint32_t flags, ndt_context_t *ctx)
                 ndt_err_format(ctx, NDT_MemoryError, "out of memory");
                 return -1;
             }
+            XND_POINTER_DATA(x->ptr) = ref;
 
-            next.index = 0;
-            next.type = u;
-            next.ptr = ref;
-
-            if (xnd_init(next, flags, ctx) < 0) {
+            xnd_t next = _ref_next(x);
+            if (xnd_init(&next, flags, ctx) < 0) {
                 xnd_clear(next, flags);
                 return -1;
             }
-
-            XND_POINTER_DATA(x.ptr) = ref;
         }
 
         return 0;
@@ -240,11 +209,8 @@ xnd_init(xnd_t x, const uint32_t flags, ndt_context_t *ctx)
 
     /* Constr is a named explicit type. */
     case Constr: {
-        next.index = 0;
-        next.type = t->Constr.type;
-        next.ptr = x.ptr;
-
-        if (xnd_init(next, flags, ctx) < 0) {
+        xnd_t next = _constr_next(x);
+        if (xnd_init(&next, flags, ctx) < 0) {
             xnd_clear(next, flags);
             return -1;
         }
@@ -254,11 +220,8 @@ xnd_init(xnd_t x, const uint32_t flags, ndt_context_t *ctx)
 
     /* Nominal is a globally unique typedef. */
     case Nominal: {
-        next.index = 0;
-        next.type = t->Nominal.type;
-        next.ptr = x.ptr;
-
-        if (xnd_init(next, flags, ctx) < 0) {
+        xnd_t next = _nominal_next(x);
+        if (xnd_init(&next, flags, ctx) < 0) {
             xnd_clear(next, flags);
             return -1;
         }

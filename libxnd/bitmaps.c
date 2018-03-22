@@ -39,6 +39,9 @@
 #include "xnd.h"
 
 
+const xnd_bitmap_t xnd_bitmap_empty = { .data = NULL, .size = 0, .next = NULL};
+
+
 static int64_t
 bitmap_size(int64_t nelem)
 {
