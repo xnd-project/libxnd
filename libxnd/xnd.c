@@ -41,7 +41,7 @@
 
 
 static int xnd_init(xnd_t *x, const uint32_t flags, ndt_context_t *ctx);
-static void xnd_clear(xnd_t xu, const uint32_t flags);
+static void xnd_clear(xnd_t *x, const uint32_t flags);
 
 
 /*****************************************************************************/
@@ -159,7 +159,7 @@ xnd_init(xnd_t *x, const uint32_t flags, ndt_context_t *ctx)
         for (i = 0; i < t->Tuple.shape; i++) {
             xnd_t next = _tuple_next(x, i);
             if (xnd_init(&next, flags, ctx) < 0) {
-                xnd_clear(next, flags);
+                xnd_clear(&next, flags);
                 return -1;
             }
         }
@@ -173,7 +173,7 @@ xnd_init(xnd_t *x, const uint32_t flags, ndt_context_t *ctx)
         for (i = 0; i < t->Record.shape; i++) {
             xnd_t next = _record_next(x, i);
             if (xnd_init(&next, flags, ctx) < 0) {
-                xnd_clear(next, flags);
+                xnd_clear(&next, flags);
                 return -1;
             }
         }
@@ -199,7 +199,7 @@ xnd_init(xnd_t *x, const uint32_t flags, ndt_context_t *ctx)
 
             xnd_t next = _ref_next(x);
             if (xnd_init(&next, flags, ctx) < 0) {
-                xnd_clear(next, flags);
+                xnd_clear(&next, flags);
                 return -1;
             }
         }
@@ -211,7 +211,7 @@ xnd_init(xnd_t *x, const uint32_t flags, ndt_context_t *ctx)
     case Constr: {
         xnd_t next = _constr_next(x);
         if (xnd_init(&next, flags, ctx) < 0) {
-            xnd_clear(next, flags);
+            xnd_clear(&next, flags);
             return -1;
         }
 
@@ -222,7 +222,7 @@ xnd_init(xnd_t *x, const uint32_t flags, ndt_context_t *ctx)
     case Nominal: {
         xnd_t next = _nominal_next(x);
         if (xnd_init(&next, flags, ctx) < 0) {
-            xnd_clear(next, flags);
+            xnd_clear(&next, flags);
             return -1;
         }
 
@@ -411,48 +411,41 @@ xnd_clear_bytes(xnd_t *x, const uint32_t flags)
 
 /* Clear embedded pointers in the data according to flags. */
 static void
-xnd_clear(xnd_t x, const uint32_t flags)
+xnd_clear(xnd_t *x, const uint32_t flags)
 {
-    const ndt_t *t = x.type;
-    xnd_t next;
+    NDT_STATIC_CONTEXT(ctx);
+    const ndt_t *t = x->type;
 
     assert(ndt_is_concrete(t));
-
-    /* Add and reset the linear index. */
-    if (t->ndim == 0) {
-        x.ptr += x.index * t->datasize;
-    }
 
     switch (t->tag) {
     case FixedDim: {
         int64_t i;
 
-        next.type = t->FixedDim.type;
-        next.ptr = x.ptr;
-
         for (i = 0; i < t->FixedDim.shape; i++) {
-            next.index = x.index + i * t->Concrete.FixedDim.step;
-            xnd_clear(next, flags);
+            xnd_t next = _fixed_dim_next(x, i);
+            xnd_clear(&next, flags);
         }
 
         return;
     }
 
     case VarDim: {
-        int32_t start, stop, shape, i;
+        int64_t start, step, shape;
+        int64_t i;
 
-        assert(0 <= x.index && x.index+1 < t->Concrete.VarDim.noffsets);
-
-        start = t->Concrete.VarDim.offsets[x.index];
-        stop = t->Concrete.VarDim.offsets[x.index+1];
-        shape = stop - start;
-
-        next.type = t->VarDim.type;
-        next.ptr = x.ptr;
+        shape = ndt_var_indices(&start, &step, t, x->index, &ctx);
+        if (shape < 0) {
+            /* This cannot happen: indices are checked in xnd_init() and
+             * should remain constant. */
+            ndt_context_del(&ctx);
+            fprintf(stderr, "xnd_clear: internal error: var indices changed\n");
+            return;
+        }
 
         for (i = 0; i < shape; i++) {
-            next.index =  start + i;
-            xnd_clear(next, flags);
+            xnd_t next = _var_dim_next(x, start, step, i);
+            xnd_clear(&next, flags);
         }
 
         return;
@@ -461,12 +454,9 @@ xnd_clear(xnd_t x, const uint32_t flags)
     case Tuple: {
         int64_t i;
 
-        next.index = 0;
-
         for (i = 0; i < t->Tuple.shape; i++) {
-            next.type = t->Tuple.types[i];
-            next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
-            xnd_clear(next, flags);
+            xnd_t next = _tuple_next(x, i);
+            xnd_clear(&next, flags);
         }
 
         return;
@@ -475,43 +465,33 @@ xnd_clear(xnd_t x, const uint32_t flags)
     case Record: {
         int64_t i;
 
-        next.index = 0;
-
         for (i = 0; i < t->Record.shape; i++) {
-            next.type = t->Record.types[i];
-            next.ptr = x.ptr + t->Concrete.Record.offset[i];
-            xnd_clear(next, flags);
+            xnd_t next = _record_next(x, i);
+            xnd_clear(&next, flags);
         }
 
         return;
     }
 
     case Ref: {
-        next.index = 0;
-
         if (flags & XND_OWN_POINTERS) {
-            next.type = t->Ref.type;
-            next.ptr = XND_POINTER_DATA(x.ptr);
-            xnd_clear(next, flags);
-            xnd_clear_ref(&x, flags);
+            xnd_t next = _ref_next(x);
+            xnd_clear(&next, flags);
+            xnd_clear_ref(x, flags);
         }
 
         return;
     }
 
     case Constr: {
-        next.index = 0;
-        next.type = t->Constr.type;
-        next.ptr = x.ptr;
-        xnd_clear(next, flags);
+        xnd_t next = _constr_next(x);
+        xnd_clear(&next, flags);
         return;
     }
 
     case Nominal: {
-        next.index = 0;
-        next.type = t->Nominal.type;
-        next.ptr = x.ptr;
-        xnd_clear(next, flags);
+        xnd_t next = _nominal_next(x);
+        xnd_clear(&next, flags);
         return;
     }
 
@@ -524,11 +504,11 @@ xnd_clear(xnd_t x, const uint32_t flags)
         return;
 
     case String:
-        xnd_clear_string(&x, flags);
+        xnd_clear_string(x, flags);
         return;
 
     case Bytes:
-        xnd_clear_bytes(&x, flags);
+        xnd_clear_bytes(x, flags);
         return;
 
     case Categorical:
@@ -562,7 +542,7 @@ xnd_del(xnd_master_t *x)
     if (x != NULL) {
         if (x->master.ptr != NULL && x->master.type != NULL) {
             if (x->flags & XND_OWN_DATA) {
-                xnd_clear(x->master, x->flags);
+                xnd_clear(&x->master, x->flags);
             }
 
             if (x->flags & XND_OWN_TYPE) {
