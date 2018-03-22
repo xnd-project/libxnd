@@ -273,23 +273,4 @@ xnd_nominal_next(const xnd_t *x, ndt_context_t *ctx)
 
     return next;
 }
-
-
-/*****************************************************************************/
-/*                               Unstable API                                */
-/*****************************************************************************/
-
-/* For gumath -- likely to change */
-typedef struct {
-    int ndim;
-    int64_t itemsize;
-    int64_t nelem;
-    int64_t shape[NDT_MAX_DIM];
-    int64_t strides[NDT_MAX_DIM];
-    char *ptr;
-} xnd_ndarray_t;
-
-XND_API int xnd_as_ndarray(xnd_ndarray_t *a, const xnd_t *x, ndt_context_t *ctx);
-
-
 #endif /* XND_H */
