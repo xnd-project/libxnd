@@ -154,9 +154,7 @@ xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx)
     }
 
     case Tuple: {
-        int64_t i;
-
-        for (i = 0; i < t->Tuple.shape; i++) {
+        for (int64_t i = 0; i < t->Tuple.shape; i++) {
             xnd_t next = _tuple_next(x, i);
             if (xnd_init(&next, flags, ctx) < 0) {
                 xnd_clear(&next, flags);
@@ -168,9 +166,7 @@ xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx)
     }
 
     case Record: {
-        int64_t i;
-
-        for (i = 0; i < t->Record.shape; i++) {
+        for (int64_t i = 0; i < t->Record.shape; i++) {
             xnd_t next = _record_next(x, i);
             if (xnd_init(&next, flags, ctx) < 0) {
                 xnd_clear(&next, flags);
@@ -420,9 +416,7 @@ xnd_clear(xnd_t * const x, const uint32_t flags)
 
     switch (t->tag) {
     case FixedDim: {
-        int64_t i;
-
-        for (i = 0; i < t->FixedDim.shape; i++) {
+        for (int64_t i = 0; i < t->FixedDim.shape; i++) {
             xnd_t next = _fixed_dim_next(x, i);
             xnd_clear(&next, flags);
         }
@@ -452,9 +446,7 @@ xnd_clear(xnd_t * const x, const uint32_t flags)
     }
 
     case Tuple: {
-        int64_t i;
-
-        for (i = 0; i < t->Tuple.shape; i++) {
+        for (int64_t i = 0; i < t->Tuple.shape; i++) {
             xnd_t next = _tuple_next(x, i);
             xnd_clear(&next, flags);
         }
@@ -463,9 +455,7 @@ xnd_clear(xnd_t * const x, const uint32_t flags)
     }
 
     case Record: {
-        int64_t i;
-
-        for (i = 0; i < t->Record.shape; i++) {
+        for (int64_t i = 0; i < t->Record.shape; i++) {
             xnd_t next = _record_next(x, i);
             xnd_clear(&next, flags);
         }
