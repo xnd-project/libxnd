@@ -77,14 +77,12 @@ test_fixed(void)
             for (k = 0; k < 2; k++) {
                 indices[0] = i; indices[1] = j; indices[2] = k;
                 l = i * 4 + j * 2 + k;
-                view = xnd_subtree(x->master, indices, 3, ctx);
+                view = xnd_subtree(&x->master, indices, 3, ctx);
                 if (view.ptr == NULL) {
                     goto error;
                 }
                 assert(view.type->tag == Uint16);
-                /* XXX The convention of adding the index at access time is
-                 * XXX convenient for the Python module, less so for C. */
-                if (*(uint16_t *)(view.ptr + view.index * view.type->datasize) != data[l]) {
+                if (*(uint16_t *)(view.ptr) != data[l]) {
                     ndt_err_format(ctx, NDT_RuntimeError, "unexpected value");
                     goto error;
                 }

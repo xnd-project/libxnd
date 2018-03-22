@@ -568,11 +568,10 @@ xnd_del(xnd_master_t *x)
 
 /* Return a typed subtree of a memory block */
 xnd_t
-xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
+xnd_subtree(const xnd_t * const x, const int64_t *indices, const int len,
+            ndt_context_t *ctx)
 {
-    const ndt_t *t = x.type;
-    xnd_t next;
-    int64_t i;
+    const ndt_t *t = x->type;
 
     assert(ndt_is_concrete(t));
 
@@ -583,15 +582,10 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
     }
 
     if (len == 0) {
-        return x;
+        return *x;
     }
 
-    /* Add and reset the linear index. */
-    if (t->ndim == 0) {
-        x.ptr += x.index * t->datasize;
-    }
-
-    i = indices[0];
+    const int64_t i = indices[0];
 
     switch (t->tag) {
     case FixedDim: {
@@ -601,17 +595,14 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
-        next = x;
-        next.type = t->FixedDim.type;
-        next.index = x.index + i * t->Concrete.FixedDim.step;
-
-        break;
+        const xnd_t next = xnd_fixed_dim_next(x, i);
+        return xnd_subtree(&next, indices+1, len-1, ctx);
     }
 
     case VarDim: {
         int64_t start, step, shape;
 
-        shape = ndt_var_indices(&start, &step, t, x.index, ctx);
+        shape = ndt_var_indices(&start, &step, t, x->index, ctx);
         if (shape < 0) {
             return xnd_error;
         }
@@ -621,11 +612,8 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
-        next = x;
-        next.type = t->VarDim.type;
-        next.index = start + i * step;
-
-        break;
+        const xnd_t next = xnd_var_dim_next(x, start, step, i);
+        return xnd_subtree(&next, indices+1, len-1, ctx);
     }
 
     case Tuple: {
@@ -634,16 +622,12 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
-        next.bitmap = xnd_bitmap_next(&x, i, ctx);
-        if (ndt_err_occurred(ctx)) {
+        const xnd_t next = xnd_tuple_next(x, i, ctx);
+        if (next.ptr == NULL) {
             return xnd_error;
         }
 
-        next.index = 0;
-        next.type = t->Tuple.types[i];
-        next.ptr = x.ptr + t->Concrete.Tuple.offset[i];
-
-        break;
+        return xnd_subtree(&next, indices+1, len-1, ctx);
     }
 
     case Record: {
@@ -652,63 +636,45 @@ xnd_subtree(xnd_t x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
-        next.bitmap = xnd_bitmap_next(&x, i, ctx);
-        if (ndt_err_occurred(ctx)) {
+        const xnd_t next = xnd_record_next(x, i, ctx);
+        if (next.ptr == NULL) {
             return xnd_error;
         }
 
-        next.index = 0;
-        next.type = t->Record.types[i];
-        next.ptr = x.ptr + t->Concrete.Record.offset[i];
-
-        break;
+        return xnd_subtree(&next, indices+1, len-1, ctx);
     }
 
     case Ref: {
-        next.bitmap = xnd_bitmap_next(&x, 0, ctx);
-        if (ndt_err_occurred(ctx)) {
+        const xnd_t next = xnd_ref_next(x, ctx);
+        if (next.ptr == NULL) {
             return xnd_error;
         }
 
-        next.index = 0;
-        next.type = t->Ref.type;
-        next.ptr = XND_POINTER_DATA(x.ptr);
-
-        return xnd_subtree(next, indices, len, ctx);
+        return xnd_subtree(&next, indices, len, ctx);
     }
 
     case Constr: {
-        next.bitmap = xnd_bitmap_next(&x, 0, ctx);
-        if (ndt_err_occurred(ctx)) {
+        const xnd_t next = xnd_constr_next(x, ctx);
+        if (next.ptr == NULL) {
             return xnd_error;
         }
 
-        next.index = 0;
-        next.type = t->Constr.type;
-        next.ptr = x.ptr;
-
-        return xnd_subtree(next, indices, len, ctx);
+        return xnd_subtree(&next, indices, len, ctx);
     }
 
    case Nominal: {
-        next.bitmap = xnd_bitmap_next(&x, 0, ctx);
-        if (ndt_err_occurred(ctx)) {
+        const xnd_t next = xnd_nominal_next(x, ctx);
+        if (next.ptr == NULL) {
             return xnd_error;
         }
 
-        next.index = 0;
-        next.type = t->Nominal.type;
-        next.ptr = x.ptr;
-
-        return xnd_subtree(next, indices, len, ctx);
+        return xnd_subtree(&next, indices, len, ctx);
     }
 
     default:
         ndt_err_format(ctx, NDT_ValueError, "type not indexable");
         return xnd_error;
     }
-
-    return xnd_subtree(next, indices+1, len-1, ctx);
 }
 
 
