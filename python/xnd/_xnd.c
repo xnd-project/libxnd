@@ -523,10 +523,10 @@ get_uint(PyObject *v, uint64_t max)
 }
 
 static int
-mblock_init(xnd_t *x, PyObject *v)
+mblock_init(xnd_t * const x, PyObject *v)
 {
     NDT_STATIC_CONTEXT(ctx);
-    const ndt_t *t = x->type;
+    const ndt_t * const t = x->type;
 
     if (!check_invariants(t)) {
         return -1;
@@ -1317,10 +1317,10 @@ dict_set_item(PyObject *dict, const char *k, PyObject *value)
 }
 
 static PyObject *
-_pyxnd_value(const xnd_t *x, const int64_t maxshape)
+_pyxnd_value(const xnd_t * const x, const int64_t maxshape)
 {
     NDT_STATIC_CONTEXT(ctx);
-    const ndt_t *t = x->type;
+    const ndt_t * const t = x->type;
 
     assert(ndt_is_concrete(t));
 
