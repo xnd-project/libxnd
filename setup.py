@@ -274,9 +274,9 @@ setup (
     install_requires = ["ndtypes == v0.2.0dev3"],
     package_dir = {"": "python"},
     packages = ["xnd"],
-    package_data = {"xnd": ["libxnd*", "xnd.h", "pyxnd.h", "contrib/*"]
-                           if INSTALL_LIBS
-                           else ["pyxnd.h"]},
+    package_data = {"xnd": ["libxnd*", "xnd.h", "pyxnd.h"]
+                           if INSTALL_LIBS else ["pyxnd.h"],
+                    "xnd.contrib": ["*"]},
     ext_modules = [ndtypes_ext()],
 )
 
