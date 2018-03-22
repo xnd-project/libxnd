@@ -120,8 +120,8 @@ XND_API void xnd_del(xnd_master_t *x);
 /*                         Traverse xnd memory blocks                        */
 /*****************************************************************************/
 
-XND_API xnd_t xnd_subtree(const xnd_t * const x, const int64_t *indices,
-                          const int len, ndt_context_t *ctx);
+XND_API xnd_t xnd_subtree(const xnd_t *x, const int64_t *indices, int len,
+                          ndt_context_t *ctx);
 
 
 /*****************************************************************************/

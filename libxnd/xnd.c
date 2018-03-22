@@ -40,8 +40,8 @@
 #include "inline.h"
 
 
-static int xnd_init(xnd_t *x, const uint32_t flags, ndt_context_t *ctx);
-static void xnd_clear(xnd_t *x, const uint32_t flags);
+static int xnd_init(xnd_t *x, uint32_t flags, ndt_context_t *ctx);
+static void xnd_clear(xnd_t *x, uint32_t flags);
 
 
 /*****************************************************************************/
@@ -69,7 +69,7 @@ xnd_err_occurred(const xnd_t *x)
 
 /* Create and initialize memory with type 't'. */
 static char *
-xnd_new(const ndt_t *t, const uint32_t flags, ndt_context_t *ctx)
+xnd_new(const ndt_t * const t, const uint32_t flags, ndt_context_t *ctx)
 {
     xnd_t x;
 
@@ -110,9 +110,9 @@ xnd_new(const ndt_t *t, const uint32_t flags, ndt_context_t *ctx)
  * At all times the data pointers must be NULL or pointers to valid memory.
  */
 static int
-xnd_init(xnd_t *x, const uint32_t flags, ndt_context_t *ctx)
+xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx)
 {
-    const ndt_t *t = x->type;
+    const ndt_t * const t = x->type;
 
     if (ndt_is_abstract(t)) {
         ndt_err_format(ctx, NDT_ValueError,
@@ -266,7 +266,7 @@ xnd_init(xnd_t *x, const uint32_t flags, ndt_context_t *ctx)
  * Any combination of flags that include XND_OWN_TYPE can be passed.
  */
 xnd_master_t *
-xnd_empty_from_string(const char *s, uint32_t flags, ndt_context_t *ctx)
+xnd_empty_from_string(const char * const s, const uint32_t flags, ndt_context_t *ctx)
 {
     xnd_bitmap_t b = {.data=NULL, .size=0, .next=NULL};
     xnd_master_t *x;
@@ -325,7 +325,7 @@ xnd_empty_from_string(const char *s, uint32_t flags, ndt_context_t *ctx)
  * can be passed. 't' must be kept valid as long as the master buffer is valid.
  */
 xnd_master_t *
-xnd_empty_from_type(const ndt_t *t, uint32_t flags, ndt_context_t *ctx)
+xnd_empty_from_type(const ndt_t * const t, const uint32_t flags, ndt_context_t *ctx)
 {
     xnd_bitmap_t b = {.data=NULL, .size=0, .next=NULL};
     xnd_master_t *x;
@@ -411,10 +411,10 @@ xnd_clear_bytes(xnd_t *x, const uint32_t flags)
 
 /* Clear embedded pointers in the data according to flags. */
 static void
-xnd_clear(xnd_t *x, const uint32_t flags)
+xnd_clear(xnd_t * const x, const uint32_t flags)
 {
     NDT_STATIC_CONTEXT(ctx);
-    const ndt_t *t = x->type;
+    const ndt_t * const t = x->type;
 
     assert(ndt_is_concrete(t));
 
@@ -571,7 +571,7 @@ xnd_t
 xnd_subtree(const xnd_t * const x, const int64_t *indices, const int len,
             ndt_context_t *ctx)
 {
-    const ndt_t *t = x->type;
+    const ndt_t * const t = x->type;
 
     assert(ndt_is_concrete(t));
 
