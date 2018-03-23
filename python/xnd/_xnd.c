@@ -2063,7 +2063,7 @@ pyxnd_multikey(const xnd_t *x, PyObject *indices[], int len)
 
     assert(len >= 0);
     assert(ndt_is_concrete(t));
-    assert(x.ptr != NULL);
+    assert(x->ptr != NULL);
 
     if (len > t->ndim) {
         PyErr_SetString(PyExc_IndexError, "too many indices");
