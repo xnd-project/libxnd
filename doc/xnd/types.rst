@@ -32,7 +32,7 @@ Fixed arrays
    >>> from xnd import *
    >>> x = xnd([[0, 1, 2], [3, 4, 5]])
    >>> x
-   xnd([[0, 1, 2], [3, 4, 5]], type="2 * 3 * int64")
+   xnd([[0, 1, 2], [3, 4, 5]], type='2 * 3 * int64')
 
 
 As expected, lists are mapped to ndarrays and integers to int64.  Indexing and
@@ -43,10 +43,10 @@ zero-copy views whenever possible:
 
    >>> x[0][1] # Scalars are returned as Python values.
    1
-
+   >>>
    >>> y = x[:, ::-1] # Containers are returned as views.
    >>> y
-   xnd([[2, 1, 0], [5, 4, 3]], type="2 * 3 * int64")
+   xnd([[2, 1, 0], [5, 4, 3]], type='2 * 3 * int64')
 
 
 Subarrays are views and properly typed:
@@ -54,7 +54,7 @@ Subarrays are views and properly typed:
 .. code-block:: py
 
    >>> x[1]
-   >>> xnd([3, 4, 5], type="3 * int64")
+   xnd([3, 4, 5], type='3 * int64')
 
 
 The representation of large values is abbreviated:
@@ -63,11 +63,17 @@ The representation of large values is abbreviated:
 
    >>> x = xnd(10 * [200 * [1]])
    >>> x
-   xnd([[1, 1, 1, 1, 1, 1, 1, 1, 1, ...], [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...], [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...], [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...], [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...], ...], type="10 * 200 * int64")
+   xnd([[1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, ...],
+        ...],
+       type='10 * 200 * int64')
 
 
 Values can be accessed in full using the *value* property:
@@ -157,11 +163,10 @@ xnd seamlessly supports nested values of arbitrary depth:
 
 .. code-block:: py
 
-   >>> lst = [{'name': 'John', 'internet_points': [1, 2, 3]},
-   ...        {'name': 'Jane', 'internet_points': [4, 5, 6]}]
    >>> xnd(lst)
-   xnd([{'internet_points': [1, 2, 3], 'name': 'John'},
-        {'internet_points': [4, 5, 6], 'name': 'Jane'}], type="2 * {name : string, internet_points : 3 * int64}")
+   xnd([{'name': 'John', 'internet_points': [1, 2, 3]},
+        {'name': 'Jane', 'internet_points': [4, 5, 6]}],
+       type='2 * {name : string, internet_points : 3 * int64}')
 
 
 Optional data (missing values)
