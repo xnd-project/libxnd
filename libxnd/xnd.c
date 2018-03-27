@@ -553,6 +553,34 @@ xnd_clear(xnd_t * const x, const uint32_t flags)
 }
 
 /*
+ * Delete an xnd_t buffer according to 'flags'. Outside xnd_del(), this
+ * function should only be used if an xnd_t owns all its members.
+ */
+void
+xnd_del_buffer(xnd_t *x, const uint32_t flags)
+{
+    if (x != NULL) {
+        if (x->ptr != NULL && x->type != NULL) {
+            if (flags & XND_OWN_DATA) {
+                xnd_clear(x, flags);
+            }
+
+            if (flags & XND_OWN_TYPE) {
+                ndt_del((ndt_t *)x->type);
+            }
+
+            if (flags & XND_OWN_DATA) {
+                ndt_aligned_free(x->ptr);
+            }
+        }
+
+        if (flags & XND_OWN_DATA) {
+            xnd_bitmap_clear(&x->bitmap);
+        }
+    }
+}
+
+/*
  * Delete the master buffer. The type and embedded pointers are deallocated
  * according to x->flags.
  */
@@ -560,23 +588,7 @@ void
 xnd_del(xnd_master_t *x)
 {
     if (x != NULL) {
-        if (x->master.ptr != NULL && x->master.type != NULL) {
-            if (x->flags & XND_OWN_DATA) {
-                xnd_clear(&x->master, x->flags);
-            }
-
-            if (x->flags & XND_OWN_TYPE) {
-                ndt_del((ndt_t *)x->master.type);
-            }
-
-            if (x->flags & XND_OWN_DATA) {
-                ndt_aligned_free(x->master.ptr);
-            }
-        }
-
-        if (x->flags & XND_OWN_DATA) {
-            xnd_bitmap_clear(&x->master.bitmap);
-        }
+        xnd_del_buffer(&x->master, x->flags);
         ndt_free(x);
     }
 }
