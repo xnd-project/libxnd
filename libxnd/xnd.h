@@ -113,6 +113,7 @@ typedef struct xnd_master {
 
 XND_API xnd_master_t *xnd_empty_from_string(const char *s, uint32_t flags, ndt_context_t *ctx);
 XND_API xnd_master_t *xnd_empty_from_type(const ndt_t *t, uint32_t flags, ndt_context_t *ctx);
+XND_API xnd_master_t *xnd_from_xnd(xnd_t *src, uint32_t flags, ndt_context_t *ctx);
 XND_API void xnd_del(xnd_master_t *x);
 
 

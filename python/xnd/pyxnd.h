@@ -62,7 +62,11 @@ extern "C" {
 #define Xnd_ViewMoveNdt_RETURN PyObject *
 #define Xnd_ViewMoveNdt_ARGS (const PyObject *, ndt_t *t)
 
-#define XND_MAX_API 5
+#define Xnd_FromXnd_INDEX 5
+#define Xnd_FromXnd_RETURN PyObject *
+#define Xnd_FromXnd_ARGS (PyTypeObject *, xnd_t *x)
+
+#define XND_MAX_API 6
 
 
 #ifdef XND_MODULE
@@ -71,6 +75,7 @@ static Xnd_Check_RETURN Xnd_Check Xnd_Check_ARGS;
 static CONST_XND_RETURN CONST_XND CONST_XND_ARGS;
 static Xnd_EmptyFromType_RETURN Xnd_EmptyFromType Xnd_EmptyFromType_ARGS;
 static Xnd_ViewMoveNdt_RETURN Xnd_ViewMoveNdt Xnd_ViewMoveNdt_ARGS;
+static Xnd_FromXnd_RETURN Xnd_FromXnd Xnd_FromXnd_ARGS;
 #else
 static void **_xnd_api;
 
@@ -88,6 +93,9 @@ static void **_xnd_api;
 
 #define Xnd_ViewMoveNdt \
     (*(Xnd_ViewMoveNdt_RETURN (*)Xnd_ViewMoveNdt_ARGS) _xnd_api[Xnd_ViewMoveNdt_INDEX])
+
+#define Xnd_FromXnd \
+    (*(Xnd_FromXnd_RETURN (*)Xnd_FromXnd_ARGS) _xnd_api[Xnd_FromXnd_INDEX])
 
 static int
 import_xnd(void)

@@ -239,6 +239,38 @@ mblock_from_typed_value(PyObject *type, PyObject *value)
     return self;
 }
 
+static MemoryBlockObject *
+mblock_from_xnd(xnd_t *src)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    MemoryBlockObject *self;
+    PyObject *type;
+    xnd_master_t *x;
+
+    x = xnd_from_xnd(src, XND_OWN_EMBEDDED, &ctx);
+    if (x == NULL) {
+        return (MemoryBlockObject *)seterr(&ctx);
+    }
+
+    type = Ndt_FromType((ndt_t *)x->master.type);
+    if (type == NULL) {
+        xnd_del(x);
+        return NULL;
+    }
+
+    self = mblock_alloc();
+    if (self == NULL) {
+        Py_DECREF(type);
+        xnd_del(x);
+        return NULL;
+    }
+
+    self->type = type;
+    self->xnd = x;
+
+    return self;
+}
+
 static PyObject *
 type_from_buffer(const Py_buffer *view)
 {
@@ -2650,6 +2682,20 @@ Xnd_ViewMoveNdt(const PyObject *v, ndt_t *t)
 }
 
 static PyObject *
+Xnd_FromXnd(PyTypeObject *tp, xnd_t *x)
+{
+    MemoryBlockObject *mblock;
+
+    mblock = mblock_from_xnd(x);
+    if (mblock == NULL) {
+        return NULL;
+    }
+
+    return pyxnd_from_mblock(tp, mblock);
+}
+
+
+static PyObject *
 init_api(void)
 {
     xnd_api[Xnd_CheckExact_INDEX] = (void *)Xnd_CheckExact;
@@ -2657,6 +2703,7 @@ init_api(void)
     xnd_api[CONST_XND_INDEX] = (void *)CONST_XND;
     xnd_api[Xnd_EmptyFromType_INDEX] = (void *)Xnd_EmptyFromType;
     xnd_api[Xnd_ViewMoveNdt_INDEX] = (void *)Xnd_ViewMoveNdt;
+    xnd_api[Xnd_FromXnd_INDEX] = (void *)Xnd_FromXnd;
 
     return PyCapsule_New(xnd_api, "xnd._xnd._API", NULL);
 }

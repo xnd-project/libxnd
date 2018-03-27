@@ -364,6 +364,36 @@ xnd_empty_from_type(const ndt_t * const t, const uint32_t flags, ndt_context_t *
     return x;
 }
 
+/*
+ * Create master buffer from an existing xnd_t.  Ownership of bitmaps, type,
+ * ptr is transferred to the master buffer.
+ *
+ * 'flags' are the master buffer's flags after the transfer.  The flags of
+ * 'src' are always assumed to be XND_OWN_ALL.
+ *
+ * This is a convenience function that should only be used if the xnd_t src
+ * owns everything and its internals have not been exposed to other views.
+ */
+xnd_master_t *
+xnd_from_xnd(xnd_t *src, const uint32_t flags, ndt_context_t *ctx)
+{
+    xnd_master_t *x;
+
+    x = ndt_alloc(1, sizeof *src);
+    if (x == NULL) {
+        xnd_clear(src, XND_OWN_ALL);
+        ndt_del((ndt_t *)src->type);
+        ndt_aligned_free(src->ptr);
+        xnd_bitmap_clear(&src->bitmap);
+        return ndt_memory_error(ctx);
+    }
+
+    x->flags = flags;
+    x->master = *src;
+
+    return x;
+}
+
 
 /*****************************************************************************/
 /*                     Deallocate and clear a master buffer                  */
