@@ -117,7 +117,7 @@ XND_API void xnd_del(xnd_master_t *x);
 
 /* Create and delete pristine xnd_t buffers. */
 XND_API xnd_master_t *xnd_from_xnd(xnd_t *src, uint32_t flags, ndt_context_t *ctx);
-XND_API void xnd_buffer_del(xnd_t *x, uint32_t flags);
+XND_API void xnd_del_buffer(xnd_t *x, uint32_t flags);
 
 
 /*****************************************************************************/
