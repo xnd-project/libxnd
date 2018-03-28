@@ -379,7 +379,7 @@ xnd_from_xnd(xnd_t *src, const uint32_t flags, ndt_context_t *ctx)
 {
     xnd_master_t *x;
 
-    x = ndt_alloc(1, sizeof *src);
+    x = ndt_alloc(1, sizeof *x);
     if (x == NULL) {
         xnd_clear(src, XND_OWN_ALL);
         ndt_del((ndt_t *)src->type);
