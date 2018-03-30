@@ -740,12 +740,17 @@ mblock_init(xnd_t * const x, PyObject *v)
             return seterr_int(&ctx);
         }
 
+        int ret = mblock_init(&next, v);
+        if (ret < 0) {
+            return ret;
+        }
+
         if (t->Nominal.constraint != NULL &&
             !t->Nominal.constraint(&next, &ctx)) {
             return seterr_int(&ctx);
         }
 
-        return mblock_init(&next, v);
+        return ret;
     }
 
     case Bool: {
