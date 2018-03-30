@@ -45,7 +45,7 @@ Importing PEP-3118 buffers is supported.
 
 
 # Ensure that libndtypes is loaded and initialized.
-from ndtypes import ndt, MAX_DIM
+from ndtypes import ndt, instantiate, MAX_DIM
 from ._xnd import Xnd, XndEllipsis
 from itertools import accumulate
 from .contrib.pretty import pretty
@@ -98,11 +98,11 @@ class xnd(Xnd):
            xnd([49, 50, 51], type="3 * uint8")
     """
 
-    def __new__(cls, value, *, type=None, dtype=None, levels=None):
-        if (type, dtype, levels).count(None) < 2:
+    def __new__(cls, value, *, type=None, dtype=None, levels=None, typedef=None):
+        if (type, dtype, levels, typedef).count(None) < 2:
             raise TypeError(
-                "the 'type', 'dtype' and 'levels' arguments are mutually "
-                "exclusive")
+                "the 'type', 'dtype', 'levels' and 'typedef' arguments are "
+                "mutually exclusive")
         if type is not None:
             if isinstance(type, str):
                 type = ndt(type)
@@ -112,6 +112,12 @@ class xnd(Xnd):
             args = ', '.join("'%s'" % l if l is not None else 'NA' for l in levels)
             t = "%d * categorical(%s)" % (len(value), args)
             type = ndt(t)
+        elif typedef is not None:
+            type = ndt(typedef)
+            if type.isabstract():
+                dtype = type.hidden_dtype
+                t = typeof(value, dtype=dtype)
+                type = instantiate(typedef, t)
         else:
             type = typeof(value)
         return super().__new__(cls, type=type, value=value)
