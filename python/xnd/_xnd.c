@@ -1554,6 +1554,10 @@ _pyxnd_value(const xnd_t * const x, const int64_t maxshape)
             return seterr(&ctx);
         }
 
+        if (t->Nominal.meth->repr != NULL) {
+            return t->Nominal.meth->repr(&next, &ctx);
+        }
+
         return _pyxnd_value(&next, maxshape);
     }
 
