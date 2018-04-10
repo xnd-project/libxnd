@@ -740,8 +740,8 @@ mblock_init(xnd_t * const x, PyObject *v)
             return seterr_int(&ctx);
         }
 
-        if (t->Nominal.init != NULL) {
-            if (!t->Nominal.init(&next, v, &ctx)) {
+        if (t->Nominal.meth->init != NULL) {
+            if (!t->Nominal.meth->init(&next, v, &ctx)) {
                 return -1;
             }
             return 0;
@@ -752,8 +752,8 @@ mblock_init(xnd_t * const x, PyObject *v)
             return ret;
         }
 
-        if (t->Nominal.constraint != NULL &&
-            !t->Nominal.constraint(&next, &ctx)) {
+        if (t->Nominal.meth->constraint != NULL &&
+            !t->Nominal.meth->constraint(&next, &ctx)) {
             return seterr_int(&ctx);
         }
 
