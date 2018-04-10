@@ -98,8 +98,9 @@ class xnd(Xnd):
            xnd([49, 50, 51], type="3 * uint8")
     """
 
-    def __new__(cls, value, *, type=None, dtype=None, levels=None, typedef=None):
-        if (type, dtype, levels, typedef).count(None) < 2:
+    def __new__(cls, value, *, type=None, dtype=None, levels=None,
+                typedef=None, dtypedef=None):
+        if (type, dtype, levels, typedef, dtypedef).count(None) < 2:
             raise TypeError(
                 "the 'type', 'dtype', 'levels' and 'typedef' arguments are "
                 "mutually exclusive")
@@ -118,6 +119,9 @@ class xnd(Xnd):
                 dtype = type.hidden_dtype
                 t = typeof(value, dtype=dtype)
                 type = instantiate(typedef, t)
+        elif dtypedef is not None:
+            dtype = ndt(dtypedef)
+            type = typeof(value, dtype=dtype)
         else:
             type = typeof(value)
         return super().__new__(cls, type=type, value=value)
