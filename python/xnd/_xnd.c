@@ -740,6 +740,13 @@ mblock_init(xnd_t * const x, PyObject *v)
             return seterr_int(&ctx);
         }
 
+        if (t->Nominal.init != NULL) {
+            if (!t->Nominal.init(&next, v, &ctx)) {
+                return -1;
+            }
+            return 0;
+        }
+
         int ret = mblock_init(&next, v);
         if (ret < 0) {
             return ret;
