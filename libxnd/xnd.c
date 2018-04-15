@@ -600,8 +600,7 @@ xnd_del(xnd_master_t *x)
 
 /* Return a typed subtree of a memory block */
 xnd_t
-xnd_subtree(const xnd_t *x, const int64_t *indices, const int len,
-            ndt_context_t *ctx)
+xnd_subtree(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
 {
     const ndt_t * const t = x->type;
 
