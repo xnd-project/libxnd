@@ -40,8 +40,8 @@
 #include "inline.h"
 
 
-static int xnd_init(xnd_t *x, const uint32_t flags, ndt_context_t *ctx);
-static void xnd_clear(xnd_t *x, const uint32_t flags);
+static int xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx);
+static void xnd_clear(xnd_t * const x, const uint32_t flags);
 
 
 /*****************************************************************************/
@@ -557,7 +557,7 @@ xnd_clear(xnd_t * const x, const uint32_t flags)
  * function should only be used if an xnd_t owns all its members.
  */
 void
-xnd_del_buffer(xnd_t *x, const uint32_t flags)
+xnd_del_buffer(xnd_t *x, uint32_t flags)
 {
     if (x != NULL) {
         if (x->ptr != NULL && x->type != NULL) {
@@ -600,7 +600,7 @@ xnd_del(xnd_master_t *x)
 
 /* Return a typed subtree of a memory block */
 xnd_t
-xnd_subtree(const xnd_t * const x, const int64_t *indices, const int len,
+xnd_subtree(const xnd_t *x, const int64_t *indices, const int len,
             ndt_context_t *ctx)
 {
     const ndt_t * const t = x->type;
