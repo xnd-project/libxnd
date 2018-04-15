@@ -40,8 +40,8 @@
 #include "inline.h"
 
 
-static int xnd_init(xnd_t *x, uint32_t flags, ndt_context_t *ctx);
-static void xnd_clear(xnd_t *x, uint32_t flags);
+static int xnd_init(xnd_t *x, const uint32_t flags, ndt_context_t *ctx);
+static void xnd_clear(xnd_t *x, const uint32_t flags);
 
 
 /*****************************************************************************/
@@ -262,7 +262,7 @@ xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx)
  * Any combination of flags that include XND_OWN_TYPE can be passed.
  */
 xnd_master_t *
-xnd_empty_from_string(const char * const s, const uint32_t flags, ndt_context_t *ctx)
+xnd_empty_from_string(const char *s, uint32_t flags, ndt_context_t *ctx)
 {
     xnd_bitmap_t b = {.data=NULL, .size=0, .next=NULL};
     xnd_master_t *x;
@@ -321,7 +321,7 @@ xnd_empty_from_string(const char * const s, const uint32_t flags, ndt_context_t 
  * can be passed. 't' must be kept valid as long as the master buffer is valid.
  */
 xnd_master_t *
-xnd_empty_from_type(const ndt_t * const t, const uint32_t flags, ndt_context_t *ctx)
+xnd_empty_from_type(const ndt_t *t, uint32_t flags, ndt_context_t *ctx)
 {
     xnd_bitmap_t b = {.data=NULL, .size=0, .next=NULL};
     xnd_master_t *x;
@@ -375,7 +375,7 @@ xnd_empty_from_type(const ndt_t * const t, const uint32_t flags, ndt_context_t *
  * owns everything and its internals have not been exposed to other views.
  */
 xnd_master_t *
-xnd_from_xnd(xnd_t *src, const uint32_t flags, ndt_context_t *ctx)
+xnd_from_xnd(xnd_t *src, uint32_t flags, ndt_context_t *ctx)
 {
     xnd_master_t *x;
 
