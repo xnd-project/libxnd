@@ -147,7 +147,7 @@ typedef struct {
     Py_buffer *view;   /* PEP-3118 imports */
 } MemoryBlockObject;
 
-static int mblock_init(xnd_t *x, PyObject *v);
+static int mblock_init(xnd_t * const x, PyObject *v);
 static PyTypeObject MemoryBlock_Type;
 
 
