@@ -209,7 +209,8 @@ def ndtypes_ext():
             from distutils.msvc9compiler import MSVCCompiler
             MSVCCompiler().initialize()
             os.chdir("vcbuild")
-            os.environ['LIBS'] = os.path.normpath(LIBS)
+            os.environ['LIBNDTYPESINCLUDE'] = os.path.normpath(CONFIGURE_INCLUDES)
+            os.environ['LIBNDTYPESDIR'] = os.path.normpath(CONFIGURE_LIBS)
             if ARCH == "64bit":
                   os.system("vcbuild64.bat")
             else:
