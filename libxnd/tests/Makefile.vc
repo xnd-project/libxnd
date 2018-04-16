@@ -17,7 +17,7 @@ LIBNDTYPESDIR = ..\..\ndtypes\libndtypes
 
 CC = cl.exe
 CFLAGS = /nologo /MT /Ox /GS /EHsc
-CFLAGS_SHARED = /nologo /DIMPORT /MD /Ox /GS /EHsc
+CFLAGS_SHARED = /nologo /DXND_IMPORT /MD /Ox /GS /EHsc
 
 default: runtest runtest_shared
 

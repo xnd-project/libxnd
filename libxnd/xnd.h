@@ -42,9 +42,9 @@
 
 
 #ifdef _MSC_VER
-  #if defined (EXPORT)
+  #if defined (XND_EXPORT)
     #define XND_API __declspec(dllexport)
-  #elif defined(IMPORT)
+  #elif defined(XND_IMPORT)
     #define XND_API __declspec(dllimport)
   #else
     #define XND_API

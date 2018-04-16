@@ -201,7 +201,7 @@ def ndtypes_ext():
 
     if sys.platform == "win32":
         libraries = ["libndtypes-0.2.0dev3.dll", "libxnd-0.2.0dev3.dll"]
-        extra_compile_args = ["/DIMPORT"]
+        extra_compile_args = ["/DXND_IMPORT"]
         extra_link_args = []
         runtime_library_dirs = []
 

@@ -17,7 +17,7 @@ LIBNDTYPESDIR = ..\ndtypes\libndtypes
 !endif
 
 OPT = /MT /Ox /GS /EHsc
-OPT_SHARED = /DEXPORT /MD /Ox /GS /EHsc /Fo.objs^\
+OPT_SHARED = /DXND_EXPORT /MD /Ox /GS /EHsc /Fo.objs^\
 
 COMMON_CFLAGS = /nologo /W4 /wd4200 /wd4201 /wd4204
 CFLAGS = $(COMMON_CFLAGS) $(OPT)
