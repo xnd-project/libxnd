@@ -1,14 +1,14 @@
 sudo: required
-python: 3.6
 
-language: C
+language: python
+python:
+  - 3.6
 
 matrix:
   include:
     - compiler: gcc
       before_script:
-        - sudo apt-get -qq update
-        - sudo apt-get install -y python3-sphinx
+        - pip install -y numpy python3-sphinx
         - git clone https://github.com/plures/ndtypes.git
         - cd ndtypes
         - python3 setup.py install --local=../python
