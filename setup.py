@@ -175,6 +175,14 @@ elif len(sys.argv) == 2:
         env['PYTHONPATH'] = path
         ret = subprocess.call([sys.executable, "python/test_xnd.py", "--long"], env=env)
         sys.exit(ret)
+    elif sys.argv[1] == 'doctest':
+        module_path = '../python'
+        python_path = os.getenv('PYTHONPATH')
+        path = module_path + ':' + python_path if python_path else module_path
+        env = os.environ.copy()
+        env['PYTHONPATH'] = path
+        ret = subprocess.call(["make", "doctest"], cwd='doc', env=env)
+        sys.exit(ret)
     elif sys.argv[1] == 'clean':
         shutil.rmtree("build", ignore_errors=True)
         os.chdir("python/xnd")

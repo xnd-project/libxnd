@@ -1,9 +1,7 @@
 import sys, os, docutils
 
 
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.imgmath',
-              'sphinx.ext.intersphinx', 'sphinx.ext.coverage',
-              'sphinx.ext.autosummary']
+extensions = ['sphinx.ext.intersphinx', 'sphinx.ext.doctest']
 
 source_suffix = '.rst'
 master_doc = 'index'

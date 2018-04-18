@@ -17,7 +17,7 @@ From NumPy
 
 Import a simple ndarray:
 
-.. code-block:: py
+.. doctest::
 
    >>> import numpy as np
    >>> from xnd import *
@@ -31,7 +31,7 @@ Import a simple ndarray:
 
 Import an ndarray with a struct dtype:
 
-.. code-block:: py
+.. doctest::
 
    >>> x = np.array([(1000, 400.25, 'abc'), (-23, -1e10, 'cba')],
    ...              dtype=[('x', '<i4'), ('y', '>f4'), ('z', 'S3')])

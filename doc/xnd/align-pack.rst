@@ -26,8 +26,9 @@ Field alignment
 The *align* keyword can be used to specify an alignment that is greater
 than the natural alignment of a field:
 
-.. code-block:: py
+.. doctest::
 
+   >>> from xnd import *
    >>> s = "(uint8, uint64 |align=32|, uint64)"
    >>> x = xnd.empty(s)
    >>> x.align
@@ -43,7 +44,7 @@ Field packing
 The *pack* keyword can be used to specify an alignment that is smaller
 than the natural alignment of a field:
 
-.. code-block:: py
+.. doctest::
 
    >>> s = "(uint8, uint64 |pack=2|, uint64)"
    >>> x = xnd.empty(s)
@@ -59,7 +60,7 @@ Struct packing
 
 The *pack* and *align* keywords can be applied to the entire struct:
 
-.. code-block:: py
+.. doctest::
 
    >>> s = "(uint8, uint64, uint64, pack=1)"
    >>> x = xnd.empty(s)
@@ -71,7 +72,7 @@ The *pack* and *align* keywords can be applied to the entire struct:
 
 Individual field and struct directives are mutually exclusive:
 
-.. code-block:: py
+.. doctest::
 
    >>> s = "2 * (uint8 |align=16|, uint64, pack=1)"
    >>> x = xnd.empty(s)
@@ -85,7 +86,7 @@ Array alignment
 
 An array has the same alignment as its elements:
 
-.. code-block:: py
+.. doctest::
 
    >>> s = "2 * (uint8, uint64, pack=1)"
    >>> x = xnd.empty(s)

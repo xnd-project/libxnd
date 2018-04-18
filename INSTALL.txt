@@ -75,6 +75,9 @@ python3 setup.py build
 # Test
 python3 setup.py test
 
+# Doctest (optional, relies on Sphinx)
+python3 setup.py doctest
+
 # Install
 python3 setup.py install
 
