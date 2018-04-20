@@ -112,15 +112,8 @@ xnd_ellipsis_repr(PyObject *self UNUSED)
 
 static PyTypeObject XndEllipsis_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "_xnd.XndEllipsis",                 /* tp_name */
-    0,                                  /* tp_basicsize */
-    0,                                  /* tp_itemsize */
-    0, /*never called*/                 /* tp_dealloc */
-    0,                                  /* tp_print */
-    0,                                  /* tp_getattr */
-    0,                                  /* tp_setattr */
-    0,                                  /* tp_reserved */
-    xnd_ellipsis_repr,                  /* tp_repr */
+    .tp_name = "_xnd.XndEllipsis",
+    .tp_repr = xnd_ellipsis_repr
 };
 
 
@@ -374,28 +367,13 @@ mblock_from_buffer(PyObject *obj)
 
 static PyTypeObject MemoryBlock_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "_xnd.memblock",
-    sizeof(MemoryBlockObject),
-    0,
-    (destructor)mblock_dealloc,              /* tp_dealloc */
-    0,                                       /* tp_print */
-    0,                                       /* tp_getattr */
-    0,                                       /* tp_setattr */
-    0,                                       /* tp_reserved */
-    0,                                       /* tp_repr */
-    0,                                       /* tp_as_number */
-    0,                                       /* tp_as_sequence */
-    0,                                       /* tp_as_mapping */
-    PyObject_HashNotImplemented,             /* tp_hash */
-    0,                                       /* tp_call */
-    0,                                       /* tp_str */
-    PyObject_GenericGetAttr,                 /* tp_getattro */
-    0,                                       /* tp_setattro */
-    0,                                       /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC, /* tp_flags */
-    NULL,                                    /* tp_doc */
-    (traverseproc)mblock_traverse,           /* tp_traverse */
-    NULL,                                    /* tp_clear */
+    .tp_name = "_xnd.memblock",
+    .tp_basicsize = sizeof(MemoryBlockObject),
+    .tp_dealloc = (destructor)mblock_dealloc,
+    .tp_hash = PyObject_HashNotImplemented,
+    .tp_getattro = PyObject_GenericGetAttr,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+    .tp_traverse = (traverseproc)mblock_traverse
 };
 
 
@@ -2581,46 +2559,20 @@ static PyMethodDef pyxnd_methods [] =
 static PyTypeObject Xnd_Type =
 {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "xnd.Xnd",                              /* tp_name */
-    sizeof(XndObject),                      /* tp_basicsize */
-    0,                                      /* tp_itemsize */
-    (destructor) pyxnd_dealloc,             /* tp_dealloc */
-    0,                                      /* tp_print */
-    (getattrfunc) 0,                        /* tp_getattr */
-    (setattrfunc) 0,                        /* tp_setattr */
-    0,                                      /* tp_reserved */
-    (reprfunc) 0,                           /* tp_repr */
-    0,                                      /* tp_as_number */
-    &pyxnd_as_sequence,                     /* tp_as_sequence */
-    &pyxnd_as_mapping,                      /* tp_as_mapping */
-    PyObject_HashNotImplemented,            /* tp_hash */
-    0,                                      /* tp_call */
-    (reprfunc) 0,                           /* tp_str */
-    (getattrofunc) PyObject_GenericGetAttr, /* tp_getattro */
-    (setattrofunc) 0,                       /* tp_setattro */
-    (PyBufferProcs *) 0,                    /* tp_as_buffer */
-    (Py_TPFLAGS_DEFAULT|
-     Py_TPFLAGS_BASETYPE|
-     Py_TPFLAGS_HAVE_GC),                   /* tp_flags */
-    0,                                      /* tp_doc */
-    (traverseproc)pyxnd_traverse,           /* tp_traverse */
-    NULL,                                   /* tp_clear */
-    0,                                      /* tp_richcompare */
-    0,                                      /* tp_weaklistoffset */
-    0,                                      /* tp_iter */
-    0,                                      /* tp_iternext */
-    pyxnd_methods,                          /* tp_methods */
-    0,                                      /* tp_members */
-    pyxnd_getsets,                          /* tp_getset */
-    0,                                      /* tp_base */
-    0,                                      /* tp_dict */
-    0,                                      /* tp_descr_get */
-    0,                                      /* tp_descr_set */
-    0,                                      /* tp_dictoffset */
-    0,                                      /* tp_init */
-    PyType_GenericAlloc,                    /* tp_alloc */
-    pyxnd_new,                              /* tp_new */
-    PyObject_GC_Del,                        /* tp_free */
+    .tp_name = "xnd.Xnd",
+    .tp_basicsize = sizeof(XndObject),
+    .tp_dealloc = (destructor) pyxnd_dealloc,
+    .tp_as_sequence = &pyxnd_as_sequence,
+    .tp_as_mapping = &pyxnd_as_mapping,
+    .tp_hash = PyObject_HashNotImplemented,
+    .tp_getattro = (getattrofunc) PyObject_GenericGetAttr,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC,
+    .tp_traverse = (traverseproc)pyxnd_traverse,
+    .tp_methods = pyxnd_methods,
+    .tp_getset = pyxnd_getsets,
+    .tp_alloc = PyType_GenericAlloc,
+    .tp_new = pyxnd_new,
+    .tp_free = PyObject_GC_Del
 };
 
 
