@@ -156,6 +156,12 @@ XND_API extern const xnd_bitmap_t xnd_bitmap_empty;
 /*
  * This looks inefficient, but both gcc and clang clean up unused xnd_t members.
  */
+static inline int64_t
+xnd_ndim(const xnd_t *x)
+{
+    return x->type->ndim;
+}
+
 static inline xnd_t
 xnd_fixed_dim_next(const xnd_t *x, const int64_t i)
 {
@@ -170,6 +176,36 @@ xnd_fixed_dim_next(const xnd_t *x, const int64_t i)
     next.ptr = u->ndim==0 ? x->ptr + next.index * next.type->datasize : x->ptr;
 
     return next;
+}
+
+static inline int64_t
+xnd_fixed_shape(const xnd_t *x)
+{
+    const ndt_t *t = x->type;
+    assert(t->tag == FixedDim);
+    return t->FixedDim.shape;
+}
+
+static inline int64_t
+xnd_fixed_shape_at(const xnd_t *x, const int i)
+{
+    const ndt_t *t = x->type;
+
+    assert(0 <= i && i < t->ndim);
+    assert(t->tag == FixedDim);
+
+    for (int k = 0; k < i; k++) {
+        t = t->FixedDim.type;
+    }
+    return t->FixedDim.shape;
+}
+
+static inline int64_t
+xnd_fixed_stride(const xnd_t *x)
+{
+    const ndt_t *t = x->type;
+    assert(t->tag == FixedDim);
+    return t->Concrete.FixedDim.step * t->Concrete.FixedDim.itemsize;
 }
 
 static inline xnd_t
