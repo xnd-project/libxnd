@@ -2543,6 +2543,7 @@ static PySequenceMethods pyxnd_as_sequence = {
     (ssizeargfunc)pyxnd_item,      /* sq_item */
 };
 
+
 static PyMethodDef pyxnd_methods [] =
 {
   /* Methods */
@@ -2556,6 +2557,170 @@ static PyMethodDef pyxnd_methods [] =
 };
 
 
+/****************************************************************************/
+/*                              Buffer exports                              */
+/****************************************************************************/
+
+static PyTypeObject BufferProxy_Type;
+
+typedef struct {
+    PyObject_HEAD
+    XndObject *xnd;
+    Py_buffer view;
+    Py_ssize_t ob_array[1];
+} BufferProxyObject;
+
+static BufferProxyObject *
+buffer_alloc(XndObject *xnd)
+{
+    const ndt_t *t = XND_TYPE(xnd);
+    BufferProxyObject *self;
+
+    self = (BufferProxyObject *)
+        PyObject_NewVar(BufferProxyObject, &BufferProxy_Type, 2 * t->ndim);
+    if (self == NULL) {
+        return NULL;
+    }
+
+    Py_INCREF(xnd);
+    self->xnd = xnd;
+ 
+    self->view.buf = NULL;
+    self->view.obj = NULL;
+    self->view.len = 0;
+    self->view.itemsize = 0;
+    self->view.readonly = 0;
+
+    self->view.ndim = t->ndim;
+    self->view.format = NULL;
+    self->view.shape = self->ob_array;
+    self->view.strides = self->ob_array + t->ndim;
+    self->view.suboffsets = NULL;
+    self->view.internal = NULL;
+
+    return self;
+}
+
+static void
+buffer_dealloc(BufferProxyObject *self)
+{
+    ndt_free(self->view.format);
+    self->view.format = NULL;
+    Py_CLEAR(self->xnd);
+    PyObject_Del(self);
+}
+
+static int
+fill_buffer(Py_buffer *view, const xnd_t *x, ndt_context_t *ctx)
+{
+    const ndt_t *t = x->type;
+    char *fmt;
+    Py_ssize_t len;
+    int i;
+
+    assert(t->ndim <= NDT_MAX_DIM);
+    assert(ndt_is_concrete(t));
+
+    fmt = ndt_to_bpformat(ndt_dtype(t), ctx);
+    if (fmt == NULL) {
+        return -1;
+    }
+
+    view->ndim = t->ndim;
+    view->format = fmt;
+    view->suboffsets = NULL;
+
+    if (!ndt_is_ndarray(t)) {
+        if (t->ndim == 0) {
+            view->len = t->datasize;
+            view->itemsize = t->datasize;
+            view->shape = NULL;
+            view->strides = NULL;
+            view->buf = x->ptr + x->index * t->datasize;
+            return 0;
+        }
+        else {
+            ndt_err_format(ctx, NDT_ValueError,
+                "buffer protocol only supports ndarrays");
+            return -1;
+        }
+    }
+
+    view->itemsize = t->Concrete.FixedDim.itemsize;
+    view->buf = x->ptr + x->index * view->itemsize;
+
+    len = 1;
+    for (i=0; t->ndim > 0; i++, t=t->FixedDim.type) {
+        view->shape[i] = t->FixedDim.shape;
+        view->strides[i] = t->Concrete.FixedDim.step * view->itemsize;
+        len *= view->shape[i];
+    }
+    len *=  view->itemsize;
+
+    view->len = len;
+
+    return 0;
+}
+
+static int
+pyxnd_getbuf(XndObject *self, Py_buffer *view, int flags)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    BufferProxyObject *proxy;
+
+    if (flags != PyBUF_FULL && flags != PyBUF_FULL_RO) {
+        PyErr_SetString(PyExc_ValueError,
+            "only PyBUF_FULL and PyBUF_FULL_RO requests are supported");
+        return -1;
+    }
+
+    proxy = buffer_alloc(self);
+    if (proxy == NULL) {
+        return -1;
+    }
+
+    if (fill_buffer(&proxy->view, XND(self), &ctx) < 0) {
+        return seterr_int(&ctx);
+    }
+
+    *view = proxy->view;
+
+    Py_INCREF(proxy);
+    view->obj = (PyObject *)proxy;
+
+    return 0;
+}
+
+static void
+pyxnd_releasebuf(XndObject *self UNUSED, Py_buffer *view UNUSED)
+{
+    return;
+    /* PyBuffer_Release() decrements view->obj after this function returns. */
+}
+
+
+static PyTypeObject BufferProxy_Type =
+{
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "xnd.BufferProxy",
+    .tp_basicsize = offsetof(BufferProxyObject, ob_array),
+    .tp_itemsize = sizeof(Py_ssize_t),
+    .tp_dealloc = (destructor) buffer_dealloc,
+    .tp_hash = PyObject_HashNotImplemented,
+    .tp_getattro = (getattrofunc) PyObject_GenericGetAttr,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+};
+
+static PyBufferProcs pyxnd_as_buffer = {
+    (getbufferproc)pyxnd_getbuf,         /* bf_getbuffer */
+    (releasebufferproc)pyxnd_releasebuf, /* bf_releasebuffer */
+};
+
+
+/****************************************************************************/
+/*                                 Xnd type                                 */
+/****************************************************************************/
+
 static PyTypeObject Xnd_Type =
 {
     PyVarObject_HEAD_INIT(NULL, 0)
@@ -2566,6 +2731,7 @@ static PyTypeObject Xnd_Type =
     .tp_as_mapping = &pyxnd_as_mapping,
     .tp_hash = PyObject_HashNotImplemented,
     .tp_getattro = (getattrofunc) PyObject_GenericGetAttr,
+    .tp_as_buffer = &pyxnd_as_buffer,
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC,
     .tp_traverse = (traverseproc)pyxnd_traverse,
     .tp_methods = pyxnd_methods,
@@ -2724,6 +2890,10 @@ PyInit__xnd(void)
     }
 
     if (PyType_Ready(&MemoryBlock_Type) < 0) {
+        return NULL;
+    }
+
+    if (PyType_Ready(&BufferProxy_Type) < 0) {
         return NULL;
     }
 

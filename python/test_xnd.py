@@ -49,6 +49,16 @@ SKIP_LONG = True
 SKIP_BRUTE_FORCE = True
 
 
+def check_buffer(x):
+    try:
+        y = memoryview(x)
+    except ValueError:
+        return
+    with memoryview(x) as y:
+        del x
+        y.tobytes()
+
+
 class TestModule(unittest.TestCase):
 
     def test_module(self):
@@ -138,6 +148,7 @@ class TestFixedDim(unittest.TestCase):
             nd = NDArray(v)
             t = ndt(s)
             x = xnd(v, type=t)
+            check_buffer(x)
 
             for i in range(3):
                 self.assertEqual(x[i].value, nd[i])
@@ -154,6 +165,7 @@ class TestFixedDim(unittest.TestCase):
                     for step in list(range(-3, 0)) + list(range(1, 4)) + [None]:
                         s = slice(start, stop, step)
                         self.assertEqual(x[s].value, nd[s])
+                        check_buffer(x[s])
 
             self.assertEqual(x[:, 0].value, nd[:, 0])
             self.assertEqual(x[:, 1].value, nd[:, 1])
@@ -273,6 +285,7 @@ class TestFortran(unittest.TestCase):
             nd = NDArray(v)
             t = ndt(s)
             x = xnd(v, type=t)
+            check_buffer(x)
 
             for i in range(3):
                 self.assertEqual(x[i].value, nd[i])
@@ -289,6 +302,7 @@ class TestFortran(unittest.TestCase):
                     for step in list(range(-3, 0)) + list(range(1, 4)) + [None]:
                         s = slice(start, stop, step)
                         self.assertEqual(x[s].value, nd[s])
+                        check_buffer(x[s])
 
             self.assertEqual(x[:, 0].value, nd[:, 0])
             self.assertEqual(x[:, 1].value, nd[:, 1])
@@ -1820,7 +1834,6 @@ class TestBuffer(unittest.TestCase):
             'h', 'i', 'l', 'q',
             'H', 'I', 'L', 'Q',
             'f', 'd',
-            'c8', 'c16'
         ]
 
         if HAVE_PYTHON_36:
@@ -1943,6 +1956,7 @@ class TestSpec(unittest.TestCase):
             nd = self.constr(value)
             d = NDArray(value)
             check(nd, d, value, 0)
+            check_buffer(nd)
 
         for max_ndim in range(1, 5):
             for min_shape in (0, 1):
@@ -1951,6 +1965,7 @@ class TestSpec(unittest.TestCase):
                         nd = self.constr(value)
                         d = NDArray(value)
                         check(nd, d, value, 0)
+                        check_buffer(nd)
 
 
 class LongIndexSliceTest(unittest.TestCase):
