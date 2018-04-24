@@ -201,7 +201,7 @@ elif len(sys.argv) == 2:
         pass
 
 
-def ndtypes_ext():
+def xnd_ext():
     include_dirs = ["libxnd", "ndtypes/python/ndtypes"] + INCLUDES
     library_dirs = ["libxnd", "ndtypes/libndtypes"] + LIBS
     depends = ["libxnd/xnd.h", "python/xnd/util.h", "python/xnd/pyxnd.h"]
@@ -285,7 +285,7 @@ setup (
     packages = ["xnd"],
     package_data = {"xnd": ["libxnd*", "xnd.h", "pyxnd.h", "contrib/*"]
                            if INSTALL_LIBS else ["pyxnd.h"]},
-    ext_modules = [ndtypes_ext()],
+    ext_modules = [xnd_ext()],
 )
 
 copy_ext()
