@@ -2680,12 +2680,11 @@ pyxnd_getbuf(XndObject *self, Py_buffer *view, int flags)
     }
 
     if (fill_buffer(&proxy->view, XND(self), &ctx) < 0) {
+        Py_DECREF(proxy);
         return seterr_int(&ctx);
     }
 
     *view = proxy->view;
-
-    Py_INCREF(proxy);
     view->obj = (PyObject *)proxy;
 
     return 0;
