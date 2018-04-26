@@ -80,7 +80,7 @@ matrix:
         - bash Miniconda3-latest-Linux-x86_64.sh -b
         - export PATH=$HOME/miniconda3/bin:$PATH
         - conda update --yes conda
-        - conda install --yes conda-build
+        - conda install --yes conda-build=3.3.0
         - conda install --yes anaconda-client
         - conda install --yes -c plures/label/dev ndtypes
       script:
@@ -103,7 +103,7 @@ matrix:
         - export PATH=$HOME/miniconda3/bin:$PATH
         - export CC=clang
         - conda update --yes conda
-        - conda install --yes conda-build
+        - conda install --yes conda-build=3.3.0
         - conda install --yes anaconda-client
         - conda install --yes -c plures/label/dev ndtypes
       script:

@@ -10,7 +10,7 @@ build_script:
   - cmd: C:\Miniconda.exe /S /D=C:\Py
   - set PATH=C:\Py;C:\Py\Scripts;C:\Py\Library\bin;%PATH%
   - conda update --yes conda
-  - conda install --yes conda-build
+  - conda install --yes conda-build=3.3.0
   - conda install --yes anaconda-client
   - conda install --yes ndtypes -c plures/label/dev
   - conda-build .conda/libxnd -c plures/label/dev
