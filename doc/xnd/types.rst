@@ -454,7 +454,7 @@ In this case, the memory block is pointer-free.
 
    >>> from ndtypes import ndt
    >>> 
-   >>> s = """
+   >>> t = """
    ...   { id : int64,
    ...     name : fixed_string(30),
    ...     price : float64,
