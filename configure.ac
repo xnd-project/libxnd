@@ -1,6 +1,6 @@
 
 AC_PREREQ([2.67])
-AC_INIT(xnd, 0.2.0dev3, plures@anaconda.com, xnd, https://github.com/plures/)
+AC_INIT(xnd, 0.2.0dev3, skrah@bytereef.org, xnd, https://github.com/plures/)
 AC_CONFIG_HEADER(config.h)
 AC_CONFIG_FILES([Makefile libxnd/Makefile libxnd/tests/Makefile])
 
