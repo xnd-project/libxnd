@@ -1,0 +1,5 @@
+
+Version 0.2.0
+-------------
+
+Stefan Krah <skrah@bytereef.org>, sponsored by Anaconda Inc. and Quansight LLC.
