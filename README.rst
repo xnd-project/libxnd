@@ -34,9 +34,9 @@ http://xnd.readthedocs.io/en/latest/
 Authors
 -------
 
-libxnd/xnd was created by https://github.com/skrah.  The funding that made
-this project possible came from https://www.anaconda.com/ and currently from
-https://www.quansight.com/ .
+libndtypes/ndtypes was created by `Stefan Krah <https://github.com/skrah>`_.
+The funding that made this project possible came from `Anaconda Inc. <https://www.anaconda.com/>`_
+and currently from `Quansight LLC <https://www.quansight.com/>`_.
 
 
 .. image:: https://badges.gitter.im/Plures/xnd.svg
