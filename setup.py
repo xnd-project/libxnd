@@ -284,7 +284,7 @@ setup (
     package_dir = {"": "python"},
     packages = ["xnd"],
     package_data = {"xnd": ["libxnd*", "xnd.h", "pyxnd.h", "contrib/*"]
-                           if INSTALL_LIBS else ["pyxnd.h"]},
+                           if INSTALL_LIBS else ["pyxnd.h", "contrib/*"]},
     ext_modules = [xnd_ext()],
 )
 
