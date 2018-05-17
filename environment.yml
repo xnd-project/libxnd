@@ -1,0 +1,7 @@
+name: xnd-environment
+channels:
+  - conda-forge
+  - default
+dependencies:
+  - numpy # tests require numpy and xnd.from_buffer
+  - xnd
