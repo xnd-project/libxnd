@@ -14,3 +14,4 @@ config.status
 build/
 doc/build/
 python/xnd/xnd.h
+*.egg-info
