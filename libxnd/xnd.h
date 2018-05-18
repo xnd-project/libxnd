@@ -213,7 +213,7 @@ xnd_fixed_stride(const xnd_t *x)
 static inline char *
 xnd_fixed_apply_index(const xnd_t *x)
 {
-    assert(t->tag == FixedDim);
+    assert(x->type->tag == FixedDim);
     return x->ptr + x->index * x->type->Concrete.FixedDim.itemsize;
 }
 
