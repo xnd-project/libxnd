@@ -1,0 +1,16 @@
+# Ignore ./configure generated files
+Makefile
+config.h
+config.log
+config.status
+
+# Ignore make generated C Files
+*.a
+*.o
+*.so
+*.so.*
+
+# Ignore python generated build files
+build/
+doc/build/
+python/xnd/xnd.h
