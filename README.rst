@@ -2,6 +2,9 @@
 xnd
 ===
 
+.. image:: https://mybinder.org/badge.svg
+   :target: http://mybinder.org/v2/gh/plures/xnd/master?filepath=notebooks/python-tutorial.ipynb
+
 libxnd
 ------
 
