@@ -170,6 +170,8 @@ xnd_fixed_dim_next(const xnd_t *x, const int64_t i)
     const int64_t step = i * t->Concrete.FixedDim.step;
     xnd_t next;
 
+    assert(t->tag == FixedDim);
+
     next.bitmap = x->bitmap;
     next.index = x->index + step;
     next.type = u;
@@ -206,6 +208,13 @@ xnd_fixed_stride(const xnd_t *x)
     const ndt_t *t = x->type;
     assert(t->tag == FixedDim);
     return t->Concrete.FixedDim.step * t->Concrete.FixedDim.itemsize;
+}
+
+static inline char *
+xnd_fixed_apply_index(const xnd_t *x)
+{
+    assert(t->tag == FixedDim);
+    return x->ptr + x->index * x->type->Concrete.FixedDim.itemsize;
 }
 
 static inline xnd_t
