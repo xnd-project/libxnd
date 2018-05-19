@@ -67,6 +67,26 @@ xnd_err_occurred(const xnd_t *x)
 /*                  Create and initialize a new master buffer                */
 /*****************************************************************************/
 
+static bool
+is_initialized(const ndt_t * const t)
+{
+    const ndt_t *dtype = ndt_dtype(t);
+
+    switch (dtype->tag) {
+    case Categorical:
+    case Bool:
+    case Int8: case Int16: case Int32: case Int64:
+    case Uint8: case Uint16: case Uint32: case Uint64:
+    case Float16: case Float32: case Float64:
+    case Complex32: case Complex64: case Complex128:
+    case FixedString: case FixedBytes:
+    case String: case Bytes:
+        return true;
+    default:
+        return false;
+    }
+}
+
 /* Create and initialize memory with type 't'. */
 static char *
 xnd_new(const ndt_t * const t, const uint32_t flags, ndt_context_t *ctx)
@@ -88,7 +108,7 @@ xnd_new(const ndt_t * const t, const uint32_t flags, ndt_context_t *ctx)
         return NULL;
     }
 
-    if (xnd_init(&x, flags, ctx) < 0) {
+    if (!is_initialized(t) && xnd_init(&x, flags, ctx) < 0) {
         ndt_aligned_free(x.ptr);
         return NULL;
     }
