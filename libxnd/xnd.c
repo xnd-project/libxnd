@@ -68,7 +68,7 @@ xnd_err_occurred(const xnd_t *x)
 /*****************************************************************************/
 
 static bool
-is_initialized(const ndt_t * const t)
+requires_init(const ndt_t * const t)
 {
     const ndt_t *dtype = ndt_dtype(t);
 
@@ -81,9 +81,9 @@ is_initialized(const ndt_t * const t)
     case Complex32: case Complex64: case Complex128:
     case FixedString: case FixedBytes:
     case String: case Bytes:
-        return true;
-    default:
         return false;
+    default:
+        return true;
     }
 }
 
@@ -108,7 +108,7 @@ xnd_new(const ndt_t * const t, const uint32_t flags, ndt_context_t *ctx)
         return NULL;
     }
 
-    if (!is_initialized(t) && xnd_init(&x, flags, ctx) < 0) {
+    if (requires_init(t) && xnd_init(&x, flags, ctx) < 0) {
         ndt_aligned_free(x.ptr);
         return NULL;
     }
@@ -419,6 +419,25 @@ xnd_from_xnd(xnd_t *src, uint32_t flags, ndt_context_t *ctx)
 /*                     Deallocate and clear a master buffer                  */
 /*****************************************************************************/
 
+static bool
+requires_clear(const ndt_t * const t)
+{
+    const ndt_t *dtype = ndt_dtype(t);
+
+    switch (dtype->tag) {
+    case Categorical:
+    case Bool:
+    case Int8: case Int16: case Int32: case Int64:
+    case Uint8: case Uint16: case Uint32: case Uint64:
+    case Float16: case Float32: case Float64:
+    case Complex32: case Complex64: case Complex128:
+    case FixedString: case FixedBytes:
+        return false;
+    default:
+        return true;
+    }
+}
+
 /* Clear an embedded pointer. */
 static void
 xnd_clear_ref(xnd_t *x, const uint32_t flags)
@@ -581,7 +600,7 @@ xnd_del_buffer(xnd_t *x, uint32_t flags)
 {
     if (x != NULL) {
         if (x->ptr != NULL && x->type != NULL) {
-            if (flags & XND_OWN_DATA) {
+            if ((flags&XND_OWN_DATA) && requires_clear(x->type)) {
                 xnd_clear(x, flags);
             }
 
