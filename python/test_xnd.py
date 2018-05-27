@@ -466,6 +466,47 @@ class TestVarDim(unittest.TestCase):
         s = "var(offsets=[0, 2]) * var(offsets=[0, 1073741824, 2147483648]) * uint8"
         self.assertRaises(ValueError, xnd.empty, s)
 
+    def test_var_dim_match(self):
+        def type_equal(t, u):
+            return t.match(u) and u.match(t)
+
+        x = xnd([0, 1, 2, 3, 4], type="var(offsets=[0,5]) * complex128")
+        sig = ndt("var... * complex128 -> var... * complex128")
+
+        spec = sig.apply([x.type])
+        self.assertTrue(type_equal(spec.out_types[0], x.type))
+
+        y = x[::-1]
+        spec = sig.apply([y.type])
+        self.assertTrue(type_equal(spec.out_types[0], y.type))
+
+        y = x[1:3:-1]
+        spec = sig.apply([y.type])
+        self.assertTrue(type_equal(spec.out_types[0], y.type))
+
+        sig = ndt("var... * complex128, var... * complex128 -> var... * complex128")
+        spec = sig.apply([x.type, x.type])
+        self.assertTrue(type_equal(spec.out_types[0], x.type))
+
+        y = x[::-1]
+        sig = ndt("var... * complex128, var... * complex128 -> var... * complex128")
+        spec = sig.apply([x.type, y.type])
+        self.assertTrue(type_equal(spec.out_types[0], x.type))
+
+        x = xnd([[0], [1, 2], [3, 4, 5]], dtype="complex128")
+        y = xnd([[3, 4, 5], [1, 2], [0]], dtype="complex128")
+        z = y[::-1]
+        sig = ndt("var... * complex128, var... * complex128 -> var... * complex128")
+        spec = sig.apply([x.type, z.type])
+        self.assertTrue(type_equal(spec.out_types[0], x.type))
+
+        x = xnd([[0], [1, 2], [3, 4, 5]], dtype="complex128")
+        y = xnd([[5, 4, 3], [2, 1], [0]], dtype="complex128")
+        z = y[::-1, ::-1]
+        sig = ndt("var... * complex128, var... * complex128 -> var... * complex128")
+        spec = sig.apply([x.type, z.type])
+        self.assertTrue(type_equal(spec.out_types[0], x.type))
+
 
 class TestSymbolicDim(unittest.TestCase):
 
