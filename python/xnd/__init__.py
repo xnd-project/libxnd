@@ -134,6 +134,17 @@ class xnd(Xnd):
         fmt = fmt.replace("\n", "\n   ")
         return "xnd%s" % fmt
 
+    @classmethod
+    def unsafe_from_data(cls, obj=None, type=None):
+        """Return an xnd object that obtains memory from 'obj' via the
+           buffer protocol.  The buffer protocol's type is overridden by
+          'type'.  No safety checks are performed, the user is responsible
+           for passing a suitable type.
+        """
+        if isinstance(type, str):
+            type = ndt(type)
+        return cls._unsafe_from_data(obj, type)
+
 
 # ======================================================================
 #                            Type inference

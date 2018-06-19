@@ -364,6 +364,61 @@ mblock_from_buffer(PyObject *obj)
     return self;
 }
 
+static MemoryBlockObject *
+mblock_from_buffer_and_type(PyObject *obj, PyObject *type)
+{
+    MemoryBlockObject *self;
+
+    if (!Ndt_Check(type)) {
+        PyErr_SetString(PyExc_TypeError, "expected ndt object");
+        return NULL;
+    }
+
+    self = mblock_alloc();
+    if (self == NULL) {
+        return NULL;
+    }
+
+    self->view = ndt_calloc(1, sizeof *self->view);
+    if (self->view == NULL) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
+    if (PyObject_GetBuffer(obj, self->view, PyBUF_FULL_RO) < 0) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
+    if (!PyBuffer_IsContiguous(self->view, 'A')) {
+        /* Conversion from buf+strides to steps+linear_index is not possible
+           if the start of the original data is missing. */
+        PyErr_SetString(PyExc_NotImplementedError,
+            "conversion from non-contiguous buffers is not implemented");
+        Py_DECREF(self);
+        return NULL;
+    }
+
+    Py_INCREF(type);
+    self->type = type;
+
+    self->xnd = ndt_calloc(1, sizeof *self->xnd);
+    if (self->xnd == NULL) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
+    self->xnd->flags = 0;
+    self->xnd->master.bitmap.data = NULL;
+    self->xnd->master.bitmap.size = 0;
+    self->xnd->master.bitmap.next = NULL;
+    self->xnd->master.index = 0;
+    self->xnd->master.type = CONST_NDT(self->type);
+    self->xnd->master.ptr = self->view->buf;
+
+    return self;
+}
+
 
 static PyTypeObject MemoryBlock_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
@@ -1314,6 +1369,26 @@ pyxnd_from_buffer(PyTypeObject *tp, PyObject *obj)
     MemoryBlockObject *mblock;
 
     mblock = mblock_from_buffer(obj);
+    if (mblock == NULL) {
+        return NULL;
+    }
+
+    return pyxnd_from_mblock(tp, mblock);
+}
+
+static PyObject *
+pyxnd_from_buffer_and_type(PyTypeObject *tp, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"obj", "type", NULL};
+    PyObject *obj = NULL;
+    PyObject *type = NULL;
+    MemoryBlockObject *mblock;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &obj, &type)) {
+        return NULL;
+    }
+
+    mblock = mblock_from_buffer_and_type(obj, type);
     if (mblock == NULL) {
         return NULL;
     }
@@ -2552,6 +2627,7 @@ static PyMethodDef pyxnd_methods [] =
   /* Class methods */
   { "empty", (PyCFunction)pyxnd_empty, METH_O|METH_CLASS, doc_empty },
   { "from_buffer", (PyCFunction)pyxnd_from_buffer, METH_O|METH_CLASS, doc_from_buffer },
+  { "_unsafe_from_data", (PyCFunction)pyxnd_from_buffer_and_type, METH_VARARGS|METH_KEYWORDS|METH_CLASS, NULL },
 
   { NULL, NULL, 1 }
 };

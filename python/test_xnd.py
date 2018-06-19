@@ -1868,6 +1868,16 @@ class TestBuffer(unittest.TestCase):
                 self.assertEqual(y[i][k], x[i][k])
 
     @unittest.skipIf(np is None, "numpy not found")
+    def test_unsafe_from_buffer(self):
+        x = np.array([[[0,1,2],
+                       [3,4,5]],
+                     [[6,7,8],
+                      [9,10,11]]])
+
+        y = xnd.unsafe_from_data(obj=x, type="12 * int64")
+        np.testing.assert_equal(y, x.reshape(12))
+
+    @unittest.skipIf(np is None, "numpy not found")
     def test_endian(self):
         standard = [
             '?',
