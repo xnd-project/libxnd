@@ -272,11 +272,11 @@ xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx)
         /* NOT REACHED: intercepted by ndt_is_abstract(). */
         ndt_err_format(ctx, NDT_RuntimeError, "unexpected abstract type");
         return -1;
-   }
+    }
 
-   /* NOT REACHED: tags should be exhaustive */
-   ndt_err_format(ctx, NDT_RuntimeError, "invalid type tag");
-   return -1;
+    /* NOT REACHED: tags should be exhaustive */
+    ndt_err_format(ctx, NDT_RuntimeError, "invalid type tag");
+    return -1;
 }
 
 /*
