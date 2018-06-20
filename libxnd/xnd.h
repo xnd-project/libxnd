@@ -54,6 +54,15 @@
 #endif
 
 
+#if SIZE_MAX == UINT64_MAX
+  #define XND_SSIZE_MAX INT64_MAX
+#elif SIZE_MAX == UINT32_MAX
+  #define XND_SSIZE_MAX INT32_MAX
+#else
+  #error "unsupported platform: need 32-bit or 64-bit size_t"
+#endif
+
+
 /*
  * Ownership flags: The library itself has no notion of how many exported
  * views a master buffer has. The Python bindings for example use Pythons's
@@ -106,6 +115,17 @@ typedef struct xnd_master {
     xnd_t master;   /* typed memory */
 } xnd_master_t;
 
+/* Used in indexing and slicing. */
+enum xnd_key { Index, FieldName, Slice };
+typedef struct {
+  enum xnd_key tag;
+  union {
+    int64_t Index;
+    const char *FieldName;
+    ndt_slice_t Slice;
+  };
+} xnd_index_t;
+
 
 /*****************************************************************************/
 /*                         Create xnd memory blocks                          */
@@ -124,8 +144,14 @@ XND_API void xnd_del_buffer(xnd_t *x, uint32_t flags);
 /*                         Traverse xnd memory blocks                        */
 /*****************************************************************************/
 
-XND_API xnd_t xnd_subtree(const xnd_t *x, const int64_t *indices, int len,
-                          ndt_context_t *ctx);
+XND_API xnd_t xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len,
+                                ndt_context_t *ctx);
+
+XND_API xnd_t xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len,
+                          bool indexable, ndt_context_t *ctx);
+
+XND_API xnd_t xnd_multikey(const xnd_t *x, const xnd_index_t indices[], int len,
+                           ndt_context_t *ctx);
 
 
 /*****************************************************************************/

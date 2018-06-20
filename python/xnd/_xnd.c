@@ -77,13 +77,6 @@ seterr_int(ndt_context_t *ctx)
     return -1;
 }
 
-static xnd_t
-seterr_xnd(ndt_context_t *ctx)
-{
-    (void)Ndt_SetError(ctx);
-    return xnd_error;
-}
-
 
 /****************************************************************************/
 /*                                Singletons                                */
@@ -1989,405 +1982,10 @@ pyxnd_length(XndObject *self)
     return pyxnd_len(XND(self));
 }
 
-static int64_t
-get_index(PyObject *key, int64_t shape)
-{
-    int64_t i = PyNumber_AsSsize_t(key, PyExc_IndexError);
-    if (i == -1 && PyErr_Occurred()) {
-        return -1;
-    }
-
-    if (i < 0) {
-        i += shape;
-    }
-
-    if (i < 0 || i >= shape || i > PY_SSIZE_T_MAX) {
-        PyErr_SetString(PyExc_IndexError, "index out of bounds");
-        return -1;
-    }
-
-    return i;
-}
-
-static int64_t
-get_index_record(const ndt_t *t, PyObject *key)
-{
-    assert(t->tag == Record);
-
-    if (PyUnicode_Check(key)) {
-        int64_t i;
-
-        for (i = 0; i < t->Record.shape; i++) {
-            if (PyUnicode_CompareWithASCIIString(
-                    key, t->Record.names[i]) == 0) {
-                return i;
-            }
-        }
-
-        PyErr_SetString(PyExc_KeyError, "key not found");
-        return -1;
-    }
-
-    return get_index(key, t->Record.shape);
-}
-
-static void
-set_index_exception(bool indexable)
-{
-    if (indexable) {
-        PyErr_SetString(PyExc_IndexError, "too many indices");
-    }
-    else {
-        PyErr_SetString(PyExc_TypeError, "type not indexable");
-    }
-}
-
-/*
- * Return a zero copy view of an xnd object.  If a dtype is indexable,
- * descend into the dtype.
- */
-static xnd_t
-pyxnd_subtree(const xnd_t *x, PyObject *indices[], int len, bool indexable)
-{
-    NDT_STATIC_CONTEXT(ctx);
-    const ndt_t *t = x->type;
-    PyObject *key;
-
-    assert(ndt_is_concrete(t));
-
-    if (t->ndim > 0 && ndt_is_optional(t)) {
-        PyErr_SetString(PyExc_NotImplementedError,
-            "optional dimensions are not supported");
-        return xnd_error;
-    }
-
-    if (len == 0) {
-        return *x;
-    }
-
-    key = indices[0];
-
-    switch (t->tag) {
-    case FixedDim: {
-        int64_t i = get_index(key, t->FixedDim.shape);
-        if (i < 0) {
-            return xnd_error;
-        }
-
-        const xnd_t next = xnd_fixed_dim_next(x, i);
-        return pyxnd_subtree(&next, indices+1, len-1, true);
-    }
-
-    case VarDim: {
-        int64_t start, step, shape;
-        int64_t i;
-
-        shape = ndt_var_indices(&start, &step, t, x->index, &ctx);
-        if (shape < 0) {
-            return seterr_xnd(&ctx);
-        }
-
-        i = get_index(key, shape);
-        if (i < 0) {
-            return xnd_error;
-        }
-
-        const xnd_t next = xnd_var_dim_next(x, start, step, i);
-        return pyxnd_subtree(&next, indices+1, len-1, true);
-    }
-
-    case Tuple: {
-        const int64_t i = get_index(key, t->Tuple.shape);
-        if (i < 0) {
-            return xnd_error;
-        }
-
-        const xnd_t next = xnd_tuple_next(x, i, &ctx);
-        if (next.ptr == NULL) {
-            return seterr_xnd(&ctx);
-        }
-
-        return pyxnd_subtree(&next, indices+1, len-1, true);
-    }
-
-    case Record: {
-        int64_t i = get_index_record(t, key);
-        if (i < 0) {
-            return xnd_error;
-        }
-
-        const xnd_t next = xnd_record_next(x, i, &ctx);
-        if (next.ptr == NULL) {
-            return seterr_xnd(&ctx);
-        }
-
-        return pyxnd_subtree(&next, indices+1, len-1, true);
-    }
-
-    case Ref: {
-        const xnd_t next = xnd_ref_next(x, &ctx);
-        if (next.ptr == NULL) {
-            return seterr_xnd(&ctx);
-        }
-
-        return pyxnd_subtree(&next, indices, len, false);
-    }
-
-    case Constr: {
-        const xnd_t next = xnd_constr_next(x, &ctx);
-        if (next.ptr == NULL) {
-            return seterr_xnd(&ctx);
-        }
-
-        return pyxnd_subtree(&next, indices, len, false);
-    }
-
-    case Nominal: {
-        const xnd_t next = xnd_nominal_next(x, &ctx);
-        if (next.ptr == NULL) {
-            return seterr_xnd(&ctx);
-        }
-
-        return pyxnd_subtree(&next, indices, len, false);
-    }
-
-    default:
-        set_index_exception(indexable);
-        return xnd_error;
-    }
-}
-
-static xnd_t pyxnd_index(const xnd_t *x, PyObject *indices[], int len);
-static xnd_t pyxnd_slice(const xnd_t *x, PyObject *indices[], int len);
-
-static xnd_t
-pyxnd_multikey(const xnd_t *x, PyObject *indices[], int len)
-{
-    NDT_STATIC_CONTEXT(ctx);
-    const ndt_t *t = x->type;
-    PyObject *key;
-
-    assert(len >= 0);
-    assert(ndt_is_concrete(t));
-    assert(x->ptr != NULL);
-
-    if (len > t->ndim) {
-        PyErr_SetString(PyExc_IndexError, "too many indices");
-        return xnd_error;
-    }
-
-    if (len == 0) {
-        xnd_t next = *x;
-        next.type = ndt_copy(t, &ctx);
-        if (next.type == NULL) {
-            return seterr_xnd(&ctx);
-        }
-
-        return next;
-    }
-
-    key = indices[0];
-
-    if (PyIndex_Check(key)) {
-        return pyxnd_index(x, indices, len);
-    }
-    else if (PySlice_Check(key)) {
-        return pyxnd_slice(x, indices, len);
-    }
-
-    PyErr_SetString(PyExc_RuntimeError,
-        "multikey: internal error: key must be index or slice");
-
-    return xnd_error;
-}
-
-/*
- * Return a view with a copy of the type.  Indexing into the dtype is
- * not permitted.
- */
-static xnd_t
-pyxnd_index(const xnd_t *x, PyObject *indices[], int len)
-{
-    const ndt_t *t = x->type;
-    PyObject *key;
-
-    assert(len > 0);
-    assert(PyIndex_Check(indices[0]));
-    assert(ndt_is_concrete(t));
-    assert(x->ptr != NULL);
-
-    key = indices[0];
-
-    switch (t->tag) {
-    case FixedDim: {
-        const int64_t i = get_index(key, t->FixedDim.shape);
-        if (i < 0) {
-            return xnd_error;
-        }
-
-        const xnd_t next = xnd_fixed_dim_next(x, i);
-        return pyxnd_multikey(&next, indices+1, len-1);
-    }
-
-    case VarDim: {
-        PyErr_SetString(PyExc_IndexError,
-            "mixed indexing and slicing is not supported for var dimensions");
-        return xnd_error;
-    }
-
-    default:
-        PyErr_SetString(PyExc_IndexError, "type is not indexable");
-        return xnd_error;
-    }
-}
-
-static xnd_t
-pyxnd_slice(const xnd_t *x, PyObject *indices[], int len)
-{
-    NDT_STATIC_CONTEXT(ctx);
-    const ndt_t *t = x->type;
-    PyObject *key;
-
-    assert(len > 0);
-    assert(PySlice_Check(indices[0]));
-    assert(ndt_is_concrete(t));
-    assert(x->ptr != NULL);
-
-    key = indices[0];
-
-    switch (t->tag) {
-    case FixedDim: {
-        int64_t start, stop, step, shape;
-        if (py_slice_get_indices_ex(key, t->FixedDim.shape,
-                                    &start, &stop, &step, &shape) < 0) {
-            return xnd_error;
-        }
-
-        const xnd_t next = xnd_fixed_dim_next(x, start);
-        const xnd_t sliced = pyxnd_multikey(&next, indices+1, len-1);
-        if (sliced.ptr == NULL) {
-            return xnd_error;
-        }
-
-        xnd_t ret = *x;
-        ret.type = ndt_fixed_dim((ndt_t *)sliced.type, shape,
-                                 t->Concrete.FixedDim.step * step,
-                                 &ctx);
-        if (ret.type == NULL) {
-            return seterr_xnd(&ctx);
-        }
-        ret.index = sliced.index;
-
-        return ret;
-    }
-
-    case VarDim: {
-        Py_ssize_t start, stop, step;
-        ndt_slice_t *slices;
-        int32_t nslices;
-
-        if (ndt_is_optional(t)) {
-            PyErr_SetString(PyExc_NotImplementedError,
-                "optional dimensions are temporarily disabled");
-            return xnd_error;
-        }
-
-        if (pyslice_unpack(key, &start, &stop, &step) < 0) {
-            return xnd_error;
-        }
-
-        xnd_t next = *x;
-        next.type = t->VarDim.type;
-
-        next = pyxnd_multikey(&next, indices+1, len-1);
-        if (next.ptr == NULL) {
-            return xnd_error;
-        }
-
-        slices = ndt_var_add_slice(&nslices, t, start, stop, step, &ctx);
-        if (slices == NULL) {
-            return seterr_xnd(&ctx);
-        }
-
-        xnd_t ret = *x;
-        ret.type = ndt_var_dim((ndt_t *)next.type,
-                                ExternalOffsets,
-                                t->Concrete.VarDim.noffsets, t->Concrete.VarDim.offsets,
-                                nslices, slices,
-                                &ctx);
-        if (ret.type == NULL) {
-            return seterr_xnd(&ctx);
-        }
-
-        ret.index = next.index;
-
-        return ret;
-    }
-
-    case Tuple: {
-        PyErr_SetString(PyExc_NotImplementedError,
-            "slicing tuples is not supported");
-        return xnd_error;
-    }
-
-    case Record: {
-        PyErr_SetString(PyExc_NotImplementedError,
-            "slicing records is not supported");
-        return xnd_error;
-    }
-
-    default:
-        PyErr_SetString(PyExc_IndexError, "type not sliceable");
-        return xnd_error;
-    }
-}
-
-static int
-is_multiindex(const PyObject *key)
-{
-    Py_ssize_t size, i;
-
-    if (!PyTuple_Check(key)) {
-        return 0;
-    }
-
-    size = PyTuple_GET_SIZE(key);
-    for (i = 0; i < size; i++) {
-        PyObject *x = PyTuple_GET_ITEM(key, i);
-        if (!PyIndex_Check(x)) {
-            return 0;
-        }
-    }
-
-    return 1;
-}
-
-static int
-is_multikey(const PyObject *key)
-{
-    Py_ssize_t size, i;
-
-    if (!PyTuple_Check(key)) {
-        return 0;
-    }
-
-    size = PyTuple_GET_SIZE(key);
-    for (i = 0; i < size; i++) {
-        PyObject *x = PyTuple_GET_ITEM(key, i);
-        if (!PyIndex_Check(x) && !PySlice_Check(x)) {
-            return 0;
-        }
-    }
-
-    return 1;
-}
-
 static PyObject *
 value_or_view_copy(XndObject *self, const xnd_t *x)
 {
-    if (x->ptr == NULL) {
-        return NULL;
-    }
+    assert(x->ptr != NULL);
 
     if (x->type->ndim == 0) {
         switch (x->type->tag) {
@@ -2404,9 +2002,7 @@ value_or_view_copy(XndObject *self, const xnd_t *x)
 static PyObject *
 value_or_view_move(XndObject *self, xnd_t *x)
 {
-    if (x->ptr == NULL) {
-        return NULL;
-    }
+    assert(x->ptr != NULL);
 
     if (x->type->ndim == 0) {
         switch (x->type->tag) {
@@ -2420,53 +2016,124 @@ value_or_view_move(XndObject *self, xnd_t *x)
     return pyxnd_view_move_type(self, x);
 }
 
-static PyObject *
-pyxnd_subscript(XndObject *self, PyObject *key)
+#define KEY_INDEX 1
+#define KEY_FIELD 2
+#define KEY_SLICE 4
+#define KEY_ERROR 128
+
+static uint8_t
+convert_single(xnd_index_t *key, PyObject *obj)
 {
-    if (PyIndex_Check(key) || PyUnicode_Check(key)) {
-        PyObject *indices[1] = {key};
-        const xnd_t x = pyxnd_subtree(&self->xnd, indices, 1, false);
-        return value_or_view_copy(self, &x);
-    }
-    else if (is_multiindex(key)) {
-        PyObject **indices = &PyTuple_GET_ITEM(key, 0);
-        Py_ssize_t n = PyTuple_GET_SIZE(key);
-        if (n > INT_MAX) {
-            goto value_error;
+    if (PyIndex_Check(obj)) {
+        int64_t i = PyNumber_AsSsize_t(obj, PyExc_IndexError);
+
+        if (i == -1 && PyErr_Occurred()) {
+            return KEY_ERROR;
         }
-        const xnd_t x = pyxnd_subtree(&self->xnd, indices, (int)n, false);
-        return value_or_view_copy(self, &x);
+
+        key->tag = Index;
+        key->Index = i;
+        return KEY_INDEX;
     }
-    else if (PySlice_Check(key)) {
-        PyObject *indices[1] = {key};
-        xnd_t x = pyxnd_multikey(&self->xnd, indices, 1);
-        return value_or_view_move(self, &x);
-    }
-    else if (is_multikey(key)) {
-        PyObject **indices = &PyTuple_GET_ITEM(key, 0);
-        Py_ssize_t n = PyTuple_GET_SIZE(key);
-        if (n > INT_MAX) {
-            goto value_error;
+    else if (PyUnicode_Check(obj)) {
+        const char *s = PyUnicode_AsUTF8(obj);
+
+        if (s == NULL) {
+            return KEY_ERROR;
         }
-        xnd_t x = pyxnd_multikey(&self->xnd, indices, (int)n);
-        return value_or_view_move(self, &x);
+
+        key->tag = FieldName;
+        key->FieldName = s;
+        return KEY_FIELD;
+    }
+    else if (PySlice_Check(obj)) {
+        Py_ssize_t start;
+        Py_ssize_t stop;
+        Py_ssize_t step;
+
+        if (pyslice_unpack(obj, &start, &stop, &step) < 0) {
+            return KEY_ERROR;
+        }
+
+        key->tag = Slice;
+        key->Slice.start = start;
+        key->Slice.stop = stop;
+        key->Slice.step = step;
+        return KEY_SLICE;
     }
     else {
         PyErr_SetString(PyExc_TypeError, "invalid subscript key");
+        return KEY_ERROR;
+    }
+}
+
+uint8_t
+convert_key(xnd_index_t *indices, int *len, PyObject *key)
+{
+    uint8_t flags = 0;
+
+    if (PyTuple_Check(key)) {
+        Py_ssize_t size = PyTuple_GET_SIZE(key);
+
+        if (size > NDT_MAX_DIM) {
+            PyErr_SetString(PyExc_IndexError, "too many indices");
+            return KEY_ERROR;
+        }
+
+        for (Py_ssize_t i = 0; i < size; i++) {
+            PyObject *x = PyTuple_GET_ITEM(key, i);
+            flags |= convert_single(indices+i, x);
+            if (flags & KEY_ERROR) {
+                return KEY_ERROR;
+            }
+        }
+
+        *len = size;
+        return flags;
+    }
+
+    *len = 1;
+    return convert_single(indices, key);
+}
+
+static PyObject *
+pyxnd_subscript(XndObject *self, PyObject *key)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    xnd_index_t indices[NDT_MAX_DIM];
+    int len;
+    uint8_t flags;
+
+    flags = convert_key(indices, &len, key);
+    if (flags & KEY_ERROR) {
         return NULL;
     }
 
-value_error:
-    PyErr_SetString(PyExc_ValueError, "too many indices");
-    return NULL;
+    if (flags & KEY_SLICE) {
+        xnd_t x = xnd_multikey(&self->xnd, indices, len, &ctx);
+        if (x.ptr == NULL) {
+            return seterr(&ctx);
+        }
+        return value_or_view_move(self, &x);
+    }
+    else {
+        const xnd_t x = xnd_subtree(&self->xnd, indices, len, false, &ctx);
+        if (x.ptr == NULL) {
+            return seterr(&ctx);
+        }
+        return value_or_view_copy(self, &x);
+    }
 }
 
 static int
 pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
 {
-    int free_type = 0;
+    NDT_STATIC_CONTEXT(ctx);
+    xnd_index_t indices[NDT_MAX_DIM];
     xnd_t x;
-    int ret;
+    int free_type = 0;
+    int ret, len;
+    uint8_t flags;
 
     if (value == NULL) {
         PyErr_SetString(PyExc_TypeError, "cannot delete memory blocks");
@@ -2478,39 +2145,27 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
         return -1;
     }
 
-    if (PyIndex_Check(key) || PyUnicode_Check(key)) {
-        PyObject *indices[1] = {key};
-        x = pyxnd_subtree(&self->xnd, indices, 1, false);
-    }
-    else if (is_multiindex(key)) {
-        PyObject **indices = &PyTuple_GET_ITEM(key, 0);
-        Py_ssize_t n = PyTuple_GET_SIZE(key);
-        if (n > INT_MAX) {
-            goto value_error;
-        }
-        x = pyxnd_subtree(&self->xnd, indices, (int)n, false);
-    }
-    else if (PySlice_Check(key)) {
-        PyObject *indices[1] = {key};
-        x = pyxnd_multikey(&self->xnd, indices, 1);
-        free_type = 1;
-    }
-    else if (is_multikey(key)) {
-        PyObject **indices = &PyTuple_GET_ITEM(key, 0);
-        Py_ssize_t n = PyTuple_GET_SIZE(key);
-        if (n > INT_MAX) {
-            goto value_error;
-        }
-        x = pyxnd_multikey(&self->xnd, indices, (int)n);
-        free_type = 1;
-    }
-    else {
-        PyErr_SetString(PyExc_TypeError, "invalid subscript key");
+    flags = convert_key(indices, &len, key);
+    if (flags & KEY_ERROR) {
         return -1;
     }
 
+    if (flags & KEY_SLICE) {
+        x = xnd_multikey(&self->xnd, indices, len, &ctx);
+        if (x.ptr == NULL) {
+            return seterr_int(&ctx);
+        }
+        free_type = 1;
+    }
+    else {
+        x = xnd_subtree(&self->xnd, indices, len, false, &ctx);
+        if (x.ptr == NULL) {
+            return seterr_int(&ctx);
+        }
+    }
+
     if (x.ptr == NULL) {
-        return -1;
+        return seterr_int(&ctx);
     }
 
     ret = mblock_init(&x, value);
@@ -2519,10 +2174,6 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
     }
 
     return ret;
-
-value_error:
-    PyErr_SetString(PyExc_ValueError, "too many indices");
-    return -1;
 }
 
 static PyObject *

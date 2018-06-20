@@ -34,10 +34,12 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <string.h>
 #include <assert.h>
 #include "ndtypes.h"
 #include "xnd.h"
 #include "inline.h"
+#include "contrib.h"
 
 
 static int xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx);
@@ -637,9 +639,83 @@ xnd_del(xnd_master_t *x)
 /*                 Subtrees (single elements are a special case)             */
 /*****************************************************************************/
 
+static int64_t
+get_index(const xnd_index_t *key, int64_t shape, ndt_context_t *ctx)
+{
+    switch (key->tag) {
+    case Index: {
+        int64_t i = key->Index;
+        if (i < 0) {
+            i += shape;
+        }
+
+        if (i < 0 || i >= shape || i > XND_SSIZE_MAX) {
+            ndt_err_format(ctx, NDT_IndexError,
+                "index with value %" PRIi64 " out of bounds", key->Index);
+            return -1;
+        }
+
+        return i;
+    }
+
+    case FieldName:
+        ndt_err_format(ctx, NDT_ValueError,
+            "expected integer index, got field name: '%s'", key->FieldName);
+        return -1;
+
+    case Slice:
+        ndt_err_format(ctx, NDT_ValueError,
+            "expected integer index, got slice");
+        return -1;
+    }
+
+    /* NOT REACHED: tags should be exhaustive */
+    ndt_err_format(ctx, NDT_RuntimeError, "invalid index tag");
+    return -1;
+}
+
+static int64_t
+get_index_record(const ndt_t *t, const xnd_index_t *key, ndt_context_t *ctx)
+{
+    assert(t->tag == Record);
+
+    switch (key->tag) {
+    case FieldName: {
+        int64_t i;
+
+        for (i = 0; i < t->Record.shape; i++) {
+            if (strcmp(key->FieldName, t->Record.names[i]) == 0) {
+                return i;
+            }
+        }
+
+        ndt_err_format(ctx, NDT_ValueError,
+            "invalid field name '%s'", key->FieldName);
+        return -1;
+    }
+    case Index: case Slice:
+        return get_index(key, t->Record.shape, ctx);
+    }
+
+    /* NOT REACHED: tags should be exhaustive */
+    ndt_err_format(ctx, NDT_RuntimeError, "invalid index tag");
+    return -1;
+}
+
+static void
+set_index_exception(bool indexable, ndt_context_t *ctx)
+{
+    if (indexable) {
+        ndt_err_format(ctx, NDT_IndexError, "too many indices");
+    }
+    else {
+        ndt_err_format(ctx, NDT_TypeError, "type not indexable");
+    }
+}
+
 /* Return a typed subtree of a memory block */
 xnd_t
-xnd_subtree(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
+xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
 {
     const ndt_t * const t = x->type;
 
@@ -666,7 +742,7 @@ xnd_subtree(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
         }
 
         const xnd_t next = xnd_fixed_dim_next(x, i);
-        return xnd_subtree(&next, indices+1, len-1, ctx);
+        return xnd_subtree_index(&next, indices+1, len-1, ctx);
     }
 
     case VarDim: {
@@ -683,7 +759,7 @@ xnd_subtree(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
         }
 
         const xnd_t next = xnd_var_dim_next(x, start, step, i);
-        return xnd_subtree(&next, indices+1, len-1, ctx);
+        return xnd_subtree_index(&next, indices+1, len-1, ctx);
     }
 
     case Tuple: {
@@ -697,7 +773,7 @@ xnd_subtree(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
-        return xnd_subtree(&next, indices+1, len-1, ctx);
+        return xnd_subtree_index(&next, indices+1, len-1, ctx);
     }
 
     case Record: {
@@ -711,7 +787,7 @@ xnd_subtree(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
-        return xnd_subtree(&next, indices+1, len-1, ctx);
+        return xnd_subtree_index(&next, indices+1, len-1, ctx);
     }
 
     case Ref: {
@@ -720,7 +796,7 @@ xnd_subtree(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
-        return xnd_subtree(&next, indices, len, ctx);
+        return xnd_subtree_index(&next, indices, len, ctx);
     }
 
     case Constr: {
@@ -729,7 +805,7 @@ xnd_subtree(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
-        return xnd_subtree(&next, indices, len, ctx);
+        return xnd_subtree_index(&next, indices, len, ctx);
     }
 
    case Nominal: {
@@ -738,11 +814,311 @@ xnd_subtree(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
             return xnd_error;
         }
 
-        return xnd_subtree(&next, indices, len, ctx);
+        return xnd_subtree_index(&next, indices, len, ctx);
     }
 
     default:
         ndt_err_format(ctx, NDT_ValueError, "type not indexable");
+        return xnd_error;
+    }
+}
+
+/*
+ * Return a zero copy view of an xnd object.  If a dtype is indexable,
+ * descend into the dtype.
+ */
+xnd_t
+xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexable,
+            ndt_context_t *ctx)
+{
+    const ndt_t *t = x->type;
+    const xnd_index_t *key;
+
+    assert(ndt_is_concrete(t));
+
+    if (t->ndim > 0 && ndt_is_optional(t)) {
+        ndt_err_format(ctx, NDT_NotImplementedError,
+            "optional dimensions are not supported");
+        return xnd_error;
+    }
+
+    if (len == 0) {
+        return *x;
+    }
+
+    key = &indices[0];
+
+    switch (t->tag) {
+    case FixedDim: {
+        int64_t i = get_index(key, t->FixedDim.shape, ctx);
+        if (i < 0) {
+            return xnd_error;
+        }
+
+        const xnd_t next = xnd_fixed_dim_next(x, i);
+        return xnd_subtree(&next, indices+1, len-1, true, ctx);
+    }
+
+    case VarDim: {
+        int64_t start, step, shape;
+        int64_t i;
+
+        shape = ndt_var_indices(&start, &step, t, x->index, ctx);
+        if (shape < 0) {
+            return xnd_error;
+        }
+
+        i = get_index(key, shape, ctx);
+        if (i < 0) {
+            return xnd_error;
+        }
+
+        const xnd_t next = xnd_var_dim_next(x, start, step, i);
+        return xnd_subtree(&next, indices+1, len-1, true, ctx);
+    }
+
+    case Tuple: {
+        const int64_t i = get_index(key, t->Tuple.shape, ctx);
+        if (i < 0) {
+            return xnd_error;
+        }
+
+        const xnd_t next = xnd_tuple_next(x, i, ctx);
+        if (next.ptr == NULL) {
+            return xnd_error;
+        }
+
+        return xnd_subtree(&next, indices+1, len-1, true, ctx);
+    }
+
+    case Record: {
+        int64_t i = get_index_record(t, key, ctx);
+        if (i < 0) {
+            return xnd_error;
+        }
+
+        const xnd_t next = xnd_record_next(x, i, ctx);
+        if (next.ptr == NULL) {
+            return xnd_error;
+        }
+
+        return xnd_subtree(&next, indices+1, len-1, true, ctx);
+    }
+
+    case Ref: {
+        const xnd_t next = xnd_ref_next(x, ctx);
+        if (next.ptr == NULL) {
+            return xnd_error;
+        }
+
+        return xnd_subtree(&next, indices, len, false, ctx);
+    }
+
+    case Constr: {
+        const xnd_t next = xnd_constr_next(x, ctx);
+        if (next.ptr == NULL) {
+            return xnd_error;
+        }
+
+        return xnd_subtree(&next, indices, len, false, ctx);
+    }
+
+    case Nominal: {
+        const xnd_t next = xnd_nominal_next(x, ctx);
+        if (next.ptr == NULL) {
+            return xnd_error;
+        }
+
+        return xnd_subtree(&next, indices, len, false, ctx);
+    }
+
+    default:
+        set_index_exception(indexable, ctx);
+        return xnd_error;
+    }
+}
+
+static xnd_t xnd_index(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *ctx);
+static xnd_t xnd_slice(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *ctx);
+
+xnd_t
+xnd_multikey(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *ctx)
+{
+    const ndt_t *t = x->type;
+    const xnd_index_t *key;
+
+    assert(len >= 0);
+    assert(ndt_is_concrete(t));
+    assert(x->ptr != NULL);
+
+    if (len > t->ndim) {
+        ndt_err_format(ctx, NDT_IndexError, "too many indices");
+        return xnd_error;
+    }
+
+    if (len == 0) {
+        xnd_t next = *x;
+        next.type = ndt_copy(t, ctx);
+        if (next.type == NULL) {
+            return xnd_error;
+        }
+
+        return next;
+    }
+
+    key = &indices[0];
+
+    switch (key->tag) {
+    case Index:
+        return xnd_index(x, indices, len, ctx);
+    case Slice:
+        return xnd_slice(x, indices, len, ctx);
+    case FieldName:
+        ndt_err_format(ctx, NDT_RuntimeError,
+            "xnd_multikey: internal error: key must be index or slice");
+        return xnd_error;
+    }
+
+    /* NOT REACHED: tags should be exhaustive */
+    ndt_err_format(ctx, NDT_RuntimeError, "invalid index tag");
+    return xnd_error;
+}
+
+/*
+ * Return a view with a copy of the type.  Indexing into the dtype is
+ * not permitted.
+ */
+static xnd_t
+xnd_index(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *ctx)
+{
+    const ndt_t *t = x->type;
+    const xnd_index_t *key;
+
+    assert(len > 0);
+    assert(ndt_is_concrete(t));
+    assert(x->ptr != NULL);
+
+    key = &indices[0];
+    assert(key->tag == Index);
+
+    switch (t->tag) {
+    case FixedDim: {
+        const int64_t i = get_index(key, t->FixedDim.shape, ctx);
+        if (i < 0) {
+            return xnd_error;
+        }
+
+        const xnd_t next = xnd_fixed_dim_next(x, i);
+        return xnd_multikey(&next, indices+1, len-1, ctx);
+    }
+
+    case VarDim: {
+        ndt_err_format(ctx, NDT_IndexError,
+            "mixed indexing and slicing is not supported for var dimensions");
+        return xnd_error;
+    }
+
+    default:
+        ndt_err_format(ctx, NDT_IndexError, "type is not indexable");
+        return xnd_error;
+    }
+}
+
+static xnd_t
+xnd_slice(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *ctx)
+{
+    const ndt_t *t = x->type;
+    const xnd_index_t *key;
+
+    assert(len > 0);
+    assert(ndt_is_concrete(t));
+    assert(x->ptr != NULL);
+
+    key = &indices[0];
+    assert(key->tag == Slice);
+
+    switch (t->tag) {
+    case FixedDim: {
+        int64_t start = key->Slice.start;
+        int64_t stop = key->Slice.stop;
+        int64_t step = key->Slice.step;
+        int64_t shape;
+
+        shape = xnd_slice_adjust_indices(t->FixedDim.shape, &start, &stop, step);
+
+        const xnd_t next = xnd_fixed_dim_next(x, start);
+        const xnd_t sliced = xnd_multikey(&next, indices+1, len-1, ctx);
+        if (sliced.ptr == NULL) {
+            return xnd_error;
+        }
+
+        xnd_t ret = *x;
+        ret.type = ndt_fixed_dim((ndt_t *)sliced.type, shape,
+                                 t->Concrete.FixedDim.step * step,
+                                 ctx);
+        if (ret.type == NULL) {
+            return xnd_error;
+        }
+        ret.index = sliced.index;
+
+        return ret;
+    }
+
+    case VarDim: {
+        int64_t start = key->Slice.start;
+        int64_t stop = key->Slice.stop;
+        int64_t step = key->Slice.step;
+        ndt_slice_t *slices;
+        int32_t nslices;
+
+        if (ndt_is_optional(t)) {
+            ndt_err_format(ctx, NDT_NotImplementedError,
+                "optional dimensions are temporarily disabled");
+            return xnd_error;
+        }
+
+        xnd_t next = *x;
+        next.type = t->VarDim.type;
+
+        next = xnd_multikey(&next, indices+1, len-1, ctx);
+        if (next.ptr == NULL) {
+            return xnd_error;
+        }
+
+        slices = ndt_var_add_slice(&nslices, t, start, stop, step, ctx);
+        if (slices == NULL) {
+            return xnd_error;
+        }
+
+        xnd_t ret = *x;
+        ret.type = ndt_var_dim((ndt_t *)next.type,
+                                ExternalOffsets,
+                                t->Concrete.VarDim.noffsets, t->Concrete.VarDim.offsets,
+                                nslices, slices,
+                                ctx);
+        if (ret.type == NULL) {
+            return xnd_error;
+        }
+
+        ret.index = next.index;
+
+        return ret;
+    }
+
+    case Tuple: {
+        ndt_err_format(ctx, NDT_NotImplementedError,
+            "slicing tuples is not supported");
+        return xnd_error;
+    }
+
+    case Record: {
+        ndt_err_format(ctx, NDT_NotImplementedError,
+            "slicing records is not supported");
+        return xnd_error;
+    }
+
+    default:
+        ndt_err_format(ctx, NDT_IndexError, "type not sliceable");
         return xnd_error;
     }
 }
