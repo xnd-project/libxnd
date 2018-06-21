@@ -827,9 +827,9 @@ xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t
  * Return a zero copy view of an xnd object.  If a dtype is indexable,
  * descend into the dtype.
  */
-xnd_t
-xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexable,
-            ndt_context_t *ctx)
+static xnd_t
+_xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexable,
+             ndt_context_t *ctx)
 {
     const ndt_t *t = x->type;
     const xnd_index_t *key;
@@ -856,7 +856,7 @@ xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexable
         }
 
         const xnd_t next = xnd_fixed_dim_next(x, i);
-        return xnd_subtree(&next, indices+1, len-1, true, ctx);
+        return _xnd_subtree(&next, indices+1, len-1, true, ctx);
     }
 
     case VarDim: {
@@ -874,7 +874,7 @@ xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexable
         }
 
         const xnd_t next = xnd_var_dim_next(x, start, step, i);
-        return xnd_subtree(&next, indices+1, len-1, true, ctx);
+        return _xnd_subtree(&next, indices+1, len-1, true, ctx);
     }
 
     case Tuple: {
@@ -888,7 +888,7 @@ xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexable
             return xnd_error;
         }
 
-        return xnd_subtree(&next, indices+1, len-1, true, ctx);
+        return _xnd_subtree(&next, indices+1, len-1, true, ctx);
     }
 
     case Record: {
@@ -902,7 +902,7 @@ xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexable
             return xnd_error;
         }
 
-        return xnd_subtree(&next, indices+1, len-1, true, ctx);
+        return _xnd_subtree(&next, indices+1, len-1, true, ctx);
     }
 
     case Ref: {
@@ -911,7 +911,7 @@ xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexable
             return xnd_error;
         }
 
-        return xnd_subtree(&next, indices, len, false, ctx);
+        return _xnd_subtree(&next, indices, len, false, ctx);
     }
 
     case Constr: {
@@ -920,7 +920,7 @@ xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexable
             return xnd_error;
         }
 
-        return xnd_subtree(&next, indices, len, false, ctx);
+        return _xnd_subtree(&next, indices, len, false, ctx);
     }
 
     case Nominal: {
@@ -929,13 +929,23 @@ xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexable
             return xnd_error;
         }
 
-        return xnd_subtree(&next, indices, len, false, ctx);
+        return _xnd_subtree(&next, indices, len, false, ctx);
     }
 
     default:
         set_index_exception(indexable, ctx);
         return xnd_error;
     }
+}
+
+/*
+ * Return a zero copy view of an xnd object.  If a dtype is indexable,
+ * descend into the dtype.
+ */
+xnd_t
+xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *ctx)
+{
+    return _xnd_subtree(x, indices, len, false, ctx);
 }
 
 static xnd_t xnd_index(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *ctx);

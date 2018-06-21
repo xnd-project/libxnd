@@ -148,7 +148,7 @@ XND_API xnd_t xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len,
                                 ndt_context_t *ctx);
 
 XND_API xnd_t xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len,
-                          bool indexable, ndt_context_t *ctx);
+                          ndt_context_t *ctx);
 
 XND_API xnd_t xnd_multikey(const xnd_t *x, const xnd_index_t indices[], int len,
                            ndt_context_t *ctx);

@@ -2117,7 +2117,7 @@ pyxnd_subscript(XndObject *self, PyObject *key)
         return value_or_view_move(self, &x);
     }
     else {
-        const xnd_t x = xnd_subtree(&self->xnd, indices, len, false, &ctx);
+        const xnd_t x = xnd_subtree(&self->xnd, indices, len, &ctx);
         if (x.ptr == NULL) {
             return seterr(&ctx);
         }
@@ -2158,7 +2158,7 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
         free_type = 1;
     }
     else {
-        x = xnd_subtree(&self->xnd, indices, len, false, &ctx);
+        x = xnd_subtree(&self->xnd, indices, len, &ctx);
         if (x.ptr == NULL) {
             return seterr_int(&ctx);
         }
