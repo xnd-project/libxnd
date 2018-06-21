@@ -95,7 +95,6 @@ Set the validity bit at *x->index*.  *x* must have an optional type.
 Clear the validity bit at *x->index*.  *x* must have an optional type.
 
 
-
 .. topic:: xnd_is_valid
 
 .. code-block:: c
@@ -114,3 +113,36 @@ type, return *1*.  Otherwise, return the validity bit (zero or nonzero).
 
 Check if the element at *x->index* is valid.  If *x* does not have an optional
 type, return *0*.  Otherwise, return the negation of the validity bit.
+
+
+.. topic:: xnd_subtree
+
+.. code-block:: c
+
+   xnd_t xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len,
+                     ndt_context_t *ctx);
+
+Apply zero or more indices to the input *x* and return a typed view. Valid
+indices are integers or strings for record fields.
+
+This function is more general than pure array indexing, hence the name. For
+example, it is possible to index into nested records that in turn contain
+arrays.
+
+
+.. topic:: xnd_multikey
+
+.. code-block:: c
+
+   xnd_t xnd_multikey(const xnd_t *x, const xnd_index_t indices[], int len,
+                      ndt_context_t *ctx);
+
+Apply zero or more keys to the input *x* and return a typed view. Valid
+keys are integers or slices.
+
+This function differs from :c:func:`xnd_subtree` in that it allows
+mixed indexing and slicing for fixed dimensions.  Records and tuples
+cannot be sliced.
+
+Variable dimensions can be sliced, but do not support mixed indexing
+and slicing.

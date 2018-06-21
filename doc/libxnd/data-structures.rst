@@ -160,3 +160,27 @@ This is the master buffer.  *flags* are explained above, the *master* buffer
 should be considered constant.
 
 For traversing memory, copy a new view buffer by value.
+
+
+Slice and index keys
+--------------------
+
+.. topic:: xnd_key
+
+.. code-block:: c
+
+   enum xnd_key { Index, FieldName, Slice };
+   typedef struct {
+     enum xnd_key tag;
+     union {
+       int64_t Index;
+       const char *FieldName;
+       ndt_slice_t Slice;
+     };
+   } xnd_index_t;
+
+Slicing and indexing uses the same model as Python.  Indices are usually
+integers, but record fields may also be indexed with field names.
+
+*ndt_slice_t* has *start*, *stop*, *step* fields that must be filled in with
+normalized values following the same protocol as :c:func:`PySlice_Unpack`.
