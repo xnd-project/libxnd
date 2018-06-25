@@ -2358,19 +2358,18 @@ fill_buffer(Py_buffer *view, const xnd_t *x, ndt_context_t *ctx)
     view->suboffsets = NULL;
 
     if (!ndt_is_ndarray(t)) {
-        if (t->ndim == 0) {
-            view->len = t->datasize;
-            view->itemsize = t->datasize;
-            view->shape = NULL;
-            view->strides = NULL;
-            view->buf = x->ptr + x->index * t->datasize;
-            return 0;
-        }
-        else {
-            ndt_err_format(ctx, NDT_ValueError,
-                "buffer protocol only supports ndarrays");
-            return -1;
-        }
+        ndt_err_format(ctx, NDT_ValueError,
+            "buffer protocol only supports ndarrays");
+        return -1;
+    }
+
+    if (t->ndim == 0) {
+        view->len = t->datasize;
+        view->itemsize = t->datasize;
+        view->shape = NULL;
+        view->strides = NULL;
+        view->buf = x->ptr + x->index * t->datasize;
+        return 0;
     }
 
     view->itemsize = t->Concrete.FixedDim.itemsize;
