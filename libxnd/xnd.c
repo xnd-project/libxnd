@@ -1139,26 +1139,40 @@ xnd_slice(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *c
 
 #define IEEE_LITTLE_ENDIAN 0
 #define IEEE_BIG_ENDIAN    1
-static int xnd_float_format = 0;
 static int xnd_double_format = 0;
+static int xnd_float_format = 0;
 
 int
 xnd_init_float(ndt_context_t *ctx)
 {
-    float y = 16711938.0;
     double x = 9006104071832581.0;
+    float y = 16711938.0;
+
+#ifndef _MSC_VER
+    if (sizeof(double) != 8) {
+        ndt_err_format(ctx, NDT_RuntimeError,
+            "unsupported platform, need sizeof(double)==8");
+        return -1;
+
+    }
 
     if (sizeof(float) != 4) {
         ndt_err_format(ctx, NDT_RuntimeError,
             "unsupported platform, need sizeof(float)==4");
         return -1;
     }
+#endif
 
-    if (sizeof(double) != 8) {
+    if (memcmp(&x, "\x43\x3f\xff\x01\x02\x03\x04\x05", 8) == 0) {
+        xnd_double_format = IEEE_BIG_ENDIAN;
+    }
+    else if (memcmp(&x, "\x05\x04\x03\x02\x01\xff\x3f\x43", 8) == 0) {
+        xnd_double_format = IEEE_LITTLE_ENDIAN;
+    }
+    else {
         ndt_err_format(ctx, NDT_RuntimeError,
-            "unsupported platform, need sizeof(double)==8");
+            "unsupported platform, could not detect double endianness");
         return -1;
-
     }
 
     if (memcmp(&y, "\x4b\x7f\x01\x02", 4) == 0) {
@@ -1170,18 +1184,6 @@ xnd_init_float(ndt_context_t *ctx)
     else {
         ndt_err_format(ctx, NDT_RuntimeError,
             "unsupported platform, could not detect float endianness");
-        return -1;
-    }
-
-    if (memcmp(&x, "\x43\x3f\xff\x01\x02\x03\x04\x05", 8) == 0) {
-        xnd_double_format = IEEE_BIG_ENDIAN;
-    }
-    else if (memcmp(&x, "\x05\x04\x03\x02\x01\xff\x3f\x43", 8) == 0) {
-        xnd_double_format = IEEE_LITTLE_ENDIAN;
-    }
-    else {
-        ndt_err_format(ctx, NDT_RuntimeError,
-            "unsupported platform, could not detect double endianness");
         return -1;
     }
 

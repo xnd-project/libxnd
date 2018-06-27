@@ -182,11 +182,11 @@ XND_API extern const xnd_bitmap_t xnd_bitmap_empty;
 /*                                 Float format                              */
 /*****************************************************************************/
 
-int xnd_init_float(ndt_context_t *ctx);
-bool xnd_float_is_little_endian(void);
-bool xnd_float_is_big_endian(void);
-bool xnd_double_is_little_endian(void);
-bool xnd_double_is_big_endian(void);
+XND_API int xnd_init_float(ndt_context_t *ctx);
+XND_API bool xnd_float_is_little_endian(void);
+XND_API bool xnd_float_is_big_endian(void);
+XND_API bool xnd_double_is_little_endian(void);
+XND_API bool xnd_double_is_big_endian(void);
 
 
 /*****************************************************************************/
