@@ -56,6 +56,12 @@ init_tests(void)
         return -1;
     }
 
+    if (xnd_init_float(ctx) < 0) {
+        ndt_err_fprint(stderr, ctx);
+        ndt_context_del(ctx);
+        return -1;
+    }
+
     ndt_context_del(ctx);
     return 0;
 }

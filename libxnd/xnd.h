@@ -37,6 +37,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <assert.h>
 #include "ndtypes.h"
 
@@ -153,6 +154,8 @@ XND_API xnd_t xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len,
 XND_API xnd_t xnd_multikey(const xnd_t *x, const xnd_index_t indices[], int len,
                            ndt_context_t *ctx);
 
+XND_API int xnd_equal(const xnd_t * const x, const xnd_t * const y, ndt_context_t *ctx);
+
 
 /*****************************************************************************/
 /*                                  Bitmaps                                  */
@@ -173,6 +176,17 @@ XND_API int xnd_is_na(const xnd_t *x);
 
 XND_API extern const xnd_t xnd_error;
 XND_API extern const xnd_bitmap_t xnd_bitmap_empty;
+
+
+/*****************************************************************************/
+/*                                 Float format                              */
+/*****************************************************************************/
+
+int xnd_init_float(ndt_context_t *ctx);
+bool xnd_float_is_little_endian(void);
+bool xnd_float_is_big_endian(void);
+bool xnd_double_is_little_endian(void);
+bool xnd_double_is_big_endian(void);
 
 
 /*****************************************************************************/
@@ -348,4 +362,58 @@ xnd_nominal_next(const xnd_t *x, ndt_context_t *ctx)
 
     return next;
 }
+
+#if NDT_SYS_BIG_ENDIAN == 1
+  #define XND_REV_COND NDT_LITTLE_ENDIAN
+#else
+  #define XND_REV_COND NDT_BIG_ENDIAN
+#endif
+
+static inline void
+memcpy_rev(char *dest, const char *src, size_t size)
+{
+    size_t i;
+
+    for (i = 0; i < size; i++) {
+        dest[i] = src[size-1-i];
+    }
+}
+
+static inline void
+bcopy_swap(char *dest, const char *src, size_t size, uint32_t flags)
+{
+    if (flags & XND_REV_COND) {
+        memcpy_rev(dest, src, size);
+    }
+    else {
+        memcpy(dest, src, size);
+    }
+}
+
+static inline int
+le(uint32_t flags)
+{
+#if NDT_SYS_BIG_ENDIAN == 1
+    return flags & NDT_LITTLE_ENDIAN;
+#else
+    return !(flags & NDT_BIG_ENDIAN);
+#endif
+}
+
+
+#define PACK_SINGLE(ptr, src, type, flags) \
+    do {                                                      \
+        type _x;                                              \
+        _x = (type)src;                                       \
+        bcopy_swap(ptr, (const char *)&_x, sizeof _x, flags); \
+    } while (0)
+
+#define UNPACK_SINGLE(dest, ptr, type, flags) \
+    do {                                                \
+        type _x;                                        \
+        bcopy_swap((char *)&_x, ptr, sizeof _x, flags); \
+        dest = _x;                                      \
+    } while (0)
+
+
 #endif /* XND_H */

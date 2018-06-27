@@ -55,6 +55,14 @@ Makefile bitmaps.c xnd.h
 Makefile bitmaps.c xnd.h
 	$(CC) "-I$(LIBNDTYPESINCLUDE)" $(CFLAGS_SHARED) -c bitmaps.c
 
+equal.obj:\
+Makefile equal.c xnd.h
+	$(CC) "-I$(LIBNDTYPESINCLUDE)" $(CFLAGS) -c equal.c
+
+.objs\equal.obj:\
+Makefile equal.c xnd.h
+	$(CC) "-I$(LIBNDTYPESINCLUDE)" $(CFLAGS_SHARED) -c equal.c
+
 xnd.obj:\
 Makefile xnd.c xnd.h
 	$(CC) "-I$(LIBNDTYPESINCLUDE)" $(CFLAGS) -c xnd.c

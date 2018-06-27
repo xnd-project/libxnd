@@ -429,59 +429,6 @@ static PyTypeObject MemoryBlock_Type = {
 /*                      MemoryBlock Object Initialization                   */
 /****************************************************************************/
 
-#if NDT_SYS_BIG_ENDIAN == 1
-  #define XND_REV_COND NDT_LITTLE_ENDIAN
-#else
-  #define XND_REV_COND NDT_BIG_ENDIAN
-#endif
-
-static inline void
-memcpy_rev(char *dest, const char *src, size_t size)
-{
-    size_t i;
-
-    for (i = 0; i < size; i++) {
-        dest[i] = src[size-1-i];
-    }
-}
-
-static inline void
-bcopy_swap(char *dest, const char *src, size_t size, uint32_t flags)
-{
-    if (flags & XND_REV_COND) {
-        memcpy_rev(dest, src, size);
-    }
-    else {
-        memcpy(dest, src, size);
-    }
-}
-
-static inline int
-le(uint32_t flags)
-{
-#if NDT_SYS_BIG_ENDIAN == 1
-    return flags & NDT_LITTLE_ENDIAN;
-#else
-    return !(flags & NDT_BIG_ENDIAN);
-#endif
-}
-
-
-#define PACK_SINGLE(ptr, src, type, flags) \
-    do {                                                      \
-        type _x;                                              \
-        _x = (type)src;                                       \
-        bcopy_swap(ptr, (const char *)&_x, sizeof _x, flags); \
-    } while (0)
-
-#define UNPACK_SINGLE(dest, ptr, type, flags) \
-    do {                                                \
-        type _x;                                        \
-        bcopy_swap((char *)&_x, ptr, sizeof _x, flags); \
-        dest = _x;                                      \
-    } while (0)
-
-
 static void
 _strncpy(char *dest, const void *src, size_t len, size_t size)
 {
@@ -2442,6 +2389,27 @@ static PyBufferProcs pyxnd_as_buffer = {
 };
 
 
+/* Special methods */
+static PyObject *
+pyxnd_richcompare(PyObject *v, PyObject *w, int op)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    PyObject *res = Py_NotImplemented;
+
+    if (op == Py_EQ || op == Py_NE) {
+        int r = xnd_equal(XND(v), XND(w), &ctx);
+        if (r < 0) {
+            return seterr(&ctx);
+        }
+
+        res = ((op==Py_EQ) == !!r) ? Py_True : Py_False;
+    }
+
+    Py_INCREF(res);
+    return res;
+}
+
+
 /****************************************************************************/
 /*                                 Xnd type                                 */
 /****************************************************************************/
@@ -2458,6 +2426,7 @@ static PyTypeObject Xnd_Type =
     .tp_getattro = (getattrofunc) PyObject_GenericGetAttr,
     .tp_as_buffer = &pyxnd_as_buffer,
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC,
+    .tp_richcompare = pyxnd_richcompare,
     .tp_traverse = (traverseproc)pyxnd_traverse,
     .tp_methods = pyxnd_methods,
     .tp_getset = pyxnd_getsets,
@@ -2595,11 +2564,15 @@ static struct PyModuleDef xnd_module = {
 PyMODINIT_FUNC
 PyInit__xnd(void)
 {
+    NDT_STATIC_CONTEXT(ctx);
     PyObject *m = NULL;
     static PyObject *capsule = NULL;
     static int initialized = 0;
 
     if (!initialized) {
+        if (xnd_init_float(&ctx) < 0) {
+            return seterr(&ctx);
+        }
         if (import_ndtypes() < 0) {
             return NULL;
         }

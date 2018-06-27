@@ -34,6 +34,7 @@
 
 from itertools import accumulate, count, product
 from random import randrange
+from collections import namedtuple
 from xnd_support import R
 
 
@@ -449,6 +450,412 @@ DTYPE_EMPTY_TEST_CASES = [
    (2 * [3 * [None]], "ThisGuy(2 * 3 * ?float32)"),
 
    (2 * [3 * [None]], "ThisGuy(!2 * 3 * ?float32)"),
+]
+
+#
+# Test case for richcompare:
+#   v: value
+#   t: type of v
+#   u: equivalent type for v
+#   w: value different from v
+#   eq: expected comparison result
+#
+T = namedtuple('T', 'v t u w eq')
+
+EQUAL_TEST_CASES = [
+   # Tuples
+   T(v=(),
+     t="()",
+     u=None,
+     w=None,
+     eq=True),
+
+   T(v=(100,),
+     t="(int8)",
+     u="?(int8)",
+     w=(101,),
+     eq=True),
+
+   T(v=(2**7-1, 2**63-1),
+     t="(int8, int64)",
+     u="(int8, ?int64) ",
+     w=(2**7-2, 2**63-1),
+     eq=True),
+
+   T(v=(2**16-1, (1.2312222+28j,)),
+     t="(uint16, (complex64))",
+     u="(uint16, ?(complex64))",
+     w=(2**16-1, (1.23122+28j,)),
+     eq=True),
+
+   T(v=(1, (1e22+2j,)),
+     t="(uint32, (complex64), pack=1)",
+     u="(uint32, (complex64), align=16)",
+     w=(1, (1e22+3j,)),
+     eq=True),
+
+   T(v=([],),
+     t="(0 * bytes)",
+     u=None,
+     w=None,
+     eq=True),
+
+   T(v=([], []),
+     t="(0 * bytes, 0 * string)",
+     u=None,
+     w=None,
+     eq=True),
+
+   T(v=([b'x'], 2 * [1.2j], 3 * ["abc"]),
+     t="(1 * bytes, 2 * complex128, 3 * string)",
+     u="(1 * bytes, 2 * ?complex128, 3 * string)",
+     w=([b'x'], 2 * [1.2j], 3 * ["ab"]),
+     eq=True),
+
+   T(v=([b'123'], 2 * [(3e22+0.2j, 10 * [2 * ["xyz"]])], 3 * ["1"]),
+     t="(1 * bytes, 2 * (complex128, 10 * 2 * string), 3 * string)",
+     u="(1 * bytes, 2 * ?(complex128, 10 * 2 * string), 3 * string)",
+     w=([b'1234'], 2 * [(3e22+0.2j, 10 * [2 * ["xyz"]])], 3 * ["1"]),
+     eq=True),
+
+   T(v=(10001, 2 * [3 * [4 * [5 * [2.250]]]]),
+     t="(int64, 2 * 3 * Some(4 * 5 * float64))",
+     u="(int64, 2 * 3 * Some(4 * 5 * ?float64))",
+     w=(10001, 2 * [3 * [4 * [5 * [2.251]]]]),
+     eq=True),
+
+   T(v=(-2**63, 2 * [3 * [4 * [5 * [10.1]]]]),
+     t="(int64, 2 * 3 * ref(4 * 5 * float64))",
+     u="(int64, 2 * 3 * ?ref(4 * 5 * float64))",
+     w=(-2**63+1, 2 * [3 * [4 * [5 * [10.1]]]]),
+     eq=True),
+
+   # Optional tuples
+   T(v=None,
+     t="?()",
+     u=None,
+     w=None,
+     eq=False),
+
+   T(v=None,
+     t="?(int8)",
+     u=None,
+     w=None,
+     eq=False),
+
+   T(v=None,
+     t="?(1 * bytes, 2 * (complex128, 10 * 2 * string), 3 * string)",
+     u=None,
+     w=None,
+     eq=False),
+
+   # Tuples with optional elements
+   T(v=(None,),
+     t="(?int8)",
+     u=None,
+     w=None,
+     eq=False),
+
+   T(v=(None, 0),
+     t="(?int8, int64)",
+     u=None,
+     w=None,
+     eq=False),
+
+   T(v=(0, None),
+     t="(int8, ?int64)",
+     u=None,
+     w=None,
+     eq=False),
+
+   T(v=(None, None),
+     t="(?int8, ?int64)",
+     u=None,
+     w=None,
+     eq=False),
+
+   T(v=None,
+     t="?(?int8, ?int64)",
+     u=None,
+     w=None,
+     eq=False),
+
+   T(v=(0, None),
+     t="(uint16, ?(complex64))",
+     u=None,
+     w=None,
+     eq=False),
+
+   T(v=(0, (None,)),
+     t="(uint16, (?complex64))",
+     u=None,
+     w=None,
+     eq=False),
+
+   T(v=(0, None),
+     t="(uint16, ?(?complex64))",
+     u=None,
+     w=None,
+     eq=False),
+
+   T(v=(None, (0+0j,)),
+     t="(?uint16, (complex64), pack=1)",
+     u=None,
+     w=None,
+     eq=False),
+
+   T(v=(0, None),
+     t="(uint16, ?(complex64), pack=1)",
+     u=None,
+     w=None,
+     eq=False),
+
+   T(v=(0, (None,)),
+     t="(uint16, (?complex64), pack=1)",
+     u=None,
+     w=None,
+     eq=False),
+
+   # Records
+   T(v={},
+     t="{}",
+     u=None,
+     w=None,
+     eq=True),
+
+   T(v=R['x': 2**31-1],
+     t="{x: int32}",
+     u="{x: ?int32}",
+     w=R['x': 2**31-2],
+     eq=True),
+
+   T(v=R['x': -128, 'y': -1],
+     t="{x: int8, y: int64}",
+     u="{x: int8, y: int64, pack=1}",
+     w=R['x': -127, 'y': -1],
+     eq=True),
+
+   T(v=R['x': 2**32-1, 'y': R['z': 10000001e3+36.1e7j]],
+     t="{x: uint32, y: {z: complex64}}",
+     u="{x: uint32, y: {z: complex64}}",
+     w=R['x': 2**32-2, 'y': R['z': 10000001e3+36.1e7j]],
+     eq=True),
+
+   T(v=R['x': 255, 'y': R['z': 2+3j]],
+     t="{x: uint8, y: {z: complex64}, pack=1}",
+     u="{x: uint8, y: {z: complex64}, pack=4}",
+     w=R['x': 255, 'y': R['z': 3+3j]],
+     eq=True),
+
+   T(v=R['x': 10001, 'y': R['z': "abc"]],
+     t="{x: uint16, y: {z: fixed_string(100)}, pack=2}",
+     u="{x: uint16, y: {z: fixed_string(100)}, align=8}",
+     w=R['x': 10001, 'y': R['z': "abcd"]],
+     eq=True),
+
+   T(v=R['x': []],
+     t="{x: 0 * bytes}",
+     u=None,
+     w=None,
+     eq=True),
+
+   T(v=R['x': [], 'y': []],
+     t="{x: 0 * bytes, y: 0 * string}",
+     u=None,
+     w=None,
+     eq=True),
+
+   T(v=R['x': [b''], 'y': 2 * [2.0j], 'z': 3 * ["y"]],
+     t="{x: 1 * fixed_bytes(size=10), y: 2 * complex128, z: 3 * string}",
+     u="{x: 1 * fixed_bytes(size=10, align=256), y: 2 * complex128, z: 3 * string}",
+     w=None,
+     eq=True),
+
+   T(v=R['x': 100, 'y': 2 * [3 * [4 * [5 * [301.0]]]]],
+     t="{x: int64, y: 2 * 3 * Some(4 * 5 * ?float64)}",
+     u="{x: int64, y: 2 * 3 * ?Some(4 * 5 * ?float64)}",
+     w=R['x': 100, 'y': 2 * [3 * [4 * [5 * [None]]]]],
+     eq=True),
+
+   # Optional records
+   T(v=None,
+     t="?{}",
+     u="?{}",
+     w=None,
+     eq=False),
+
+   T(v=None,
+     t="?{x: int8}",
+     u="?{x: int8}",
+     w=None,
+     eq=False),
+
+   T(v=R['x': 101],
+     t="?{x: int8}",
+     u="{x: int8}",
+     w=R['x': 100],
+     eq=True),
+
+   T(v=None,
+     t="?{x: 0 * bytes}",
+     u="?{x: 0 * bytes}",
+     w=None,
+     eq=False),
+
+   T(v=None,
+     t="?{x: 0 * bytes, y: 0 * string}",
+     u="?{x: 0 * bytes, y: 0 * string}",
+     w=None,
+     eq=False),
+
+   # Records with optional elements
+   T(v=R['x': None],
+     t="{x: ?int8}",
+     u="{x: ?int8}",
+     w=None,
+     eq=False),
+
+   T(v=R['x': None, 'y': 0],
+     t="{x: ?int8, y: int64}",
+     u="{x: ?int8, y: int64}",
+     w=R['x': 0, 'y': 0],
+     eq=False),
+
+   T(v=R['x': 100, 'y': None],
+     t="{x: int8, y: ?int64}",
+     u="{x: int8, y: ?int64}",
+     w=R['x': 100, 'y': 10],
+     eq=False),
+
+   T(v=R['x': None, 'y': None],
+     t="{x: ?int8, y: ?int64}",
+     u="{x: ?int8, y: ?int64}",
+     w=R['x': 1, 'y': 1],
+     eq=False),
+
+   T(v=None,
+     t="?{x: ?int8, y: ?int64}",
+     u="?{x: ?int8, y: ?int64}",
+     w=None,
+     eq=False),
+
+   T(v=R['x': 0, 'y': None],
+     t="{x: uint16, y: ?{z: complex64}}",
+     u="{x: uint16, y: ?{z: complex64}}",
+     w=R['x': 1, 'y': None],
+     eq=False),
+
+   T(v=R['x': 0, 'y': R['z': None]],
+     t="{x: uint16, y: {z: ?complex64}}",
+     u="{x: uint16, y: {z: ?complex64}}",
+     w=R['x': 0, 'y': R['z': 2]],
+     eq=False),
+
+   T(v=R['x': 0, 'y': None],
+     t="{x: uint16, y: ?{z: ?complex64}}",
+     u="{x: uint16, y: ?{z: ?complex64}}",
+     w=R['x': 0, 'y': R['z': 1+10j]],
+     eq=False),
+
+   T(v=R['x': None, 'y': R['z': 0+0j]],
+     t="{x: ?uint16, y: {z: complex64}, pack=1}",
+     u="{x: ?uint16, y: {z: complex64}, align=16}",
+     w=R['x': 256, 'y': R['z': 0+0j]],
+     eq=False),
+
+   T(v=R['x': 0, 'y': None],
+     t="{x: uint16, y: ?{z: complex64}, pack=1}",
+     u="{x: uint16, y: ?{z: complex64}, pack=1}",
+     w=R['x': 0, 'y': R['z': 0+1j]],
+     eq=False),
+
+   T(v=R['x': 0, 'y': R['z': None]],
+     t="{x: ?uint16, y: {z: ?complex64}, pack=1}",
+     u="{x: ?uint16, y: {z: ?complex64}, pack=1}",
+     w=R['x': None, 'y': R['z': None]],
+     eq=False),
+
+   T(v=R['x': []],
+     t="{x: 0 * ?bytes}",
+     u="{x: 0 * ?bytes}",
+     w=None,
+     eq=True),
+
+   T(v=R['x': 1 * [None]],
+     t="{x: 1 * ?bytes}",
+     u="{x: 1 * ?bytes}",
+     w=None,
+     eq=False),
+
+   T(v=R['x': 10 * [None]],
+     t="{x: 10 * ?bytes}",
+     u="{x: 10 * ?bytes}",
+     w=R['x': 10 * [b"123"]],
+     eq=False),
+
+   T(v=R['x': [], 'y': []],
+     t="{x: 0 * ?bytes, y: 0 * ?string}",
+     u="{x: 0 * ?bytes, y: 0 * ?string}",
+     w=None,
+     eq=True),
+
+   T(v=R['x': 5 * [b"123"], 'y': 2 * ["abc"]],
+     t="{x: 5 * ?bytes, y: 2 * string}",
+     u="{x: 5 * bytes, y: 2 * string}",
+     w=R['x': 5 * [b"12345"], 'y': 2 * ["abc"]],
+     eq=True),
+
+   T(v=R['x': [b"-123"], 'y': 2 * [1e200+10j], 'z': 3 * [100*"t"]],
+     t="{x: 1 * ?bytes, y: 2 * ?complex128, z: 3 * ?string}",
+     u="{x: 1 * ?bytes, y: 2 * ?complex128, z: 3 * ?string}",
+     w=R['x': [b"-123"], 'y': 2 * [1e200+10j], 'z': 3 * [100*"t" + "u"]],
+     eq=True),
+
+   T(v=R['x': [b"x"], 'y': 2 * [R['a': 0.0j, 'b': 10 * [2 * ["c"]]]], 'z': 3 * ["a"]],
+     t="{x: 1 * ?bytes, y: 2 * {a: complex128, b: 10 * 2 * string}, z: 3 * string}",
+     u="{x: 1 * ?bytes, y: 2 * {a: complex128, b: 10 * 2 * ?string}, z: 3 * string}",
+     w=R['x': [b"x"], 'y': 2 * [R['a': 1.0j, 'b': 10 * [2 * ["c"]]]], 'z': 3 * ["a"]],
+     eq=True),
+
+   # Primitive types
+   T(v=False, t="bool", u="?bool", w=True, eq=True),
+   T(v=0, t="?bool", u="bool", w=1, eq=True),
+
+   T(v=127, t="int8", u="?int8", w=100, eq=True),
+   T(v=127, t="?int8", u="int8", w=100, eq=True),
+
+   T(v=-127, t="int16", u="?int16", w=100, eq=True),
+   T(v=-127, t="?int16", u="int16", w=100, eq=True),
+
+   T(v=127, t="int32", u="?int32", w=100, eq=True),
+   T(v=127, t="?int32", u="int32", w=100, eq=True),
+
+   T(v=127, t="int64", u="?int64", w=100, eq=True),
+   T(v=127, t="?int64", u="int64", w=100, eq=True),
+
+   T(v=127, t="uint8", u="?uint8", w=100, eq=True),
+   T(v=127, t="?uint8", u="uint8", w=100, eq=True),
+
+   T(v=127, t="uint16", u="?uint16", w=100, eq=True),
+   T(v=127, t="?uint16", u="uint16", w=100, eq=True),
+
+   T(v=127, t="uint32", u="?uint32", w=100, eq=True),
+   T(v=127, t="?uint32", u="uint32", w=100, eq=True),
+
+   T(v=127, t="uint64", u="?uint64", w=100, eq=True),
+   T(v=127, t="?uint64", u="uint64", w=100, eq=True),
+
+   T(v=1.122e11, t="float32", u="?float32", w=2.111, eq=True),
+   T(v=1.233e10, t="?float32", u="float32", w=3.111, eq=True),
+
+   T(v=1.122e11, t="float64", u="?float64", w=2.111, eq=True),
+   T(v=1.233e10, t="?float64", u="float64", w=3.111, eq=True),
+
+   T(v=1.122e11+1j, t="complex64", u="?complex64", w=1.122e11+2j, eq=True),
+   T(v=1.122e11+1j, t="?complex64", u="complex64", w=1.1e11+1j, eq=True),
+
+   T(v=1.122e11-100j, t="complex128", u="?complex128", w=1.122e11-101j, eq=True),
+   T(v=1.122e11-100j, t="?complex128", u="complex128", w=1.122e10-100j, eq=True),
 ]
 
 
