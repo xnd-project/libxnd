@@ -31,9 +31,9 @@ default: $(LIBSTATIC) $(LIBSHARED)
 	copy /y $(LIBSHARED) ..\python\xnd
 
 
-OBJS = bitmaps.obj xnd.obj
+OBJS = bitmaps.obj equal.obj xnd.obj
 
-SHARED_OBJS = .objs\bitmaps.obj .objs\xnd.obj
+SHARED_OBJS = .objs\bitmaps.obj .objs\equal.obj .objs\xnd.obj
 
 
 $(LIBSTATIC):\
