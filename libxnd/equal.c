@@ -356,19 +356,19 @@ xnd_equal(const xnd_t * const x, const xnd_t * const y, ndt_context_t *ctx)
 
     case Bytes: {
         char *a, *b;
-        int64_t n, m;
+        int64_t asize, bsize;
 
-        n = XND_BYTES_SIZE(x->ptr);
-        m = XND_BYTES_SIZE(y->ptr);
+        asize = XND_BYTES_SIZE(x->ptr);
+        bsize = XND_BYTES_SIZE(y->ptr);
 
         a = (char *)XND_BYTES_DATA(x->ptr);
         b = (char *)XND_BYTES_DATA(y->ptr);
 
-        if (n != m) {
+        if (asize != bsize) {
             return 0;
         }
 
-        return memcmp(a, b, n) == 0;
+        return memcmp(a, b, asize) == 0;
     }
 
     /* NOT REACHED: xnd types must be concrete. */
