@@ -267,9 +267,9 @@ class TestFixedDim(unittest.TestCase):
         self.assertNotEqual(x, xnd([1,2,3,4], dtype="float64"))
         self.assertNotEqual(x, xnd([1,2,3,4], dtype="int32"))
 
+        # Simple multidimensional arrays.
         x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]])
         y = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]])
-
         self.assertEqual(x, y)
 
         for i in range(4):
@@ -279,6 +279,28 @@ class TestFixedDim(unittest.TestCase):
                 self.assertNotEqual(x, y)
                 y[i, k] = v
 
+        # C <-> Fortran.
+        x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]])
+        y = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="!4 * 3 * int64")
+        self.assertEqual(x, y)
+
+        for i in range(4):
+            for k in range(3):
+                v = y[i, k]
+                y[i, k] = 100
+                self.assertNotEqual(x, y)
+                y[i, k] = v
+
+        # Slices.
+        x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]])
+        y = xnd([[1,2,3], [7,8,9]], type="!2 * 3 * int64")
+        self.assertEqual(x[::2], y)
+
+        x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]])
+        y = xnd([1,4,7,10])
+        self.assertEqual(x[:, 0], y)
+
+        # Test corner cases and many dtypes.
         for v, t, u, _, _ in EQUAL_TEST_CASES:
             for vv, tt, uu in [
                (0 * [v], "0 * %s" % t, "0 * %s" % u),
@@ -474,6 +496,124 @@ class TestFortran(unittest.TestCase):
             # Allocation fails.
             s = "!32768 * 32768 * 2 * uint8"
             self.assertRaises(MemoryError, xnd.empty, s)
+
+    def test_fortran_richcompare(self):
+
+        x = xnd([1,2,3,4], type="!4 * int64")
+
+        self.assertIs(x.__lt__(x), NotImplemented)
+        self.assertIs(x.__le__(x), NotImplemented)
+        self.assertIs(x.__gt__(x), NotImplemented)
+        self.assertIs(x.__ge__(x), NotImplemented)
+
+        self.assertEqual(x, xnd([1,2,3,4], type="!4 * int64"))
+
+        # Different shape and/or data.
+        self.assertNotEqual(x, xnd([1,2,3,100], type="!4 * int64"))
+        self.assertNotEqual(x, xnd([1,2,3], type="!3 * int64"))
+        self.assertNotEqual(x, xnd([1,2,3,4,5], type="!5 * int64"))
+
+        # Different shape.
+        self.assertNotEqual(x, xnd([1,2,3], type="!3 * int64"))
+        self.assertNotEqual(x, xnd([[1,2,3,4]], type="!1 * 4 * int64"))
+        self.assertNotEqual(x, xnd([[1,2], [3,4]], type="!2 * 2 * int64"))
+
+        # Different type (casting should be done by ufuncs).
+        self.assertNotEqual(x, xnd([1,2,3,4], type="!4 * float64"))
+        self.assertNotEqual(x, xnd([1,2,3,4], type="!4 * int32"))
+
+        # Simple multidimensional arrays.
+        x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="!4 * 3 * int64")
+        y = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="!4 * 3 * int64")
+        self.assertEqual(x, y)
+
+        for i in range(4):
+            for k in range(3):
+                v = y[i, k]
+                y[i, k] = 100
+                self.assertNotEqual(x, y)
+                y[i, k] = v
+
+        # Fortran <-> C.
+        x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="!4 * 3 * int64")
+        y = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]])
+        self.assertEqual(x, y)
+
+        for i in range(4):
+            for k in range(3):
+                v = y[i, k]
+                y[i, k] = 100
+                self.assertNotEqual(x, y)
+                y[i, k] = v
+
+        # Slices.
+        x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="!4 * 3 * int64")
+        y = xnd([[1,2,3], [7,8,9]])
+        self.assertEqual(x[::2], y)
+
+        x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="!4 * 3 * int64")
+        y = xnd([1,4,7,10], type="!4 * int64")
+        self.assertEqual(x[:, 0], y)
+
+        # Test corner cases and many dtypes.
+        for v, t, u, _, _ in EQUAL_TEST_CASES:
+            for vv, tt, uu in [
+               (0 * [v], "!0 * %s" % t, "!0 * %s" % u),
+               (0 * [0 * [v]], "!0 * 0 * %s" % t, "!0 * 0 * %s" % u),
+               (0 * [1 * [v]], "!0 * 1 * %s" % t, "!0 * 1 * %s" % u),
+               (1 * [0 * [v]], "!1 * 0 * %s" % t, "!1 * 0 * %s" % u)]:
+
+                ttt = ndt(tt)
+                uuu = ndt(tt)
+
+                x = xnd(vv, type=ttt)
+
+                y = xnd(vv, type=ttt)
+                self.assertEqual(x, y)
+
+                y = xnd(vv, type=uuu)
+                self.assertEqual(x, y)
+
+        for v, t, u, w, eq in EQUAL_TEST_CASES:
+            for vv, tt, uu, indices in [
+               (1 * [v], "!1 * %s" % t, "!1 * %s" % u, (0,)),
+               (2 * [v], "!2 * %s" % t, "!2 * %s" % u, (1,)),
+               (1000 * [v], "!1000 * %s" % t, "!1000 * %s" % u, (961,)),
+
+               (1 * [1 * [v]], "!1 * 1 * %s" % t, "!1 * 1 * %s" % u, (0, 0)),
+               (1 * [2 * [v]], "!1 * 2 * %s" % t, "!1 * 2 * %s" % u, (0, 1)),
+               (2 * [1 * [v]], "!2 * 1 * %s" % t, "!2 * 1 * %s" % u, (1, 0)),
+               (2 * [2 * [v]], "!2 * 2 * %s" % t, "!2 * 2 * %s" % u, (1, 1)),
+               (2 * [3 * [v]], "!2 * 3 * %s" % t, "!2 * 3 * %s" % u, (1, 2)),
+               (3 * [2 * [v]], "!3 * 2 * %s" % t, "!3 * 2 * %s" % u, (2, 1)),
+               (3 * [40 * [v]], "!3 * 40 * %s" % t, "!3 * 40 * %s" % u, (1, 32))]:
+
+                ttt = ndt(tt)
+                uuu = ndt(tt)
+
+                x = xnd(vv, type=ttt)
+
+                y = xnd(vv, type=ttt)
+                if eq:
+                    self.assertEqual(x, y)
+                else:
+                    self.assertNotEqual(x, y)
+
+                if u is not None:
+                    y = xnd(vv, type=uuu)
+                    if eq:
+                        self.assertEqual(x, y)
+                    else:
+                        self.assertNotEqual(x, y)
+
+                if w is not None:
+                    y = xnd(vv, type=ttt)
+                    y[indices] = w
+                    self.assertNotEqual(x, y)
+
+                    y = xnd(vv, type=uuu)
+                    y[indices] = w
+                    self.assertNotEqual(x, y)
 
 
 class TestVarDim(unittest.TestCase):
