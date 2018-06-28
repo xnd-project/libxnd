@@ -1144,6 +1144,81 @@ class TestRecord(unittest.TestCase):
         x = xnd(lst, dtype="{a: ?int64, b: ?int64, c: ?int64}")
         self.assertEqual(x.value, lst)
 
+    def test_record_richcompare(self):
+
+        # Simple tests.
+        x = xnd(R['a': 1, 'b': 2.0, 'c': "3", 'd': b"123"])
+
+        self.assertIs(x.__lt__(x), NotImplemented)
+        self.assertIs(x.__le__(x), NotImplemented)
+        self.assertIs(x.__gt__(x), NotImplemented)
+        self.assertIs(x.__ge__(x), NotImplemented)
+
+        self.assertEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "3", 'd': b"123"]))
+
+        self.assertNotEqual(x, xnd(R['z': 1, 'b': 2.0, 'c': "3", 'd': b"123"]))
+        self.assertNotEqual(x, xnd(R['a': 2, 'b': 2.0, 'c': "3", 'd': b"123"]))
+        self.assertNotEqual(x, xnd(R['a': 1, 'b': 2.1, 'c': "3", 'd': b"123"]))
+        self.assertNotEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "", 'd': b"123"]))
+        self.assertNotEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "345", 'd': "123"]))
+        self.assertNotEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "3", 'd': b""]))
+        self.assertNotEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "3", 'd': b"12345"]))
+
+        # Nested structures.
+        t = """
+            {a: uint8,
+             b: fixed_string(100, 'utf32'),
+             c: {x: complex128,
+                 y: 2 * 3 * {v: fixed_bytes(size=64, align=32),
+                             u: bytes}},
+             d: ref(string)}
+            """
+
+        v = R['a': 10,
+              'b': "\U00001234\U00001001abc",
+              'c': R['x': 12.1e244+3j,
+                     'y': [[R['v': b"123", 'u': 10 * b"22"],
+                            R['v': b"123456", 'u': 10 * b"23"],
+                            R['v': b"123456789", 'u': 10 * b"24"]],
+                           [R['v': b"1", 'u': b"a"],
+                            R['v': b"12", 'u': b"ab"],
+                            R['v': b"123", 'u': b"abc"]]]],
+              'd': "xyz"]
+
+        x = xnd(v, type=t)
+        y = xnd(v, type=t)
+        self.assertEqual(x, y)
+
+        w = y[0]
+        y[0] = 11
+        self.assertNotEqual(x, y)
+        y[0] = w
+        self.assertEqual(x, y)
+
+        w = y[1]
+        y[1] = "\U00001234\U00001001abx"
+        self.assertNotEqual(x, y)
+        y[1] = w
+        self.assertEqual(x, y)
+
+        w = y[2,0]
+        y[2,0] = 12.1e244-3j
+        self.assertNotEqual(x, y)
+        y[2,0] = w
+        self.assertEqual(x, y)
+
+        w = y[2,1,1,2,0]
+        y[2,1,1,2,0] = b"abc"
+        self.assertNotEqual(x, y)
+        y[2,1,1,2,0] = w
+        self.assertEqual(x, y)
+
+        w = y[3].value
+        y[3] = ""
+        self.assertNotEqual(x, y)
+        y[3] = w
+        self.assertEqual(x, y)
+
 
 class TestRef(unittest.TestCase):
 

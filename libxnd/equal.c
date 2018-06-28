@@ -136,11 +136,14 @@ xnd_equal(const xnd_t * const x, const xnd_t * const y, ndt_context_t *ctx)
         }
 
         for (int64_t i = 0; i < t->Record.shape; i++) {
+            if (strcmp(t->Record.names[i], u->Record.names[i]) != 0) {
+                return 0;
+            }
+
             const xnd_t xnext = xnd_record_next(x, i, ctx);
             if (xnext.ptr == NULL) {
                 return -1;
             }
-
 
             const xnd_t ynext = xnd_record_next(y, i, ctx);
             if (ynext.ptr == NULL) {

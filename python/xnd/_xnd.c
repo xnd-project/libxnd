@@ -2396,7 +2396,9 @@ pyxnd_richcompare(PyObject *v, PyObject *w, int op)
     NDT_STATIC_CONTEXT(ctx);
     PyObject *res = Py_NotImplemented;
 
-    if (op == Py_EQ || op == Py_NE) {
+    assert(Xnd_Check(v));
+
+    if (Xnd_Check(w) && (op == Py_EQ || op == Py_NE)) {
         int r = xnd_equal(XND(v), XND(w), &ctx);
         if (r < 0) {
             return seterr(&ctx);
