@@ -1019,6 +1019,60 @@ class TestTuple(unittest.TestCase):
         y[3] = w
         self.assertEqual(x, y)
 
+        # Test corner cases and many dtypes.
+        for v, t, u, _, _ in EQUAL_TEST_CASES:
+            for vv, tt, uu in [
+               ((0 * [v],), "(0 * %s)" % t, "(0 * %s)" % u),
+               (((0 * [v],),), "((0 * %s))" % t, "((0 * %s))" % u)]:
+
+                ttt = ndt(tt)
+                uuu = ndt(tt)
+
+                x = xnd(vv, type=ttt)
+
+                y = xnd(vv, type=ttt)
+                self.assertEqual(x, y)
+
+                y = xnd(vv, type=uuu)
+                self.assertEqual(x, y)
+
+        for v, t, u, w, eq in EQUAL_TEST_CASES:
+            for vv, tt, uu, indices in [
+               ((v,), "(%s)" % t, "(%s)" % u, (0,)),
+               (((v,),), "((%s))" % t, "(%s)" % u, (0, 0)),
+               ((((v,),),), "(((%s)))" % t, "(((%s)))" % u, (0, 0, 0)),
+
+               ((1 * [v],), "(1 * %s)" % t, "(1 * %s)" % u, (0, 0)),
+               (((1 * [v],),), "((1 * %s))" % t, "((1 * %s))" % u, (0, 0, 0)),
+               ((3 * [v],), "(3 * %s)" % t, "(3 * %s)" % u, (0, 2))]:
+
+                ttt = ndt(tt)
+                uuu = ndt(tt)
+
+                x = xnd(vv, type=ttt)
+
+                y = xnd(vv, type=ttt)
+                if eq:
+                    self.assertEqual(x, y)
+                else:
+                    self.assertNotEqual(x, y)
+
+                if u is not None:
+                    y = xnd(vv, type=uuu)
+                    if eq:
+                        self.assertEqual(x, y)
+                    else:
+                        self.assertNotEqual(x, y)
+
+                if w is not None:
+                    y = xnd(vv, type=ttt)
+                    y[indices] = w
+                    self.assertNotEqual(x, y)
+
+                    y = xnd(vv, type=uuu)
+                    y[indices] = w
+                    self.assertNotEqual(x, y)
+
 
 class TestRecord(unittest.TestCase):
 
