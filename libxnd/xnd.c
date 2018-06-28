@@ -1148,7 +1148,7 @@ xnd_init_float(ndt_context_t *ctx)
     double x = 9006104071832581.0;
     float y = 16711938.0;
 
-#ifndef _MSC_VER
+#ifndef _MSC_VER /* Suppress a warning, no need to check on Windows. */
     if (sizeof(double) != 8) {
         ndt_err_format(ctx, NDT_RuntimeError,
             "unsupported platform, need sizeof(double)==8");
