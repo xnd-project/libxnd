@@ -946,6 +946,79 @@ class TestTuple(unittest.TestCase):
         x = xnd(lst, dtype="(?int64, ?int64, ?int64)")
         self.assertEqual(x.value, lst)
 
+    def test_tuple_richcompare(self):
+
+        # Simple tests.
+        x = xnd((1, 2.0, "3", b"123"))
+
+        self.assertIs(x.__lt__(x), NotImplemented)
+        self.assertIs(x.__le__(x), NotImplemented)
+        self.assertIs(x.__gt__(x), NotImplemented)
+        self.assertIs(x.__ge__(x), NotImplemented)
+
+        self.assertEqual(x, xnd((1, 2.0, "3", b"123")))
+
+        self.assertNotEqual(x, xnd((2, 2.0, "3", b"123")))
+        self.assertNotEqual(x, xnd((1, 2.1, "3", b"123")))
+        self.assertNotEqual(x, xnd((1, 2.0, "", b"123")))
+        self.assertNotEqual(x, xnd((1, 2.0, "345", b"123")))
+        self.assertNotEqual(x, xnd((1, 2.0, "3", b"")))
+        self.assertNotEqual(x, xnd((1, 2.0, "3", b"12345")))
+
+        # Nested structures.
+        t = """
+            (uint8,
+             fixed_string(100, 'utf32'),
+              (complex128,
+               2 * 3 * (fixed_bytes(size=64, align=32), bytes)),
+             ref(string))
+            """
+
+        v = (10,
+             "\U00001234\U00001001abc",
+               (12.1e244+3j,
+                [[(b"123", 10 * b"22"),
+                  (b"123456", 10 * b"23"),
+                  (b"123456789", 10 * b"24")],
+                 [(b"1", b"a"),
+                  (b"12", b"ab"),
+                  (b"123", b"abc")]]),
+             "xyz")
+
+        x = xnd(v, type=t)
+        y = xnd(v, type=t)
+        self.assertEqual(x, y)
+
+        w = y[0]
+        y[0] = 11
+        self.assertNotEqual(x, y)
+        y[0] = w
+        self.assertEqual(x, y)
+
+        w = y[1]
+        y[1] = "\U00001234\U00001001abx"
+        self.assertNotEqual(x, y)
+        y[1] = w
+        self.assertEqual(x, y)
+
+        w = y[2,0]
+        y[2,0] = 12.1e244-3j
+        self.assertNotEqual(x, y)
+        y[2,0] = w
+        self.assertEqual(x, y)
+
+        w = y[2,1,1,2,0]
+        y[2,1,1,2,0] = b"abc"
+        self.assertNotEqual(x, y)
+        y[2,1,1,2,0] = w
+        self.assertEqual(x, y)
+
+        w = y[3].value
+        y[3] = ""
+        self.assertNotEqual(x, y)
+        y[3] = w
+        self.assertEqual(x, y)
+
 
 class TestRecord(unittest.TestCase):
 
