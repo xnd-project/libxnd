@@ -263,10 +263,6 @@ class TestFixedDim(unittest.TestCase):
         self.assertNotEqual(x, xnd([[1,2,3,4]]))
         self.assertNotEqual(x, xnd([[1,2], [3,4]]))
 
-        # Different type (casting should be done by ufuncs).
-        self.assertNotEqual(x, xnd([1,2,3,4], dtype="float64"))
-        self.assertNotEqual(x, xnd([1,2,3,4], dtype="int32"))
-
         # Simple multidimensional arrays.
         x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]])
         y = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]])
@@ -517,10 +513,6 @@ class TestFortran(unittest.TestCase):
         self.assertNotEqual(x, xnd([1,2,3], type="!3 * int64"))
         self.assertNotEqual(x, xnd([[1,2,3,4]], type="!1 * 4 * int64"))
         self.assertNotEqual(x, xnd([[1,2], [3,4]], type="!2 * 2 * int64"))
-
-        # Different type (casting should be done by ufuncs).
-        self.assertNotEqual(x, xnd([1,2,3,4], type="!4 * float64"))
-        self.assertNotEqual(x, xnd([1,2,3,4], type="!4 * int32"))
 
         # Simple multidimensional arrays.
         x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="!4 * 3 * int64")
