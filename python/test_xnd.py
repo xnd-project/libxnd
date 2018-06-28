@@ -1497,6 +1497,72 @@ class TestConstr(unittest.TestCase):
 
         self.assertEqual(x.value, v)
 
+    def test_constr_richcompare(self):
+
+        # Simple tests.
+        x = xnd([1,2,3,4], type="A(4 * float32)")
+
+        self.assertIs(x.__lt__(x), NotImplemented)
+        self.assertIs(x.__le__(x), NotImplemented)
+        self.assertIs(x.__gt__(x), NotImplemented)
+        self.assertIs(x.__ge__(x), NotImplemented)
+
+        self.assertEqual(x, xnd([1,2,3,4], type="A(4 * float32)"))
+
+        self.assertNotEqual(x, xnd([1,2,3,4], type="B(4 * float32)"))
+        self.assertNotEqual(x, xnd([1,2,3,5], type="A(4 * float32)"))
+        self.assertNotEqual(x, xnd([1,2,3], type="A(3 * float32)"))
+        self.assertNotEqual(x, xnd([1,2,3,4,5], type="A(5 * float32)"))
+
+        # Test corner cases and many dtypes.
+        for v, t, u, _, _ in EQUAL_TEST_CASES:
+            for vv, tt, uu in [
+               (0 * [v], "A(0 * %s)" % t, "A(0 * %s)" % u),
+               (0 * [v], "A(B(0 * %s))" % t, "A(B(0 * %s))" % u),
+               (0 * [v], "A(B(C(0 * %s)))" % t, "A(B(C(0 * %s)))" % u)]:
+
+                ttt = ndt(tt)
+                uuu = ndt(tt)
+
+                x = xnd(vv, type=ttt)
+
+                y = xnd(vv, type=ttt)
+                self.assertEqual(x, y)
+
+                y = xnd(vv, type=uuu)
+                self.assertEqual(x, y)
+
+        for v, t, u, w, eq in EQUAL_TEST_CASES:
+            for vv, tt, uu, indices in [
+               (v, "A(%s)" % t, "A(%s)" % u, ()),
+               (v, "A(B(%s))" % t, "A(B(%s))" % u, ()),
+               (v, "A(B(C(%s)))" % t, "A(B(C(%s)))" % u, ()),
+               (1 * [v], "A(1 * %s)" % t, "A(1 * %s)" % u, (0,)),
+               (3 * [v], "A(3 * %s)" % t, "A(3 * %s)" % u, (2,))]:
+
+                ttt = ndt(tt)
+                uuu = ndt(tt)
+
+                x = xnd(vv, type=ttt)
+
+                y = xnd(vv, type=ttt)
+                if eq:
+                    self.assertEqual(x, y)
+                else:
+                    self.assertNotEqual(x, y)
+
+                if u is not None:
+                    y = xnd(vv, type=uuu)
+                    if eq:
+                        self.assertEqual(x, y)
+                    else:
+                        self.assertNotEqual(x, y)
+
+                if w is not None:
+                    y = xnd(vv, type=ttt)
+                    y[indices] = w
+                    self.assertNotEqual(x, y)
+
 
 class TestNominal(unittest.TestCase):
 

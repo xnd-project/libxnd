@@ -172,6 +172,10 @@ xnd_equal(const xnd_t * const x, const xnd_t * const y, ndt_context_t *ctx)
     }
 
     case Constr: {
+        if (strcmp(t->Constr.name, u->Constr.name) != 0) {
+            return 0;
+        }
+
         const xnd_t xnext = xnd_constr_next(x, ctx);
         if (xnext.ptr == NULL) {
             return -1;
