@@ -1368,6 +1368,55 @@ class TestRef(unittest.TestCase):
         self.assertNotEqual(x, xnd([1,2,3], type="ref(3 * float32)"))
         self.assertNotEqual(x, xnd([1,2,3,4,5], type="ref(5 * float32)"))
 
+        # Test corner cases and many dtypes.
+        for v, t, u, _, _ in EQUAL_TEST_CASES:
+            for vv, tt, uu in [
+               (0 * [v], "ref(0 * %s)" % t, "ref(0 * %s)" % u),
+               (0 * [v], "ref(ref(0 * %s))" % t, "ref(ref(0 * %s))" % u),
+               (0 * [v], "ref(ref(ref(0 * %s)))" % t, "ref(ref(ref(0 * %s)))" % u)]:
+
+                ttt = ndt(tt)
+                uuu = ndt(tt)
+
+                x = xnd(vv, type=ttt)
+
+                y = xnd(vv, type=ttt)
+                self.assertEqual(x, y)
+
+                y = xnd(vv, type=uuu)
+                self.assertEqual(x, y)
+
+        for v, t, u, w, eq in EQUAL_TEST_CASES:
+            for vv, tt, uu, indices in [
+               (v, "ref(%s)" % t, "ref(%s)" % u, ()),
+               (v, "ref(ref(%s))" % t, "ref(ref(%s))" % u, ()),
+               (v, "ref(ref(ref(%s)))" % t, "ref(ref(ref(%s)))" % u, ()),
+               (1 * [v], "ref(1 * %s)" % t, "ref(1 * %s)" % u, (0,)),
+               (3 * [v], "ref(3 * %s)" % t, "ref(3 * %s)" % u, (2,))]:
+
+                ttt = ndt(tt)
+                uuu = ndt(tt)
+
+                x = xnd(vv, type=ttt)
+
+                y = xnd(vv, type=ttt)
+                if eq:
+                    self.assertEqual(x, y)
+                else:
+                    self.assertNotEqual(x, y)
+
+                if u is not None:
+                    y = xnd(vv, type=uuu)
+                    if eq:
+                        self.assertEqual(x, y)
+                    else:
+                        self.assertNotEqual(x, y)
+
+                if w is not None:
+                    y = xnd(vv, type=ttt)
+                    y[indices] = w
+                    self.assertNotEqual(x, y)
+
 
 class TestConstr(unittest.TestCase):
 
