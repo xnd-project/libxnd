@@ -1305,6 +1305,22 @@ class TestRef(unittest.TestCase):
 
         self.assertEqual(x.value, v)
 
+    def test_ref_richcompare(self):
+
+        # Simple tests.
+        x = xnd([1,2,3,4], type="ref(4 * float32)")
+
+        self.assertIs(x.__lt__(x), NotImplemented)
+        self.assertIs(x.__le__(x), NotImplemented)
+        self.assertIs(x.__gt__(x), NotImplemented)
+        self.assertIs(x.__ge__(x), NotImplemented)
+
+        self.assertEqual(x, xnd([1,2,3,4], type="ref(4 * float32)"))
+
+        self.assertNotEqual(x, xnd([1,2,3,5], type="ref(4 * float32)"))
+        self.assertNotEqual(x, xnd([1,2,3], type="ref(3 * float32)"))
+        self.assertNotEqual(x, xnd([1,2,3,4,5], type="ref(5 * float32)"))
+
 
 class TestConstr(unittest.TestCase):
 
