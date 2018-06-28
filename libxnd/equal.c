@@ -190,6 +190,10 @@ xnd_equal(const xnd_t * const x, const xnd_t * const y, ndt_context_t *ctx)
     }
 
     case Nominal: {
+        if (strcmp(t->Nominal.name, u->Nominal.name) != 0) {
+            return 0;
+        }
+
         const xnd_t xnext = xnd_nominal_next(x, ctx);
         if (xnext.ptr == NULL) {
             return -1;

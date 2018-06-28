@@ -1651,6 +1651,24 @@ class TestNominal(unittest.TestCase):
     def test_nominal_error(self):
         self.assertRaises(ValueError, xnd.empty, "undefined_t")
 
+    def test_nominal_richcompare(self):
+
+        typedef("some1000", "4 * float32")
+        typedef("some1001", "4 * float32")
+
+        # Simple tests.
+        x = xnd([1,2,3,4], type="some1000")
+
+        self.assertIs(x.__lt__(x), NotImplemented)
+        self.assertIs(x.__le__(x), NotImplemented)
+        self.assertIs(x.__gt__(x), NotImplemented)
+        self.assertIs(x.__ge__(x), NotImplemented)
+
+        self.assertEqual(x, xnd([1,2,3,4], type="some1000"))
+
+        self.assertNotEqual(x, xnd([1,2,3,4], type="some1001"))
+        self.assertNotEqual(x, xnd([1,2,3,5], type="some1000"))
+
 
 class TestScalarKind(unittest.TestCase):
 
