@@ -2026,6 +2026,13 @@ class TestBool(unittest.TestCase):
         x = xnd(True, type="bool")
         self.assertRaises(TypeError, len, x)
 
+    def test_bool_richcompare(self):
+
+        self.assertEqual(xnd(True), xnd(True))
+        self.assertEqual(xnd(False), xnd(False))
+        self.assertNotEqual(xnd(True), xnd(False))
+        self.assertNotEqual(xnd(False), xnd(True))
+
 
 class TestSignedKind(unittest.TestCase):
 
