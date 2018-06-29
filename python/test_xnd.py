@@ -1799,6 +1799,23 @@ class TestFixedString(unittest.TestCase):
             s = "fixed_string(1073741824, 'utf16')"
             self.assertRaises(MemoryError, xnd.empty, s)
 
+    def test_fixed_string_richcompare(self):
+        test_cases = [
+          ("fixed_string(1)", "", "x"),
+          ("fixed_string(3)", 3 * "y", "yyz"),
+          ("fixed_string(1, 'ascii')", "a", "b"),
+          ("fixed_string(3, 'utf8')", 3 * "a", "abc"),
+          ("fixed_string(3, 'utf16')", 3 * "\u1234", "\u1234\u1235\u1234"),
+          ("fixed_string(3, 'utf32')", 3 * "\U00001234", "\U00001234\U00001234\U00001235"),
+        ]
+
+        for t, v, w in test_cases:
+            x = xnd(v, type=t)
+            y = xnd(v, type=t)
+            self.assertEqual(x, y)
+            y[()] = w
+            self.assertNotEqual(x, y)
+
 
 class TestFixedBytesKind(unittest.TestCase):
 
