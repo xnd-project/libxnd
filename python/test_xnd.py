@@ -1873,6 +1873,28 @@ class TestFixedBytes(unittest.TestCase):
             s = "fixed_bytes(size=2147483648)"
             self.assertRaises(MemoryError, xnd.empty, s)
 
+    def test_fixed_bytes_richcompare(self):
+        test_cases = [
+          (b"a", "fixed_bytes(size=1)", b"b"),
+          (100 * b"a", "fixed_bytes(size=100)", 99 * b"a" + b"b"),
+          (4 * b"a", "fixed_bytes(size=4, align=2)", 2 * b"a" + 2 * b"b"),
+        ]
+
+        for v, t, w in test_cases:
+            x = xnd(v, type=t)
+            y = xnd(v, type=t)
+            self.assertEqual(x, y)
+            y[()] = w
+            self.assertNotEqual(x, y)
+
+        x = xnd(128 * b"a", type="fixed_bytes(size=128, align=16)")
+        y = xnd(128 * b"a", type="fixed_bytes(size=128, align=4)")
+        self.assertEqual(x, y)
+
+        x = xnd(128 * b"a", type="fixed_bytes(size=128, align=16)")
+        y = xnd(128 * b"a", type="fixed_bytes(size=128, align=4)")
+        self.assertEqual(x, y)
+
 
 class TestString(unittest.TestCase):
 
