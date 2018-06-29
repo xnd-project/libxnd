@@ -2076,6 +2076,12 @@ class TestSigned(unittest.TestCase):
         x = xnd(10, type="int16")
         self.assertRaises(TypeError, len, x)
 
+    def test_signed_richcompare(self):
+
+        for t in "int8", "int16", "int32", "int64":
+            self.assertEqual(xnd(-10, type=t), xnd(-10, type=t))
+            self.assertNotEqual(xnd(-10, type=t), xnd(100, type=t))
+
 
 class TestUnsignedKind(unittest.TestCase):
 
@@ -2118,6 +2124,12 @@ class TestUnsigned(unittest.TestCase):
         # Test len.
         x = xnd(10, type="uint64")
         self.assertRaises(TypeError, len, x)
+
+    def test_unsigned_richcompare(self):
+
+        for t in "uint8", "uint16", "uint32", "uint64":
+            self.assertEqual(xnd(10, type=t), xnd(10, type=t))
+            self.assertNotEqual(xnd(10, type=t), xnd(100, type=t))
 
 
 class TestFloatKind(unittest.TestCase):
