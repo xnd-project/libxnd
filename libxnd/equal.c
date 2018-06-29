@@ -216,6 +216,11 @@ xnd_equal(const xnd_t * const x, const xnd_t * const y, ndt_context_t *ctx)
 
         UNPACK_SINGLE(i, x->ptr, int64_t, t->flags);
         UNPACK_SINGLE(k, y->ptr, int64_t, u->flags);
+
+        if (t->Categorical.types[i].tag == ValNA) {
+            return 0;
+        }
+
         return i == k;
     }
 

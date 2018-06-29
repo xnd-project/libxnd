@@ -1717,6 +1717,20 @@ class TestCategorical(unittest.TestCase):
         x[0] = None
         self.assertEqual(x.value, [None, 'December'])
 
+    def test_categorical_richcompare(self):
+        t = "3 * categorical(NA, 'January', 'August')"
+        x = xnd(['August', 'January', 'January'], type=t)
+
+        y = xnd(['August', 'January', 'January'], type=t)
+        self.assertEqual(x, y)
+
+        y = xnd(['August', 'January', 'August'], type=t)
+        self.assertNotEqual(x, y)
+
+        x = xnd(['August', None, 'August'], type=t)
+        y = xnd(['August', None, 'August'], type=t)
+        self.assertNotEqual(x, y)
+
 
 class TestFixedStringKind(unittest.TestCase):
 
