@@ -2176,6 +2176,16 @@ class TestFloat(unittest.TestCase):
         x = xnd(float("nan"), type="float16")
         self.assertTrue(isnan(x.value))
 
+        # Richcompare.
+        self.assertEqual(xnd(1.2e3, type="float16"), xnd(1.2e3, type="float16"))
+        self.assertEqual(xnd(float("inf"), type="float16"), xnd(float("inf"), type="float16"))
+        self.assertEqual(xnd(float("-inf"), type="float16"), xnd(float("-inf"), type="float16"))
+
+        self.assertNotEqual(xnd(1.2e3, type="float16"), xnd(-1.2e3, type="float16"))
+        self.assertNotEqual(xnd(float("inf"), type="float16"), xnd(float("-inf"), type="float16"))
+        self.assertNotEqual(xnd(float("-inf"), type="float16"), xnd(float("inf"), type="float16"))
+        self.assertNotEqual(xnd(float("nan"), type="float16"), xnd(float("nan"), type="float16"))
+
     def test_float32(self):
         fromhex = float.fromhex
 
@@ -2204,6 +2214,16 @@ class TestFloat(unittest.TestCase):
         x = xnd(float("nan"), type="float32")
         self.assertTrue(isnan(x.value))
 
+        # Richcompare.
+        self.assertEqual(xnd(1.2e7, type="float32"), xnd(1.2e7, type="float32"))
+        self.assertEqual(xnd(float("inf"), type="float32"), xnd(float("inf"), type="float32"))
+        self.assertEqual(xnd(float("-inf"), type="float32"), xnd(float("-inf"), type="float32"))
+
+        self.assertNotEqual(xnd(1.2e7, type="float32"), xnd(-1.2e7, type="float32"))
+        self.assertNotEqual(xnd(float("inf"), type="float32"), xnd(float("-inf"), type="float32"))
+        self.assertNotEqual(xnd(float("-inf"), type="float32"), xnd(float("inf"), type="float32"))
+        self.assertNotEqual(xnd(float("nan"), type="float32"), xnd(float("nan"), type="float32"))
+
     def test_float64(self):
         fromhex = float.fromhex
 
@@ -2227,6 +2247,16 @@ class TestFloat(unittest.TestCase):
 
         x = xnd(float("nan"), type="float64")
         self.assertTrue(isnan(x.value))
+
+        # Richcompare.
+        self.assertEqual(xnd(1.2e7, type="float64"), xnd(1.2e7, type="float64"))
+        self.assertEqual(xnd(float("inf"), type="float64"), xnd(float("inf"), type="float64"))
+        self.assertEqual(xnd(float("-inf"), type="float64"), xnd(float("-inf"), type="float64"))
+
+        self.assertNotEqual(xnd(1.2e7, type="float64"), xnd(-1.2e7, type="float64"))
+        self.assertNotEqual(xnd(float("inf"), type="float64"), xnd(float("-inf"), type="float64"))
+        self.assertNotEqual(xnd(float("-inf"), type="float64"), xnd(float("inf"), type="float64"))
+        self.assertNotEqual(xnd(float("nan"), type="float64"), xnd(float("nan"), type="float64"))
 
 
 class TestComplexKind(unittest.TestCase):
