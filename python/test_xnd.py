@@ -1939,6 +1939,15 @@ class TestString(unittest.TestCase):
         x[1] = R['a': -12j, 'b': 'z']
         self.assertEqual(x.value, [R['a': 220j, 'b': 'y'], R['a': -12j, 'b': 'z']])
 
+    def test_string_richcompare(self):
+
+        x = xnd("abc")
+
+        self.assertEqual(x, xnd("abc"))
+        self.assertEqual(x, xnd("abc\0\0"))
+
+        self.assertNotEqual(x, xnd("acb"))
+
 
 class TestBytes(unittest.TestCase):
 
