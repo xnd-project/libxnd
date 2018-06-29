@@ -2311,6 +2311,20 @@ class TestComplex(unittest.TestCase):
         self.assertTrue(isnan(x.value.real))
         self.assertEqual(x.value.imag, 0.0)
 
+        # Richcompare.
+        t = "complex32"
+        c = [DENORM_MIN, LOWEST, MAX, float("inf"), float("-inf"), float("nan")]
+        for r in c:
+            for s in c:
+                for i in c:
+                    for j in c:
+                        x = xnd(complex(r, i), type=t)
+                        y = xnd(complex(s, j), type=t)
+                        if r == s and i == j:
+                            self.assertEqual(x, y)
+                        else:
+                            self.assertNotEqual(x, y)
+
     def test_complex64(self):
         fromhex = float.fromhex
 
@@ -2347,6 +2361,20 @@ class TestComplex(unittest.TestCase):
         self.assertTrue(isnan(x.value.real))
         self.assertEqual(x.value.imag, 0.0)
 
+        # Richcompare.
+        t = "complex64"
+        c = [DENORM_MIN, LOWEST, MAX, float("inf"), float("-inf"), float("nan")]
+        for r in c:
+            for s in c:
+                for i in c:
+                    for j in c:
+                        x = xnd(complex(r, i), type=t)
+                        y = xnd(complex(s, j), type=t)
+                        if r == s and i == j:
+                            self.assertEqual(x, y)
+                        else:
+                            self.assertNotEqual(x, y)
+
     def test_complex128(self):
         fromhex = float.fromhex
 
@@ -2375,6 +2403,20 @@ class TestComplex(unittest.TestCase):
         x = xnd(complex("nan"), type="complex128")
         self.assertTrue(isnan(x.value.real))
         self.assertEqual(x.value.imag, 0.0)
+
+        # Richcompare.
+        t = "complex128"
+        c = [DENORM_MIN, LOWEST, MAX, float("inf"), float("-inf"), float("nan")]
+        for r in c:
+            for s in c:
+                for i in c:
+                    for j in c:
+                        x = xnd(complex(r, i), type=t)
+                        y = xnd(complex(s, j), type=t)
+                        if r == s and i == j:
+                            self.assertEqual(x, y)
+                        else:
+                            self.assertNotEqual(x, y)
 
 
 class TestPrimitive(unittest.TestCase):
