@@ -154,7 +154,8 @@ XND_API xnd_t xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len,
 XND_API xnd_t xnd_multikey(const xnd_t *x, const xnd_index_t indices[], int len,
                            ndt_context_t *ctx);
 
-XND_API int xnd_equal(const xnd_t * const x, const xnd_t * const y, ndt_context_t *ctx);
+XND_API int xnd_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx);
+XND_API int xnd_strict_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx);
 
 
 /*****************************************************************************/

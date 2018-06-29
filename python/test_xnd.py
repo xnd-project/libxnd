@@ -59,7 +59,18 @@ def check_buffer(x):
         y.tobytes()
 
 
-class TestModule(unittest.TestCase):
+class XndTestCase(unittest.TestCase):
+
+    def assertStrictEqual(self, x, y):
+        self.assertTrue(x.strict_equal(y))
+        self.assertEqual(x, y)
+
+    def assertNotStrictEqual(self, x, y):
+        self.assertFalse(x.strict_equal(y))
+        self.assertNotEqual(x, y)
+
+
+class TestModule(XndTestCase):
 
     def test_module(self):
         test_cases = [
@@ -73,7 +84,7 @@ class TestModule(unittest.TestCase):
             self.assertRaises(ValueError, xnd.empty, s)
 
 
-class TestFunction(unittest.TestCase):
+class TestFunction(XndTestCase):
 
     def test_function(self):
         test_cases = [
@@ -85,14 +96,14 @@ class TestFunction(unittest.TestCase):
             self.assertRaises(ValueError, xnd.empty, s)
 
 
-class TestVoid(unittest.TestCase):
+class TestVoid(XndTestCase):
 
     def test_void(self):
         self.assertRaises(ValueError, xnd.empty, "void")
         self.assertRaises(ValueError, xnd.empty, "10 * 2 * void")
 
 
-class TestAny(unittest.TestCase):
+class TestAny(XndTestCase):
 
     def test_any(self):
         test_cases = [
@@ -106,7 +117,7 @@ class TestAny(unittest.TestCase):
             self.assertRaises(ValueError, xnd.empty, s)
 
 
-class TestFixedDim(unittest.TestCase):
+class TestFixedDim(XndTestCase):
 
     def test_fixed_dim_empty(self):
         for v, s in DTYPE_EMPTY_TEST_CASES:
@@ -251,50 +262,50 @@ class TestFixedDim(unittest.TestCase):
         self.assertIs(x.__gt__(x), NotImplemented)
         self.assertIs(x.__ge__(x), NotImplemented)
 
-        self.assertEqual(x, xnd([1,2,3,4]))
+        self.assertStrictEqual(x, xnd([1,2,3,4]))
 
         # Different shape and/or data.
-        self.assertNotEqual(x, xnd([1,2,3,100]))
-        self.assertNotEqual(x, xnd([1,2,3]))
-        self.assertNotEqual(x, xnd([1,2,3,4,5]))
+        self.assertNotStrictEqual(x, xnd([1,2,3,100]))
+        self.assertNotStrictEqual(x, xnd([1,2,3]))
+        self.assertNotStrictEqual(x, xnd([1,2,3,4,5]))
 
         # Different shape.
-        self.assertNotEqual(x, xnd([1,2,3]))
-        self.assertNotEqual(x, xnd([[1,2,3,4]]))
-        self.assertNotEqual(x, xnd([[1,2], [3,4]]))
+        self.assertNotStrictEqual(x, xnd([1,2,3]))
+        self.assertNotStrictEqual(x, xnd([[1,2,3,4]]))
+        self.assertNotStrictEqual(x, xnd([[1,2], [3,4]]))
 
         # Simple multidimensional arrays.
         x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]])
         y = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]])
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         for i in range(4):
             for k in range(3):
                 v = y[i, k]
                 y[i, k] = 100
-                self.assertNotEqual(x, y)
+                self.assertNotStrictEqual(x, y)
                 y[i, k] = v
 
         # C <-> Fortran.
         x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]])
         y = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="!4 * 3 * int64")
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         for i in range(4):
             for k in range(3):
                 v = y[i, k]
                 y[i, k] = 100
-                self.assertNotEqual(x, y)
+                self.assertNotStrictEqual(x, y)
                 y[i, k] = v
 
         # Slices.
         x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]])
         y = xnd([[1,2,3], [7,8,9]], type="!2 * 3 * int64")
-        self.assertEqual(x[::2], y)
+        self.assertStrictEqual(x[::2], y)
 
         x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]])
         y = xnd([1,4,7,10])
-        self.assertEqual(x[:, 0], y)
+        self.assertStrictEqual(x[:, 0], y)
 
         # Test corner cases and many dtypes.
         for v, t, u, _, _ in EQUAL_TEST_CASES:
@@ -310,10 +321,10 @@ class TestFixedDim(unittest.TestCase):
                 x = xnd(vv, type=ttt)
 
                 y = xnd(vv, type=ttt)
-                self.assertEqual(x, y)
+                self.assertStrictEqual(x, y)
 
                 y = xnd(vv, type=uuu)
-                self.assertEqual(x, y)
+                self.assertStrictEqual(x, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -336,28 +347,28 @@ class TestFixedDim(unittest.TestCase):
 
                 y = xnd(vv, type=ttt)
                 if eq:
-                    self.assertEqual(x, y)
+                    self.assertStrictEqual(x, y)
                 else:
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
                 if u is not None:
                     y = xnd(vv, type=uuu)
                     if eq:
-                        self.assertEqual(x, y)
+                        self.assertStrictEqual(x, y)
                     else:
-                        self.assertNotEqual(x, y)
+                        self.assertNotStrictEqual(x, y)
 
                 if w is not None:
                     y = xnd(vv, type=ttt)
                     y[indices] = w
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
                     y = xnd(vv, type=uuu)
                     y[indices] = w
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
 
-class TestFortran(unittest.TestCase):
+class TestFortran(XndTestCase):
 
     def test_fortran_empty(self):
         for v, s in DTYPE_EMPTY_TEST_CASES:
@@ -502,50 +513,50 @@ class TestFortran(unittest.TestCase):
         self.assertIs(x.__gt__(x), NotImplemented)
         self.assertIs(x.__ge__(x), NotImplemented)
 
-        self.assertEqual(x, xnd([1,2,3,4], type="!4 * int64"))
+        self.assertStrictEqual(x, xnd([1,2,3,4], type="!4 * int64"))
 
         # Different shape and/or data.
-        self.assertNotEqual(x, xnd([1,2,3,100], type="!4 * int64"))
-        self.assertNotEqual(x, xnd([1,2,3], type="!3 * int64"))
-        self.assertNotEqual(x, xnd([1,2,3,4,5], type="!5 * int64"))
+        self.assertNotStrictEqual(x, xnd([1,2,3,100], type="!4 * int64"))
+        self.assertNotStrictEqual(x, xnd([1,2,3], type="!3 * int64"))
+        self.assertNotStrictEqual(x, xnd([1,2,3,4,5], type="!5 * int64"))
 
         # Different shape.
-        self.assertNotEqual(x, xnd([1,2,3], type="!3 * int64"))
-        self.assertNotEqual(x, xnd([[1,2,3,4]], type="!1 * 4 * int64"))
-        self.assertNotEqual(x, xnd([[1,2], [3,4]], type="!2 * 2 * int64"))
+        self.assertNotStrictEqual(x, xnd([1,2,3], type="!3 * int64"))
+        self.assertNotStrictEqual(x, xnd([[1,2,3,4]], type="!1 * 4 * int64"))
+        self.assertNotStrictEqual(x, xnd([[1,2], [3,4]], type="!2 * 2 * int64"))
 
         # Simple multidimensional arrays.
         x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="!4 * 3 * int64")
         y = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="!4 * 3 * int64")
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         for i in range(4):
             for k in range(3):
                 v = y[i, k]
                 y[i, k] = 100
-                self.assertNotEqual(x, y)
+                self.assertNotStrictEqual(x, y)
                 y[i, k] = v
 
         # Fortran <-> C.
         x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="!4 * 3 * int64")
         y = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]])
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         for i in range(4):
             for k in range(3):
                 v = y[i, k]
                 y[i, k] = 100
-                self.assertNotEqual(x, y)
+                self.assertNotStrictEqual(x, y)
                 y[i, k] = v
 
         # Slices.
         x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="!4 * 3 * int64")
         y = xnd([[1,2,3], [7,8,9]])
-        self.assertEqual(x[::2], y)
+        self.assertStrictEqual(x[::2], y)
 
         x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="!4 * 3 * int64")
         y = xnd([1,4,7,10], type="!4 * int64")
-        self.assertEqual(x[:, 0], y)
+        self.assertStrictEqual(x[:, 0], y)
 
         # Test corner cases and many dtypes.
         for v, t, u, _, _ in EQUAL_TEST_CASES:
@@ -561,10 +572,10 @@ class TestFortran(unittest.TestCase):
                 x = xnd(vv, type=ttt)
 
                 y = xnd(vv, type=ttt)
-                self.assertEqual(x, y)
+                self.assertStrictEqual(x, y)
 
                 y = xnd(vv, type=uuu)
-                self.assertEqual(x, y)
+                self.assertStrictEqual(x, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -587,28 +598,28 @@ class TestFortran(unittest.TestCase):
 
                 y = xnd(vv, type=ttt)
                 if eq:
-                    self.assertEqual(x, y)
+                    self.assertStrictEqual(x, y)
                 else:
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
                 if u is not None:
                     y = xnd(vv, type=uuu)
                     if eq:
-                        self.assertEqual(x, y)
+                        self.assertStrictEqual(x, y)
                     else:
-                        self.assertNotEqual(x, y)
+                        self.assertNotStrictEqual(x, y)
 
                 if w is not None:
                     y = xnd(vv, type=ttt)
                     y[indices] = w
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
                     y = xnd(vv, type=uuu)
                     y[indices] = w
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
 
-class TestVarDim(unittest.TestCase):
+class TestVarDim(XndTestCase):
 
     def test_var_dim_empty(self):
         for v, s in DTYPE_EMPTY_TEST_CASES:
@@ -744,44 +755,44 @@ class TestVarDim(unittest.TestCase):
         self.assertIs(x.__gt__(x), NotImplemented)
         self.assertIs(x.__ge__(x), NotImplemented)
 
-        self.assertEqual(x, xnd([1,2,3,4], type="var(offsets=[0,4]) * int64"))
+        self.assertStrictEqual(x, xnd([1,2,3,4], type="var(offsets=[0,4]) * int64"))
 
         # Different shape and/or data.
-        self.assertNotEqual(x, xnd([1,2,3,100], type="var(offsets=[0,4]) * int64"))
-        self.assertNotEqual(x, xnd([1,2,3], type="var(offsets=[0,3]) * int64"))
-        self.assertNotEqual(x, xnd([1,2,3,4,5], type="var(offsets=[0,5]) * int64"))
+        self.assertNotStrictEqual(x, xnd([1,2,3,100], type="var(offsets=[0,4]) * int64"))
+        self.assertNotStrictEqual(x, xnd([1,2,3], type="var(offsets=[0,3]) * int64"))
+        self.assertNotStrictEqual(x, xnd([1,2,3,4,5], type="var(offsets=[0,5]) * int64"))
 
         # Different shape.
-        self.assertNotEqual(x, xnd([1,2,3], type="var(offsets=[0,3]) * int64"))
-        self.assertNotEqual(x, xnd([[1,2,3,4]], type="var(offsets=[0,1]) * var(offsets=[0,4]) * int64"))
-        self.assertNotEqual(x, xnd([[1,2], [3,4]], type="var(offsets=[0,2]) * var(offsets=[0,2,4]) * int64"))
+        self.assertNotStrictEqual(x, xnd([1,2,3], type="var(offsets=[0,3]) * int64"))
+        self.assertNotStrictEqual(x, xnd([[1,2,3,4]], type="var(offsets=[0,1]) * var(offsets=[0,4]) * int64"))
+        self.assertNotStrictEqual(x, xnd([[1,2], [3,4]], type="var(offsets=[0,2]) * var(offsets=[0,2,4]) * int64"))
 
         # Simple multidimensional arrays.
         x = xnd([[1], [2,3,4,5], [6,7], [8,9,10]])
         y = xnd([[1], [2,3,4,5], [6,7], [8,9,10]])
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         for i, shape in zip(range(4), (1, 4, 2, 3)):
             for k in range(shape):
                 v = y[i, k]
                 y[i, k] = 100
-                self.assertNotEqual(x, y)
+                self.assertNotStrictEqual(x, y)
                 y[i, k] = v
 
         y = xnd([[1], [2,3,5], [6,7], [8,9,10]])
-        self.assertNotEqual(x, y)
+        self.assertNotStrictEqual(x, y)
 
         # Slices.
         x = xnd([[1], [4,5], [6,7,8], [9,10,11,12]])
 
         y = xnd([[1], [6,7,8]])
-        self.assertEqual(x[::2], y)
+        self.assertStrictEqual(x[::2], y)
 
         y = xnd([[9,10,11,12], [4,5]])
-        self.assertEqual(x[::-2], y)
+        self.assertStrictEqual(x[::-2], y)
 
         y = xnd([[12,11,10,9], [5,4]])
-        self.assertEqual(x[::-2, ::-1], y)
+        self.assertStrictEqual(x[::-2, ::-1], y)
 
         # Test corner cases and many dtypes.
         for v, t, u, _, _ in EQUAL_TEST_CASES:
@@ -797,10 +808,10 @@ class TestVarDim(unittest.TestCase):
                 x = xnd(vv, type=ttt)
 
                 y = xnd(vv, type=ttt)
-                self.assertEqual(x, y)
+                self.assertStrictEqual(x, y)
 
                 y = xnd(vv, type=uuu)
-                self.assertEqual(x, y)
+                self.assertStrictEqual(x, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -823,28 +834,28 @@ class TestVarDim(unittest.TestCase):
 
                 y = xnd(vv, type=ttt)
                 if eq:
-                    self.assertEqual(x, y)
+                    self.assertStrictEqual(x, y)
                 else:
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
                 if u is not None:
                     y = xnd(vv, type=uuu)
                     if eq:
-                        self.assertEqual(x, y)
+                        self.assertStrictEqual(x, y)
                     else:
-                        self.assertNotEqual(x, y)
+                        self.assertNotStrictEqual(x, y)
 
                 if w is not None:
                     y = xnd(vv, type=ttt)
                     y[indices] = w
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
                     y = xnd(vv, type=uuu)
                     y[indices] = w
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
 
-class TestSymbolicDim(unittest.TestCase):
+class TestSymbolicDim(XndTestCase):
 
     def test_symbolic_dim_raise(self):
         for _, s in DTYPE_EMPTY_TEST_CASES:
@@ -858,7 +869,7 @@ class TestSymbolicDim(unittest.TestCase):
                 self.assertRaises(err, xnd.empty, t)
 
 
-class TestEllipsisDim(unittest.TestCase):
+class TestEllipsisDim(XndTestCase):
 
     def test_ellipsis_dim_raise(self):
         for _, s in DTYPE_EMPTY_TEST_CASES:
@@ -874,7 +885,7 @@ class TestEllipsisDim(unittest.TestCase):
                 self.assertRaises(err, xnd.empty, t)
 
 
-class TestTuple(unittest.TestCase):
+class TestTuple(XndTestCase):
 
     def test_tuple_empty(self):
         for v, s in DTYPE_EMPTY_TEST_CASES:
@@ -956,14 +967,14 @@ class TestTuple(unittest.TestCase):
         self.assertIs(x.__gt__(x), NotImplemented)
         self.assertIs(x.__ge__(x), NotImplemented)
 
-        self.assertEqual(x, xnd((1, 2.0, "3", b"123")))
+        self.assertStrictEqual(x, xnd((1, 2.0, "3", b"123")))
 
-        self.assertNotEqual(x, xnd((2, 2.0, "3", b"123")))
-        self.assertNotEqual(x, xnd((1, 2.1, "3", b"123")))
-        self.assertNotEqual(x, xnd((1, 2.0, "", b"123")))
-        self.assertNotEqual(x, xnd((1, 2.0, "345", b"123")))
-        self.assertNotEqual(x, xnd((1, 2.0, "3", b"")))
-        self.assertNotEqual(x, xnd((1, 2.0, "3", b"12345")))
+        self.assertNotStrictEqual(x, xnd((2, 2.0, "3", b"123")))
+        self.assertNotStrictEqual(x, xnd((1, 2.1, "3", b"123")))
+        self.assertNotStrictEqual(x, xnd((1, 2.0, "", b"123")))
+        self.assertNotStrictEqual(x, xnd((1, 2.0, "345", b"123")))
+        self.assertNotStrictEqual(x, xnd((1, 2.0, "3", b"")))
+        self.assertNotStrictEqual(x, xnd((1, 2.0, "3", b"12345")))
 
         # Nested structures.
         t = """
@@ -987,37 +998,37 @@ class TestTuple(unittest.TestCase):
 
         x = xnd(v, type=t)
         y = xnd(v, type=t)
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         w = y[0]
         y[0] = 11
-        self.assertNotEqual(x, y)
+        self.assertNotStrictEqual(x, y)
         y[0] = w
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         w = y[1]
         y[1] = "\U00001234\U00001001abx"
-        self.assertNotEqual(x, y)
+        self.assertNotStrictEqual(x, y)
         y[1] = w
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         w = y[2,0]
         y[2,0] = 12.1e244-3j
-        self.assertNotEqual(x, y)
+        self.assertNotStrictEqual(x, y)
         y[2,0] = w
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         w = y[2,1,1,2,0]
         y[2,1,1,2,0] = b"abc"
-        self.assertNotEqual(x, y)
+        self.assertNotStrictEqual(x, y)
         y[2,1,1,2,0] = w
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         w = y[3].value
         y[3] = ""
-        self.assertNotEqual(x, y)
+        self.assertNotStrictEqual(x, y)
         y[3] = w
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         # Test corner cases and many dtypes.
         for v, t, u, _, _ in EQUAL_TEST_CASES:
@@ -1031,10 +1042,10 @@ class TestTuple(unittest.TestCase):
                 x = xnd(vv, type=ttt)
 
                 y = xnd(vv, type=ttt)
-                self.assertEqual(x, y)
+                self.assertStrictEqual(x, y)
 
                 y = xnd(vv, type=uuu)
-                self.assertEqual(x, y)
+                self.assertStrictEqual(x, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -1053,28 +1064,28 @@ class TestTuple(unittest.TestCase):
 
                 y = xnd(vv, type=ttt)
                 if eq:
-                    self.assertEqual(x, y)
+                    self.assertStrictEqual(x, y)
                 else:
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
                 if u is not None:
                     y = xnd(vv, type=uuu)
                     if eq:
-                        self.assertEqual(x, y)
+                        self.assertStrictEqual(x, y)
                     else:
-                        self.assertNotEqual(x, y)
+                        self.assertNotStrictEqual(x, y)
 
                 if w is not None:
                     y = xnd(vv, type=ttt)
                     y[indices] = w
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
                     y = xnd(vv, type=uuu)
                     y[indices] = w
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
 
-class TestRecord(unittest.TestCase):
+class TestRecord(XndTestCase):
 
     def test_record_empty(self):
         for v, s in DTYPE_EMPTY_TEST_CASES:
@@ -1154,15 +1165,15 @@ class TestRecord(unittest.TestCase):
         self.assertIs(x.__gt__(x), NotImplemented)
         self.assertIs(x.__ge__(x), NotImplemented)
 
-        self.assertEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "3", 'd': b"123"]))
+        self.assertStrictEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "3", 'd': b"123"]))
 
-        self.assertNotEqual(x, xnd(R['z': 1, 'b': 2.0, 'c': "3", 'd': b"123"]))
-        self.assertNotEqual(x, xnd(R['a': 2, 'b': 2.0, 'c': "3", 'd': b"123"]))
-        self.assertNotEqual(x, xnd(R['a': 1, 'b': 2.1, 'c': "3", 'd': b"123"]))
-        self.assertNotEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "", 'd': b"123"]))
-        self.assertNotEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "345", 'd': "123"]))
-        self.assertNotEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "3", 'd': b""]))
-        self.assertNotEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "3", 'd': b"12345"]))
+        self.assertNotStrictEqual(x, xnd(R['z': 1, 'b': 2.0, 'c': "3", 'd': b"123"]))
+        self.assertNotStrictEqual(x, xnd(R['a': 2, 'b': 2.0, 'c': "3", 'd': b"123"]))
+        self.assertNotStrictEqual(x, xnd(R['a': 1, 'b': 2.1, 'c': "3", 'd': b"123"]))
+        self.assertNotStrictEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "", 'd': b"123"]))
+        self.assertNotStrictEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "345", 'd': "123"]))
+        self.assertNotStrictEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "3", 'd': b""]))
+        self.assertNotStrictEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "3", 'd': b"12345"]))
 
         # Nested structures.
         t = """
@@ -1187,37 +1198,37 @@ class TestRecord(unittest.TestCase):
 
         x = xnd(v, type=t)
         y = xnd(v, type=t)
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         w = y[0]
         y[0] = 11
-        self.assertNotEqual(x, y)
+        self.assertNotStrictEqual(x, y)
         y[0] = w
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         w = y[1]
         y[1] = "\U00001234\U00001001abx"
-        self.assertNotEqual(x, y)
+        self.assertNotStrictEqual(x, y)
         y[1] = w
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         w = y[2,0]
         y[2,0] = 12.1e244-3j
-        self.assertNotEqual(x, y)
+        self.assertNotStrictEqual(x, y)
         y[2,0] = w
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         w = y[2,1,1,2,0]
         y[2,1,1,2,0] = b"abc"
-        self.assertNotEqual(x, y)
+        self.assertNotStrictEqual(x, y)
         y[2,1,1,2,0] = w
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         w = y[3].value
         y[3] = ""
-        self.assertNotEqual(x, y)
+        self.assertNotStrictEqual(x, y)
         y[3] = w
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         # Test corner cases and many dtypes.
         for v, t, u, _, _ in EQUAL_TEST_CASES:
@@ -1231,10 +1242,10 @@ class TestRecord(unittest.TestCase):
                 x = xnd(vv, type=ttt)
 
                 y = xnd(vv, type=ttt)
-                self.assertEqual(x, y)
+                self.assertStrictEqual(x, y)
 
                 y = xnd(vv, type=uuu)
-                self.assertEqual(x, y)
+                self.assertStrictEqual(x, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -1250,24 +1261,24 @@ class TestRecord(unittest.TestCase):
 
                 y = xnd(vv, type=ttt)
                 if eq:
-                    self.assertEqual(x, y)
+                    self.assertStrictEqual(x, y)
                 else:
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
                 if u is not None:
                     y = xnd(vv, type=uuu)
                     if eq:
-                        self.assertEqual(x, y)
+                        self.assertStrictEqual(x, y)
                     else:
-                        self.assertNotEqual(x, y)
+                        self.assertNotStrictEqual(x, y)
 
                 if w is not None:
                     y = xnd(vv, type=ttt)
                     y[indices] = w
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
 
-class TestRef(unittest.TestCase):
+class TestRef(XndTestCase):
 
     def test_ref_empty(self):
         for v, s in DTYPE_EMPTY_TEST_CASES:
@@ -1362,11 +1373,11 @@ class TestRef(unittest.TestCase):
         self.assertIs(x.__gt__(x), NotImplemented)
         self.assertIs(x.__ge__(x), NotImplemented)
 
-        self.assertEqual(x, xnd([1,2,3,4], type="ref(4 * float32)"))
+        self.assertStrictEqual(x, xnd([1,2,3,4], type="ref(4 * float32)"))
 
-        self.assertNotEqual(x, xnd([1,2,3,5], type="ref(4 * float32)"))
-        self.assertNotEqual(x, xnd([1,2,3], type="ref(3 * float32)"))
-        self.assertNotEqual(x, xnd([1,2,3,4,5], type="ref(5 * float32)"))
+        self.assertNotStrictEqual(x, xnd([1,2,3,5], type="ref(4 * float32)"))
+        self.assertNotStrictEqual(x, xnd([1,2,3], type="ref(3 * float32)"))
+        self.assertNotStrictEqual(x, xnd([1,2,3,4,5], type="ref(5 * float32)"))
 
         # Test corner cases and many dtypes.
         for v, t, u, _, _ in EQUAL_TEST_CASES:
@@ -1381,10 +1392,10 @@ class TestRef(unittest.TestCase):
                 x = xnd(vv, type=ttt)
 
                 y = xnd(vv, type=ttt)
-                self.assertEqual(x, y)
+                self.assertStrictEqual(x, y)
 
                 y = xnd(vv, type=uuu)
-                self.assertEqual(x, y)
+                self.assertStrictEqual(x, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -1401,24 +1412,24 @@ class TestRef(unittest.TestCase):
 
                 y = xnd(vv, type=ttt)
                 if eq:
-                    self.assertEqual(x, y)
+                    self.assertStrictEqual(x, y)
                 else:
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
                 if u is not None:
                     y = xnd(vv, type=uuu)
                     if eq:
-                        self.assertEqual(x, y)
+                        self.assertStrictEqual(x, y)
                     else:
-                        self.assertNotEqual(x, y)
+                        self.assertNotStrictEqual(x, y)
 
                 if w is not None:
                     y = xnd(vv, type=ttt)
                     y[indices] = w
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
 
-class TestConstr(unittest.TestCase):
+class TestConstr(XndTestCase):
 
     def test_constr_empty(self):
         for v, s in DTYPE_EMPTY_TEST_CASES:
@@ -1507,12 +1518,12 @@ class TestConstr(unittest.TestCase):
         self.assertIs(x.__gt__(x), NotImplemented)
         self.assertIs(x.__ge__(x), NotImplemented)
 
-        self.assertEqual(x, xnd([1,2,3,4], type="A(4 * float32)"))
+        self.assertStrictEqual(x, xnd([1,2,3,4], type="A(4 * float32)"))
 
-        self.assertNotEqual(x, xnd([1,2,3,4], type="B(4 * float32)"))
-        self.assertNotEqual(x, xnd([1,2,3,5], type="A(4 * float32)"))
-        self.assertNotEqual(x, xnd([1,2,3], type="A(3 * float32)"))
-        self.assertNotEqual(x, xnd([1,2,3,4,5], type="A(5 * float32)"))
+        self.assertNotStrictEqual(x, xnd([1,2,3,4], type="B(4 * float32)"))
+        self.assertNotStrictEqual(x, xnd([1,2,3,5], type="A(4 * float32)"))
+        self.assertNotStrictEqual(x, xnd([1,2,3], type="A(3 * float32)"))
+        self.assertNotStrictEqual(x, xnd([1,2,3,4,5], type="A(5 * float32)"))
 
         # Test corner cases and many dtypes.
         for v, t, u, _, _ in EQUAL_TEST_CASES:
@@ -1527,10 +1538,10 @@ class TestConstr(unittest.TestCase):
                 x = xnd(vv, type=ttt)
 
                 y = xnd(vv, type=ttt)
-                self.assertEqual(x, y)
+                self.assertStrictEqual(x, y)
 
                 y = xnd(vv, type=uuu)
-                self.assertEqual(x, y)
+                self.assertStrictEqual(x, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -1547,24 +1558,24 @@ class TestConstr(unittest.TestCase):
 
                 y = xnd(vv, type=ttt)
                 if eq:
-                    self.assertEqual(x, y)
+                    self.assertStrictEqual(x, y)
                 else:
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
                 if u is not None:
                     y = xnd(vv, type=uuu)
                     if eq:
-                        self.assertEqual(x, y)
+                        self.assertStrictEqual(x, y)
                     else:
-                        self.assertNotEqual(x, y)
+                        self.assertNotStrictEqual(x, y)
 
                 if w is not None:
                     y = xnd(vv, type=ttt)
                     y[indices] = w
-                    self.assertNotEqual(x, y)
+                    self.assertNotStrictEqual(x, y)
 
 
-class TestNominal(unittest.TestCase):
+class TestNominal(XndTestCase):
 
     def test_nominal_empty(self):
         c = 0
@@ -1664,19 +1675,19 @@ class TestNominal(unittest.TestCase):
         self.assertIs(x.__gt__(x), NotImplemented)
         self.assertIs(x.__ge__(x), NotImplemented)
 
-        self.assertEqual(x, xnd([1,2,3,4], type="some1000"))
+        self.assertStrictEqual(x, xnd([1,2,3,4], type="some1000"))
 
-        self.assertNotEqual(x, xnd([1,2,3,4], type="some1001"))
-        self.assertNotEqual(x, xnd([1,2,3,5], type="some1000"))
+        self.assertNotStrictEqual(x, xnd([1,2,3,4], type="some1001"))
+        self.assertNotStrictEqual(x, xnd([1,2,3,5], type="some1000"))
 
 
-class TestScalarKind(unittest.TestCase):
+class TestScalarKind(XndTestCase):
 
     def test_scalar_kind(self):
         self.assertRaises(ValueError, xnd.empty, "Scalar")
 
 
-class TestCategorical(unittest.TestCase):
+class TestCategorical(XndTestCase):
 
     def test_categorical_empty(self):
         # Categorical values are stored as indices into the type's categories.
@@ -1722,23 +1733,23 @@ class TestCategorical(unittest.TestCase):
         x = xnd(['August', 'January', 'January'], type=t)
 
         y = xnd(['August', 'January', 'January'], type=t)
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         y = xnd(['August', 'January', 'August'], type=t)
-        self.assertNotEqual(x, y)
+        self.assertNotStrictEqual(x, y)
 
         x = xnd(['August', None, 'August'], type=t)
         y = xnd(['August', None, 'August'], type=t)
-        self.assertNotEqual(x, y)
+        self.assertNotStrictEqual(x, y)
 
 
-class TestFixedStringKind(unittest.TestCase):
+class TestFixedStringKind(XndTestCase):
 
     def test_fixed_string_kind(self):
         self.assertRaises(ValueError, xnd.empty, "FixedString")
 
 
-class TestFixedString(unittest.TestCase):
+class TestFixedString(XndTestCase):
 
     def test_fixed_string_empty(self):
         test_cases = [
@@ -1812,18 +1823,18 @@ class TestFixedString(unittest.TestCase):
         for t, v, w in test_cases:
             x = xnd(v, type=t)
             y = xnd(v, type=t)
-            self.assertEqual(x, y)
+            self.assertStrictEqual(x, y)
             y[()] = w
-            self.assertNotEqual(x, y)
+            self.assertNotStrictEqual(x, y)
 
 
-class TestFixedBytesKind(unittest.TestCase):
+class TestFixedBytesKind(XndTestCase):
 
     def test_fixed_bytes_kind(self):
         self.assertRaises(ValueError, xnd.empty, "FixedBytes")
 
 
-class TestFixedBytes(unittest.TestCase):
+class TestFixedBytes(XndTestCase):
 
     def test_fixed_bytes_empty(self):
         r = R['a': 3 * b'\x00', 'b': 10 * b'\x00']
@@ -1883,20 +1894,20 @@ class TestFixedBytes(unittest.TestCase):
         for v, t, w in test_cases:
             x = xnd(v, type=t)
             y = xnd(v, type=t)
-            self.assertEqual(x, y)
+            self.assertStrictEqual(x, y)
             y[()] = w
-            self.assertNotEqual(x, y)
+            self.assertNotStrictEqual(x, y)
 
         x = xnd(128 * b"a", type="fixed_bytes(size=128, align=16)")
         y = xnd(128 * b"a", type="fixed_bytes(size=128, align=4)")
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
         x = xnd(128 * b"a", type="fixed_bytes(size=128, align=16)")
         y = xnd(128 * b"a", type="fixed_bytes(size=128, align=4)")
-        self.assertEqual(x, y)
+        self.assertStrictEqual(x, y)
 
 
-class TestString(unittest.TestCase):
+class TestString(XndTestCase):
 
     def test_string_empty(self):
         test_cases = [
@@ -1943,13 +1954,13 @@ class TestString(unittest.TestCase):
 
         x = xnd("abc")
 
-        self.assertEqual(x, xnd("abc"))
-        self.assertEqual(x, xnd("abc\0\0"))
+        self.assertStrictEqual(x, xnd("abc"))
+        self.assertStrictEqual(x, xnd("abc\0\0"))
 
-        self.assertNotEqual(x, xnd("acb"))
+        self.assertNotStrictEqual(x, xnd("acb"))
 
 
-class TestBytes(unittest.TestCase):
+class TestBytes(XndTestCase):
 
     def test_bytes_empty(self):
         r = R['a': b'', 'b': b'']
@@ -1983,7 +1994,7 @@ class TestBytes(unittest.TestCase):
         self.assertEqual(x.value, v)
 
 
-class TestChar(unittest.TestCase):
+class TestChar(XndTestCase):
 
     def test_char(self):
         # Semantics need to be evaluated (we already have fixed_string
@@ -1992,7 +2003,7 @@ class TestChar(unittest.TestCase):
         self.assertRaises(NotImplementedError, xnd, 1, type="char('utf8')")
 
 
-class TestBool(unittest.TestCase):
+class TestBool(XndTestCase):
 
     def test_bool(self):
         # From bool.
@@ -2028,19 +2039,19 @@ class TestBool(unittest.TestCase):
 
     def test_bool_richcompare(self):
 
-        self.assertEqual(xnd(True), xnd(True))
-        self.assertEqual(xnd(False), xnd(False))
-        self.assertNotEqual(xnd(True), xnd(False))
-        self.assertNotEqual(xnd(False), xnd(True))
+        self.assertStrictEqual(xnd(True), xnd(True))
+        self.assertStrictEqual(xnd(False), xnd(False))
+        self.assertNotStrictEqual(xnd(True), xnd(False))
+        self.assertNotStrictEqual(xnd(False), xnd(True))
 
 
-class TestSignedKind(unittest.TestCase):
+class TestSignedKind(XndTestCase):
 
     def test_signed_kind(self):
         self.assertRaises(ValueError, xnd.empty, "Signed")
 
 
-class TestSigned(unittest.TestCase):
+class TestSigned(XndTestCase):
 
     def test_signed(self):
         # Test bounds.
@@ -2079,17 +2090,17 @@ class TestSigned(unittest.TestCase):
     def test_signed_richcompare(self):
 
         for t in "int8", "int16", "int32", "int64":
-            self.assertEqual(xnd(-10, type=t), xnd(-10, type=t))
-            self.assertNotEqual(xnd(-10, type=t), xnd(100, type=t))
+            self.assertStrictEqual(xnd(-10, type=t), xnd(-10, type=t))
+            self.assertNotStrictEqual(xnd(-10, type=t), xnd(100, type=t))
 
 
-class TestUnsignedKind(unittest.TestCase):
+class TestUnsignedKind(XndTestCase):
 
     def test_unsigned_kind(self):
         self.assertRaises(ValueError, xnd.empty, "Unsigned")
 
 
-class TestUnsigned(unittest.TestCase):
+class TestUnsigned(XndTestCase):
 
     def test_unsigned(self):
         # Test bounds.
@@ -2128,17 +2139,17 @@ class TestUnsigned(unittest.TestCase):
     def test_unsigned_richcompare(self):
 
         for t in "uint8", "uint16", "uint32", "uint64":
-            self.assertEqual(xnd(10, type=t), xnd(10, type=t))
-            self.assertNotEqual(xnd(10, type=t), xnd(100, type=t))
+            self.assertStrictEqual(xnd(10, type=t), xnd(10, type=t))
+            self.assertNotStrictEqual(xnd(10, type=t), xnd(100, type=t))
 
 
-class TestFloatKind(unittest.TestCase):
+class TestFloatKind(XndTestCase):
 
     def test_float_kind(self):
         self.assertRaises(ValueError, xnd.empty, "Float")
 
 
-class TestFloat(unittest.TestCase):
+class TestFloat(XndTestCase):
 
     @requires_py36
     def test_float16(self):
@@ -2177,14 +2188,14 @@ class TestFloat(unittest.TestCase):
         self.assertTrue(isnan(x.value))
 
         # Richcompare.
-        self.assertEqual(xnd(1.2e3, type="float16"), xnd(1.2e3, type="float16"))
-        self.assertEqual(xnd(float("inf"), type="float16"), xnd(float("inf"), type="float16"))
-        self.assertEqual(xnd(float("-inf"), type="float16"), xnd(float("-inf"), type="float16"))
+        self.assertStrictEqual(xnd(1.2e3, type="float16"), xnd(1.2e3, type="float16"))
+        self.assertStrictEqual(xnd(float("inf"), type="float16"), xnd(float("inf"), type="float16"))
+        self.assertStrictEqual(xnd(float("-inf"), type="float16"), xnd(float("-inf"), type="float16"))
 
-        self.assertNotEqual(xnd(1.2e3, type="float16"), xnd(-1.2e3, type="float16"))
-        self.assertNotEqual(xnd(float("inf"), type="float16"), xnd(float("-inf"), type="float16"))
-        self.assertNotEqual(xnd(float("-inf"), type="float16"), xnd(float("inf"), type="float16"))
-        self.assertNotEqual(xnd(float("nan"), type="float16"), xnd(float("nan"), type="float16"))
+        self.assertNotStrictEqual(xnd(1.2e3, type="float16"), xnd(-1.2e3, type="float16"))
+        self.assertNotStrictEqual(xnd(float("inf"), type="float16"), xnd(float("-inf"), type="float16"))
+        self.assertNotStrictEqual(xnd(float("-inf"), type="float16"), xnd(float("inf"), type="float16"))
+        self.assertNotStrictEqual(xnd(float("nan"), type="float16"), xnd(float("nan"), type="float16"))
 
     def test_float32(self):
         fromhex = float.fromhex
@@ -2215,14 +2226,14 @@ class TestFloat(unittest.TestCase):
         self.assertTrue(isnan(x.value))
 
         # Richcompare.
-        self.assertEqual(xnd(1.2e7, type="float32"), xnd(1.2e7, type="float32"))
-        self.assertEqual(xnd(float("inf"), type="float32"), xnd(float("inf"), type="float32"))
-        self.assertEqual(xnd(float("-inf"), type="float32"), xnd(float("-inf"), type="float32"))
+        self.assertStrictEqual(xnd(1.2e7, type="float32"), xnd(1.2e7, type="float32"))
+        self.assertStrictEqual(xnd(float("inf"), type="float32"), xnd(float("inf"), type="float32"))
+        self.assertStrictEqual(xnd(float("-inf"), type="float32"), xnd(float("-inf"), type="float32"))
 
-        self.assertNotEqual(xnd(1.2e7, type="float32"), xnd(-1.2e7, type="float32"))
-        self.assertNotEqual(xnd(float("inf"), type="float32"), xnd(float("-inf"), type="float32"))
-        self.assertNotEqual(xnd(float("-inf"), type="float32"), xnd(float("inf"), type="float32"))
-        self.assertNotEqual(xnd(float("nan"), type="float32"), xnd(float("nan"), type="float32"))
+        self.assertNotStrictEqual(xnd(1.2e7, type="float32"), xnd(-1.2e7, type="float32"))
+        self.assertNotStrictEqual(xnd(float("inf"), type="float32"), xnd(float("-inf"), type="float32"))
+        self.assertNotStrictEqual(xnd(float("-inf"), type="float32"), xnd(float("inf"), type="float32"))
+        self.assertNotStrictEqual(xnd(float("nan"), type="float32"), xnd(float("nan"), type="float32"))
 
     def test_float64(self):
         fromhex = float.fromhex
@@ -2249,23 +2260,23 @@ class TestFloat(unittest.TestCase):
         self.assertTrue(isnan(x.value))
 
         # Richcompare.
-        self.assertEqual(xnd(1.2e7, type="float64"), xnd(1.2e7, type="float64"))
-        self.assertEqual(xnd(float("inf"), type="float64"), xnd(float("inf"), type="float64"))
-        self.assertEqual(xnd(float("-inf"), type="float64"), xnd(float("-inf"), type="float64"))
+        self.assertStrictEqual(xnd(1.2e7, type="float64"), xnd(1.2e7, type="float64"))
+        self.assertStrictEqual(xnd(float("inf"), type="float64"), xnd(float("inf"), type="float64"))
+        self.assertStrictEqual(xnd(float("-inf"), type="float64"), xnd(float("-inf"), type="float64"))
 
-        self.assertNotEqual(xnd(1.2e7, type="float64"), xnd(-1.2e7, type="float64"))
-        self.assertNotEqual(xnd(float("inf"), type="float64"), xnd(float("-inf"), type="float64"))
-        self.assertNotEqual(xnd(float("-inf"), type="float64"), xnd(float("inf"), type="float64"))
-        self.assertNotEqual(xnd(float("nan"), type="float64"), xnd(float("nan"), type="float64"))
+        self.assertNotStrictEqual(xnd(1.2e7, type="float64"), xnd(-1.2e7, type="float64"))
+        self.assertNotStrictEqual(xnd(float("inf"), type="float64"), xnd(float("-inf"), type="float64"))
+        self.assertNotStrictEqual(xnd(float("-inf"), type="float64"), xnd(float("inf"), type="float64"))
+        self.assertNotStrictEqual(xnd(float("nan"), type="float64"), xnd(float("nan"), type="float64"))
 
 
-class TestComplexKind(unittest.TestCase):
+class TestComplexKind(XndTestCase):
 
     def test_complex_kind(self):
         self.assertRaises(ValueError, xnd.empty, "Complex")
 
 
-class TestComplex(unittest.TestCase):
+class TestComplex(XndTestCase):
 
     @requires_py36
     def test_complex32(self):
@@ -2321,9 +2332,9 @@ class TestComplex(unittest.TestCase):
                         x = xnd(complex(r, i), type=t)
                         y = xnd(complex(s, j), type=t)
                         if r == s and i == j:
-                            self.assertEqual(x, y)
+                            self.assertStrictEqual(x, y)
                         else:
-                            self.assertNotEqual(x, y)
+                            self.assertNotStrictEqual(x, y)
 
     def test_complex64(self):
         fromhex = float.fromhex
@@ -2371,9 +2382,9 @@ class TestComplex(unittest.TestCase):
                         x = xnd(complex(r, i), type=t)
                         y = xnd(complex(s, j), type=t)
                         if r == s and i == j:
-                            self.assertEqual(x, y)
+                            self.assertStrictEqual(x, y)
                         else:
-                            self.assertNotEqual(x, y)
+                            self.assertNotStrictEqual(x, y)
 
     def test_complex128(self):
         fromhex = float.fromhex
@@ -2414,12 +2425,12 @@ class TestComplex(unittest.TestCase):
                         x = xnd(complex(r, i), type=t)
                         y = xnd(complex(s, j), type=t)
                         if r == s and i == j:
-                            self.assertEqual(x, y)
+                            self.assertStrictEqual(x, y)
                         else:
-                            self.assertNotEqual(x, y)
+                            self.assertNotStrictEqual(x, y)
 
 
-class TestPrimitive(unittest.TestCase):
+class TestPrimitive(XndTestCase):
 
     def test_primitive_empty(self):
         # Test creation and initialization of empty xnd objects.
@@ -2432,7 +2443,7 @@ class TestPrimitive(unittest.TestCase):
                 self.assertEqual(x.type, ndt(ts))
 
 
-class TestTypevar(unittest.TestCase):
+class TestTypevar(XndTestCase):
 
     def test_typevar(self):
         self.assertRaises(ValueError, xnd.empty, "T")
@@ -2440,7 +2451,7 @@ class TestTypevar(unittest.TestCase):
         self.assertRaises(ValueError, xnd.empty, "{a: 2 * 10 * T, b: bytes}")
 
 
-class TestTypeInference(unittest.TestCase):
+class TestTypeInference(XndTestCase):
 
     def test_tuple(self):
         d = R['a': (2.0, b"bytes"), 'b': ("str", float('inf'))]
@@ -2611,7 +2622,7 @@ class TestTypeInference(unittest.TestCase):
             self.assertRaises(NotImplementedError, xnd, v)
 
 
-class TestIndexing(unittest.TestCase):
+class TestIndexing(XndTestCase):
 
     def test_indexing(self):
         x = xnd([])
@@ -2663,7 +2674,7 @@ class TestIndexing(unittest.TestCase):
         self.assertEqual(x[1].value, ["x", "y", "z"])
 
 
-class TestSequence(unittest.TestCase):
+class TestSequence(XndTestCase):
 
     def test_sequence(self):
         for v, s in DTYPE_EMPTY_TEST_CASES:
@@ -2683,7 +2694,7 @@ class TestSequence(unittest.TestCase):
                     self.assertEqual(z.value, lst[i].value)
 
 
-class TestAPI(unittest.TestCase):
+class TestAPI(XndTestCase):
 
     def test_hash(self):
         x = xnd(1000)
@@ -2722,7 +2733,7 @@ class TestAPI(unittest.TestCase):
         self.assertRaises(ValueError, x.short_value, -1)
 
 
-class TestRepr(unittest.TestCase):
+class TestRepr(XndTestCase):
 
     def test_repr(self):
         lst = 10 * [19 * [23 * [{'a': 100, 'b': "xyz", 'c': ['abc', 'uvw']}]]]
@@ -2731,7 +2742,7 @@ class TestRepr(unittest.TestCase):
         self.assertLess(len(r), 100000)
 
 
-class TestBuffer(unittest.TestCase):
+class TestBuffer(XndTestCase):
 
     @unittest.skipIf(np is None, "numpy not found")
     def test_from_buffer(self):
@@ -2807,7 +2818,7 @@ class TestBuffer(unittest.TestCase):
         self.assertEqual(x.tolist(), [1000, 2000, 3000])
 
 
-class TestSpec(unittest.TestCase):
+class TestSpec(XndTestCase):
 
     def __init__(self, *, constr,
                  values, value_generator,
@@ -2906,7 +2917,7 @@ class TestSpec(unittest.TestCase):
                         check_buffer(nd)
 
 
-class LongIndexSliceTest(unittest.TestCase):
+class LongIndexSliceTest(XndTestCase):
 
     def test_subarray(self):
         # Multidimensional indexing
