@@ -38,6 +38,7 @@ extern "C" {
 #endif
 
 
+#include <Python.h>
 #include "ndtypes.h"
 #include "xnd.h"
 
