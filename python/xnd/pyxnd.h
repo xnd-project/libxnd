@@ -57,6 +57,9 @@ extern "C" {
    to acquire and manage external memory blocks.
 */
 
+/* Exposed here for the benefit of Numba. The API should not be regarded
+   stable across versions. */
+
 typedef struct {
     PyObject_HEAD
     PyObject *type;    /* type owner */
@@ -68,6 +71,9 @@ typedef struct {
 /****************************************************************************/
 /*                                 xnd object                               */
 /****************************************************************************/
+
+/* Exposed here for the benefit of Numba. The API should not be regarded
+   stable across versions. */
 
 typedef struct {
     PyObject_HEAD
