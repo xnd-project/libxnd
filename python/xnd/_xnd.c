@@ -114,25 +114,6 @@ static PyTypeObject XndEllipsis_Type = {
 /*                           MemoryBlock Object                             */
 /****************************************************************************/
 
-/* This object owns the memory that is shared by several xnd objects. It is
-   never exposed to the Python level.
-
-   The memory block is created by the primary xnd object on initialization.
-   Sub-views, slices etc. share the memory block.
-
-   PEP-3118 imports are supported.  At a later stage the mblock object will
-   potentially need to communicate with Arrow or other formats in order
-   to acquire and manage external memory blocks.
-*/
-
-
-typedef struct {
-    PyObject_HEAD
-    PyObject *type;    /* type owner */
-    xnd_master_t *xnd; /* memblock owner */
-    Py_buffer *view;   /* PEP-3118 imports */
-} MemoryBlockObject;
-
 static int mblock_init(xnd_t * const x, PyObject *v);
 static PyTypeObject MemoryBlock_Type;
 
@@ -1182,21 +1163,7 @@ mblock_init(xnd_t * const x, PyObject *v)
 /*                                 xnd object                               */
 /****************************************************************************/
 
-typedef struct {
-    PyObject_HEAD
-    MemoryBlockObject *mblock; /* owner of the primary type and memory block */
-    PyObject *type;            /* owner of the current type */
-    xnd_t xnd;                 /* typed view, does not own anything */
-} XndObject;
-
 static PyTypeObject Xnd_Type;
-
-#define TYPE_OWNER(v) (((XndObject *)v)->type)
-#define XND(v) (&(((XndObject *)v)->xnd))
-#define XND_INDEX(v) (((XndObject *)v)->xnd.index)
-#define XND_TYPE(v) (((XndObject *)v)->xnd.type)
-#define XND_PTR(v) (((XndObject *)v)->xnd.ptr)
-
 
 static inline bool
 is_readonly(XndObject *self)
