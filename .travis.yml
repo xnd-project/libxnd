@@ -87,9 +87,9 @@ matrix:
         - cd xnd
         - git fetch --unshallow
         - conda build .conda/libxnd -c xnd/label/dev
-        - conda build --python 3.6 .conda/xnd -c xnd/label/dev
+        - conda build .conda/xnd -c xnd/label/dev
         - export LIBXND=`conda build --output .conda/libxnd -c xnd/label/dev`
-        - export XND=`conda build --python 3.6 --output .conda/xnd -c xnd/label/dev`
+        - export XND=`conda build --output .conda/xnd -c xnd/label/dev`
         - if test X"$TRAVIS_BRANCH" = X"master" && test X"$TRAVIS_PULL_REQUEST" = X"false"; then anaconda --token $ANACONDA_TOKEN upload $LIBXND --user xnd --label dev; fi
         - if test X"$TRAVIS_BRANCH" = X"master" && test X"$TRAVIS_PULL_REQUEST" = X"false"; then anaconda --token $ANACONDA_TOKEN upload $XND --user xnd --label dev; fi
 
@@ -110,9 +110,9 @@ matrix:
         - cd xnd
         - git fetch --unshallow
         - conda build .conda/libxnd -c xnd/label/dev
-        - conda build --python 3.6 .conda/xnd -c xnd/label/dev
+        - conda build .conda/xnd -c xnd/label/dev
         - export LIBXND=`conda build --output .conda/libxnd -c xnd/label/dev`
-        - export XND=`conda build --python 3.6 --output .conda/xnd -c xnd/label/dev`
+        - export XND=`conda build --output .conda/xnd -c xnd/label/dev`
         - if test X"$TRAVIS_BRANCH" = X"master" && test X"$TRAVIS_PULL_REQUEST" = X"false"; then anaconda --token $ANACONDA_TOKEN upload $LIBXND --user xnd --label dev; fi
         - if test X"$TRAVIS_BRANCH" = X"master" && test X"$TRAVIS_PULL_REQUEST" = X"false"; then anaconda --token $ANACONDA_TOKEN upload $XND --user xnd --label dev; fi
 

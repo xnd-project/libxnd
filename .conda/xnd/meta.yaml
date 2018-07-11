@@ -18,10 +18,12 @@ test:
 
 requirements:
   build:
+    - python =={{ environ.get('PY_VER', '3.6') }}
     - libndtypes ==0.2.0dev3
     - libxnd ==0.2.0dev3
     - ndtypes ==0.2.0dev3
   run:
+    - python =={{ environ.get('PY_VER', '3.6') }}
     - libndtypes ==0.2.0dev3
     - libxnd ==0.2.0dev3
     - ndtypes ==0.2.0dev3
