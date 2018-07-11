@@ -18,10 +18,12 @@ test:
 
 requirements:
   build:
+    - python =={{ PY_VER }}
     - libndtypes ==0.2.0dev3
     - libxnd ==0.2.0dev3
     - ndtypes ==0.2.0dev3
   run:
+    - python =={{ PY_VER }}
     - libndtypes ==0.2.0dev3
     - libxnd ==0.2.0dev3
     - ndtypes ==0.2.0dev3
