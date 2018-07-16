@@ -41,8 +41,8 @@ zero-copy views whenever possible:
 
 .. doctest::
 
-   >>> x[0][1] # Scalars are returned as Python values.
-   1
+   >>> x[0][1] # Indexing returns views, even for scalars.
+   xnd(1, type='int64')
    >>>
    >>> y = x[:, ::-1] # Containers are returned as views.
    >>> y
@@ -116,7 +116,7 @@ values in the case of scalars:
 
    >>> x = xnd([[0.1j], [3+2j, 4+5j, 10j]])
    >>> x[1, 2]
-   10j
+   xnd(10j, type='complex128')
 
    >>> x[1]
    xnd([(3+2j), (4+5j), 10j], type='var * complex128')
@@ -348,7 +348,7 @@ Indexing works the same as for arrays:
 
    >>> x = xnd(("foo", 1.0))
    >>> x[0]
-   'foo'
+   xnd('foo', type='string')
 
 
 Nested tuples are more general than ragged arrays. They can a) hold different
@@ -401,9 +401,9 @@ by name:
 .. doctest::
 
    >>> x[0]
-   b'123'
+   xnd(b'123', type='bytes')
    >>> x['a']
-   b'123'
+   xnd(b'123', type='bytes')
    >>> x['b']
    xnd({'x': 1.2, 'y': (100+3j)}, type='{x : float64, y : complex128}')
 
