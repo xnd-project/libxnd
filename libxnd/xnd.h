@@ -157,6 +157,8 @@ XND_API xnd_t xnd_multikey(const xnd_t *x, const xnd_index_t indices[], int len,
 XND_API int xnd_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx);
 XND_API int xnd_strict_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx);
 
+XND_API int xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx);
+
 
 /*****************************************************************************/
 /*                                  Bitmaps                                  */

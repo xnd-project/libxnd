@@ -1179,7 +1179,7 @@ xnd_init_float(ndt_context_t *ctx)
         xnd_float_format = IEEE_BIG_ENDIAN;
     }
     else if (memcmp(&y, "\x02\x01\x7f\x4b", 4) == 0) {
-        xnd_float_format = IEEE_BIG_ENDIAN;
+        xnd_float_format = IEEE_LITTLE_ENDIAN;
     }
     else {
         ndt_err_format(ctx, NDT_RuntimeError,

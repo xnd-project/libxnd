@@ -31,9 +31,9 @@ default: $(LIBSTATIC) $(LIBSHARED)
 	copy /y $(LIBSHARED) ..\python\xnd
 
 
-OBJS = bitmaps.obj equal.obj xnd.obj
+OBJS = bitmaps.obj copy.obj equal.obj xnd.obj
 
-SHARED_OBJS = .objs\bitmaps.obj .objs\equal.obj .objs\xnd.obj
+SHARED_OBJS = .objs\bitmaps.obj .objs\copy.obj .objs\equal.obj .objs\xnd.obj
 
 
 $(LIBSTATIC):\
@@ -54,6 +54,14 @@ Makefile bitmaps.c xnd.h
 .objs\bitmaps.obj:\
 Makefile bitmaps.c xnd.h
 	$(CC) "-I$(LIBNDTYPESINCLUDE)" $(CFLAGS_SHARED) -c bitmaps.c
+
+copy.obj:\
+Makefile copy.c xnd.h
+	$(CC) "-I$(LIBNDTYPESINCLUDE)" $(CFLAGS) -c copy.c
+
+.objs\copy.obj:\
+Makefile copy.c xnd.h
+	$(CC) "-I$(LIBNDTYPESINCLUDE)" $(CFLAGS_SHARED) -c copy.c
 
 equal.obj:\
 Makefile equal.c xnd.h

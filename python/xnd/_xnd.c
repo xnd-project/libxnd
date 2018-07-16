@@ -1896,40 +1896,6 @@ pyxnd_length(XndObject *self)
     return pyxnd_len(XND(self));
 }
 
-static PyObject *
-value_or_view_copy(XndObject *self, const xnd_t *x)
-{
-    assert(x->ptr != NULL);
-
-    if (x->type->ndim == 0) {
-        switch (x->type->tag) {
-        case Tuple: case Record: case Ref: case Constr: case Nominal:
-            return pyxnd_view_copy_type(self, x);
-        default:
-            return _pyxnd_value(x, INT64_MAX);
-        }
-    }
-
-    return pyxnd_view_copy_type(self, x);
-}
-
-static PyObject *
-value_or_view_move(XndObject *self, xnd_t *x)
-{
-    assert(x->ptr != NULL);
-
-    if (x->type->ndim == 0) {
-        switch (x->type->tag) {
-        case Tuple: case Record: case Ref: case Constr: case Nominal:
-            return pyxnd_view_move_type(self, x);
-        default:
-            return _pyxnd_value(x, INT64_MAX);
-        }
-    }
-
-    return pyxnd_view_move_type(self, x);
-}
-
 #define KEY_INDEX 1
 #define KEY_FIELD 2
 #define KEY_SLICE 4
@@ -2028,14 +1994,14 @@ pyxnd_subscript(XndObject *self, PyObject *key)
         if (x.ptr == NULL) {
             return seterr(&ctx);
         }
-        return value_or_view_move(self, &x);
+        return pyxnd_view_move_type(self, &x);
     }
     else {
         const xnd_t x = xnd_subtree(&self->xnd, indices, len, &ctx);
         if (x.ptr == NULL) {
             return seterr(&ctx);
         }
-        return value_or_view_copy(self, &x);
+        return pyxnd_view_copy_type(self, &x);
     }
 }
 
@@ -2082,7 +2048,16 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
         return seterr_int(&ctx);
     }
 
-    ret = mblock_init(&x, value);
+    if (Xnd_Check(value)) {
+        ret = xnd_copy(&x, XND(value), self->mblock->xnd->flags, &ctx);
+        if (ret < 0) {
+            (void)seterr_int(&ctx);
+        }
+    }
+    else {
+        ret = mblock_init(&x, value);
+    }
+
     if (free_type) {
         ndt_del((ndt_t *)x.type);
     }
@@ -2382,6 +2357,24 @@ static PyBufferProcs pyxnd_as_buffer = {
 
 /* Special methods */
 static PyObject *
+convert_cmp(PyObject *v, PyObject *w, int op)
+{
+    PyObject *vcmp;
+    PyObject *res;
+
+    assert(!Xnd_Check(w));
+
+    vcmp = _pyxnd_value(XND(v), INT64_MAX);
+    if (vcmp == NULL) {
+        return NULL;
+    }
+
+    res = PyObject_RichCompare(vcmp, w, op);
+    Py_DECREF(vcmp);
+    return res;
+}
+
+static PyObject *
 pyxnd_richcompare(PyObject *v, PyObject *w, int op)
 {
     NDT_STATIC_CONTEXT(ctx);
@@ -2389,7 +2382,11 @@ pyxnd_richcompare(PyObject *v, PyObject *w, int op)
 
     assert(Xnd_Check(v));
 
-    if (Xnd_Check(w) && (op == Py_EQ || op == Py_NE)) {
+    if (!Xnd_Check(w)) {
+        return convert_cmp(v, w, op);
+    }
+
+    if (op == Py_EQ || op == Py_NE) {
         int r = xnd_equal(XND(v), XND(w), &ctx);
         if (r < 0) {
             return seterr(&ctx);

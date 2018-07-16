@@ -62,12 +62,12 @@ def check_buffer(x):
 class XndTestCase(unittest.TestCase):
 
     def assertStrictEqual(self, x, y):
-        self.assertTrue(x.strict_equal(y))
-        self.assertEqual(x, y)
+        self.assertTrue(x.strict_equal(y), msg="x: %s  y: %s" % (x, y))
+        self.assertEqual(x, y, msg="x: %s  y: %s" % (x, y))
 
     def assertNotStrictEqual(self, x, y):
-        self.assertFalse(x.strict_equal(y))
-        self.assertNotEqual(x, y)
+        self.assertFalse(x.strict_equal(y), msg="x: %s  y: %s" % (x, y))
+        self.assertNotEqual(x, y, msg="x: %s  y: %s" % (x, y))
 
 
 class TestModule(XndTestCase):
@@ -1000,25 +1000,25 @@ class TestTuple(XndTestCase):
         y = xnd(v, type=t)
         self.assertStrictEqual(x, y)
 
-        w = y[0]
+        w = y[0].value
         y[0] = 11
         self.assertNotStrictEqual(x, y)
         y[0] = w
         self.assertStrictEqual(x, y)
 
-        w = y[1]
+        w = y[1].value
         y[1] = "\U00001234\U00001001abx"
         self.assertNotStrictEqual(x, y)
         y[1] = w
         self.assertStrictEqual(x, y)
 
-        w = y[2,0]
+        w = y[2,0].value
         y[2,0] = 12.1e244-3j
         self.assertNotStrictEqual(x, y)
         y[2,0] = w
         self.assertStrictEqual(x, y)
 
-        w = y[2,1,1,2,0]
+        w = y[2,1,1,2,0].value
         y[2,1,1,2,0] = b"abc"
         self.assertNotStrictEqual(x, y)
         y[2,1,1,2,0] = w
@@ -1200,25 +1200,25 @@ class TestRecord(XndTestCase):
         y = xnd(v, type=t)
         self.assertStrictEqual(x, y)
 
-        w = y[0]
+        w = y[0].value
         y[0] = 11
         self.assertNotStrictEqual(x, y)
         y[0] = w
         self.assertStrictEqual(x, y)
 
-        w = y[1]
+        w = y[1].value
         y[1] = "\U00001234\U00001001abx"
         self.assertNotStrictEqual(x, y)
         y[1] = w
         self.assertStrictEqual(x, y)
 
-        w = y[2,0]
+        w = y[2,0].value
         y[2,0] = 12.1e244-3j
         self.assertNotStrictEqual(x, y)
         y[2,0] = w
         self.assertStrictEqual(x, y)
 
-        w = y[2,1,1,2,0]
+        w = y[2,1,1,2,0].value
         y[2,1,1,2,0] = b"abc"
         self.assertNotStrictEqual(x, y)
         y[2,1,1,2,0] = w
