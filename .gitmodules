@@ -1,0 +1,6 @@
+[submodule "ndtypes"]
+	path = ndtypes
+	url = https://github.com/plures/ndtypes.git
+[submodule "gumath"]
+	path = gumath
+	url = https://github.com/plures/gumath.git
