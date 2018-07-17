@@ -11,7 +11,7 @@ python3 setup.py install --local=$PWD/../../python
 python3 setup.py install --local=$PWD/../gumath/python
 # install ndtypes (globally)
 python3 setup.py install
-cd ..
+cd ../..
 
 # install xnd (globally)
 python3 setup.py install
@@ -22,4 +22,4 @@ cd plures/gumath
 # install gumath (globally)
 python3 setup.py build
 python3 setup.py install
-cd ..
+cd ../..
