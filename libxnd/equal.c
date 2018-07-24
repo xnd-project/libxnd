@@ -46,7 +46,7 @@
 /*****************************************************************************/
 
 int
-xnd_strict_equal(const xnd_t * const x, const xnd_t * const y, ndt_context_t *ctx)
+xnd_strict_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx)
 {
     const ndt_t * const t = x->type;
     const ndt_t * const u = y->type;
@@ -857,7 +857,7 @@ equal_complex128(const double real, const double imag, const xnd_t * const x)
 }
 
 int
-xnd_equal(const xnd_t * const x, const xnd_t * const y, ndt_context_t *ctx)
+xnd_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx)
 {
     const ndt_t * const t = x->type;
     const ndt_t * const u = y->type;

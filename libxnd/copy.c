@@ -541,7 +541,6 @@ copy_complex128(xnd_t * const x, const double real, const double imag,
     }
 
     case Complex32: {
-        double imag = 0.0;
         if (xnd_float_pack2(real, (unsigned char *)x->ptr, le(t->flags), ctx) < 0) {
             return -1;
         }
@@ -549,7 +548,6 @@ copy_complex128(xnd_t * const x, const double real, const double imag,
     }
 
     case Complex64: {
-        double imag = 0.0;
         if (xnd_float_pack4(real, (unsigned char *)x->ptr, le(t->flags), ctx) < 0) {
             return -1;
         }
@@ -557,7 +555,6 @@ copy_complex128(xnd_t * const x, const double real, const double imag,
     }
 
     case Complex128: {
-        double imag = 0.0;
         xnd_float_pack8(real, (unsigned char *)x->ptr, le(t->flags));
         xnd_float_pack8(imag, (unsigned char *)(x->ptr+8), le(t->flags));
         return 0;
@@ -569,8 +566,7 @@ copy_complex128(xnd_t * const x, const double real, const double imag,
 }
 
 int
-xnd_copy(xnd_t * const y, const xnd_t * const x, const uint32_t flags,
-         ndt_context_t *ctx)
+xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
 {
     const ndt_t * const t = x->type;
     const ndt_t * const u = y->type;
