@@ -854,7 +854,7 @@ xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
             u->datasize != t->datasize) {
             return type_error(ctx);
         }
-        memcpy(y->ptr, x->ptr, t->datasize);
+        memcpy(y->ptr, x->ptr, (size_t)t->datasize);
         return 0;
     }
 
@@ -864,7 +864,7 @@ xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
             u->datasize != t->datasize) {
             return type_error(ctx);
         }
-        memcpy(y->ptr, x->ptr, t->datasize);
+        memcpy(y->ptr, x->ptr, (size_t)t->datasize);
         return 0;
     }
 
@@ -909,7 +909,7 @@ xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
             (void)ndt_memory_error(ctx);
             return -1;
         }
-        memcpy(s, XND_BYTES_DATA(x->ptr), size);
+        memcpy(s, XND_BYTES_DATA(x->ptr), (size_t)size);
 
         if (XND_BYTES_DATA(y->ptr) != NULL) {
             if (!(flags & XND_OWN_EMBEDDED)) {
