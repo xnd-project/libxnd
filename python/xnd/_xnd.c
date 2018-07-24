@@ -2277,21 +2277,21 @@ fill_buffer(Py_buffer *view, const xnd_t *x, ndt_context_t *ctx)
     }
 
     if (t->ndim == 0) {
-        view->len = t->datasize;
-        view->itemsize = t->datasize;
+        view->len = (Py_ssize_t)t->datasize;
+        view->itemsize = (Py_ssize_t)t->datasize;
         view->shape = NULL;
         view->strides = NULL;
         view->buf = x->ptr + x->index * t->datasize;
         return 0;
     }
 
-    view->itemsize = t->Concrete.FixedDim.itemsize;
+    view->itemsize = (Py_ssize_t)t->Concrete.FixedDim.itemsize;
     view->buf = x->ptr + x->index * view->itemsize;
 
     len = 1;
     for (i=0; t->ndim > 0; i++, t=t->FixedDim.type) {
-        view->shape[i] = t->FixedDim.shape;
-        view->strides[i] = t->Concrete.FixedDim.step * view->itemsize;
+        view->shape[i] = (Py_ssize_t)t->FixedDim.shape;
+        view->strides[i] = (Py_ssize_t)(t->Concrete.FixedDim.step * view->itemsize);
         len *= view->shape[i];
     }
     len *=  view->itemsize;
