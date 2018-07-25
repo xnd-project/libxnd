@@ -44,6 +44,12 @@ import subprocess
 import shutil
 import warnings
 
+try:
+    import sphinx.cmd
+    SPHINX_BUILD = "sphinx.cmd.build"
+except:
+    SPHINX_BUILD = "sphinx"
+
 
 DESCRIPTION = """\
 General container that maps a wide range of Python values directly to memory.\
@@ -182,7 +188,7 @@ elif len(sys.argv) == 2:
         path = module_path + ':' + python_path if python_path else module_path
         env = os.environ.copy()
         env['PYTHONPATH'] = path
-        cmd = [sys.executable, "-m", "sphinx.cmd.build",
+        cmd = [sys.executable, "-m", SPHINX_BUILD,
                "-b", "doctest", "-d", "build/doctrees", ".", "build/html"]
         ret = subprocess.call(cmd, env=env)
         sys.exit(ret)

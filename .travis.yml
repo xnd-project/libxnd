@@ -8,7 +8,7 @@ matrix:
   include:
     - compiler: gcc
       before_script:
-        - pip install numpy sphinx
+        - python3 -m pip install numpy sphinx
         - git clone https://github.com/plures/ndtypes.git
         - cd ndtypes
         - python3 setup.py install --local=../python
