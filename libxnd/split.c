@@ -228,7 +228,6 @@ xnd_split(const xnd_t *x, int64_t *nparts, ndt_context_t *ctx)
     }
 
     nmemb = MULi64(nrows, ncols, &overflow);
-    (void)nmemb;
     if (overflow) {
         ndt_err_format(ctx, NDT_ValueError, "'n' parameter is too large");
         return NULL;
