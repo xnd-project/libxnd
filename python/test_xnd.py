@@ -2818,6 +2818,21 @@ class TestBuffer(XndTestCase):
         self.assertEqual(x.tolist(), [1000, 2000, 3000])
 
 
+class TestSplit(XndTestCase):
+
+    def test_split(self):
+        for _ in range(1):
+            for lst in gen_fixed():
+                x = xnd(lst)
+                for n in range(1, 100):
+                    try:
+                        a = split_xnd(x, n)
+                    except ValueError:
+                        continue
+                    b = xnd.split(x, n)
+                    self.assertEqual(a, b)
+
+
 class TestSpec(XndTestCase):
 
     def __init__(self, *, constr,
@@ -3069,6 +3084,7 @@ ALL_TESTS = [
   TestAPI,
   TestRepr,
   TestBuffer,
+  TestSplit,
   LongIndexSliceTest,
 ]
 

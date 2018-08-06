@@ -2013,6 +2013,55 @@ pyxnd_subscript(XndObject *self, PyObject *key)
     return _pyxnd_subscript(self, indices, len, flags & KEY_SLICE);
 }
 
+static void
+free_slices(xnd_t *lst, int64_t start, int64_t stop)
+{
+    for (int64_t i = start; i < stop; i++) {
+        ndt_del((ndt_t *)lst[i].type);
+    }
+
+    ndt_free(lst);
+}
+
+static PyObject *
+pyxnd_split(PyObject *self, PyObject *nparts)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    PyObject *res;
+    xnd_t *slices;
+    int64_t n;
+
+    n = PyLong_AsLong(nparts);
+    if (n == -1 && PyErr_Occurred()) {
+        return NULL;
+    }
+
+    slices = xnd_split(XND(self), &n, &ctx);
+    if (slices == NULL) {
+        return seterr(&ctx);
+    }
+
+    res = PyList_New(n);
+    if (res == NULL) {
+        free_slices(slices, 0, n);
+        return NULL;
+    }
+
+    for (int64_t i = 0; i < n; i++) {
+        PyObject *x = pyxnd_view_move_type((XndObject *)self, &slices[i]);
+        if (x == NULL) {
+            free_slices(slices, i+1, n);
+            Py_DECREF(res);
+            return NULL;
+        }
+        PyList_SET_ITEM(res, i, x);
+    }
+
+    ndt_free(slices);
+
+    return res;
+}
+
 static int
 pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
 {
@@ -2195,6 +2244,7 @@ static PyMethodDef pyxnd_methods [] =
   /* Methods */
   { "short_value", (PyCFunction)pyxnd_short_value, METH_VARARGS|METH_KEYWORDS, doc_short_value },
   { "strict_equal", (PyCFunction)pyxnd_strict_equal, METH_O, NULL },
+  { "split", (PyCFunction)pyxnd_split, METH_O, NULL },
 
   /* Class methods */
   { "empty", (PyCFunction)pyxnd_empty, METH_O|METH_CLASS, doc_empty },

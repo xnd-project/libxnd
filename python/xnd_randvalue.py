@@ -1053,3 +1053,67 @@ def mixed_indices(max_ndim):
 def itos(indices):
     return ", ".join(str(i) if isinstance(i, int) else "%s:%s:%s" %
                      (i.start, i.stop, i.step) for i in indices)
+
+
+# ======================================================================
+#                Split a shape into N almost equal slices
+# ======================================================================
+
+def start(i, r, q):
+  return i*(q+1) if i < r else r+i*q
+
+def stop(i, r, q):
+  return (i+1)*(q+1) if i < r else r+(i+1)*q
+
+def step(i, r, q):
+  return q+1 if i < r else q
+
+def sl(i, r, q):
+  return slice(start(i, r, q), stop(i, r, q))
+
+def prepend(x, xs):
+  return [(x,) + t for t in xs]
+
+def last_column(i, r, q, n):
+  return [(sl(i, r, q),) for i in range(n)]
+
+def schedule(n, shape):
+  assert isinstance(n, int) and isinstance(shape, list)
+  if (n <= 0):
+    raise ValueError("n must be greater than zero")
+  if shape == []:
+      return [()]
+  m, ms = shape[0], shape[1:]
+  if (m <= 0):
+    raise ValueError("shape must be greater than zero")
+  if n <= m:
+    q, r = divmod(m, n)
+    return last_column(0, r, q, n)
+  else:
+    q, r = divmod(n, m)
+    return column(0, r, q, m, ms)
+
+def column(i, r, q, m, ms):
+  if i == m: return []
+  return prepend(slice(i, i+1),
+                 schedule(step(i, r, q), ms)) + \
+         column(i+1, r, q, m, ms)
+
+# ======================================================================
+#                   Split an xnd object into N subtrees
+# ======================================================================
+
+def zero_in_shape(shape):
+    for i in shape:
+        if i == 0:
+            return True
+    return False
+
+def split_xnd(x, n):
+    shape = list(x.type.shape)
+    if zero_in_shape(shape):
+        raise ValueError("split does not support zeros in shape")
+    indices_list = schedule(n, shape)
+    return [x[i] for i in indices_list]
+
+

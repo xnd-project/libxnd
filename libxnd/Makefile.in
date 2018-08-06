@@ -27,9 +27,9 @@ XND_LDFLAGS = $(strip $(CONFIGURE_LDFLAGS) $(LDFLAGS))
 default: $(LIBSTATIC) $(LIBSHARED)
 
 
-OBJS = bitmaps.o copy.o equal.o xnd.o
+OBJS = bitmaps.o copy.o equal.o split.o xnd.o
 
-SHARED_OBJS = .objs/bitmaps.o .objs/copy.o .objs/equal.o .objs/xnd.o
+SHARED_OBJS = .objs/bitmaps.o .objs/copy.o .objs/equal.o .objs/split.o .objs/xnd.o
 
 
 $(LIBSTATIC): Makefile $(OBJS)
@@ -64,6 +64,14 @@ Makefile equal.c xnd.h
 .objs/equal.o:\
 Makefile equal.c xnd.h
 	$(CC) $(XND_CFLAGS_SHARED) -c equal.c -o .objs/equal.o
+
+split.o:\
+Makefile split.c overflow.h xnd.h
+	$(CC) $(XND_CFLAGS) -c split.c
+
+.objs/split.o:\
+Makefile split.c overflow.h xnd.h
+	$(CC) $(XND_CFLAGS_SHARED) -c split.c -o .objs/split.o
 
 xnd.o:\
 Makefile xnd.c xnd.h
