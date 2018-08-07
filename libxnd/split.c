@@ -183,7 +183,7 @@ column(int64_t nrows, int64_t ncols,
 }
 
 static int
-get_shape(int64_t *shape, const ndt_t *t, ndt_context_t *ctx)
+get_shape(int64_t *shape, const ndt_t *t, int max_outer, ndt_context_t *ctx)
 {
     int i;
 
@@ -193,9 +193,16 @@ get_shape(int64_t *shape, const ndt_t *t, ndt_context_t *ctx)
         return -1;
     }
 
-    for (i = 0; t->ndim > 0; i++, t=t->FixedDim.type) {
+    for (i = 0; i < max_outer && t->ndim > 0; i++, t=t->FixedDim.type) {
         shape[i] = t->FixedDim.shape;
         if (shape[i] <= 0) {
+            ndt_err_format(ctx, NDT_ValueError,
+                "split function called on invalid shape or shape with zeros");
+            return -1;
+        }
+    }
+    for (; t->ndim > 0; t=t->FixedDim.type) {
+        if (t->FixedDim.shape <= 0) {
             ndt_err_format(ctx, NDT_ValueError,
                 "split function called on invalid shape or shape with zeros");
             return -1;
@@ -206,7 +213,7 @@ get_shape(int64_t *shape, const ndt_t *t, ndt_context_t *ctx)
 }
 
 xnd_t *
-xnd_split(const xnd_t *x, int64_t *nparts, ndt_context_t *ctx)
+xnd_split(const xnd_t *x, int64_t *nparts, int max_outer, ndt_context_t *ctx)
 {
     bool overflow = false;
     int64_t shape[NDT_MAX_DIM];
@@ -222,7 +229,7 @@ xnd_split(const xnd_t *x, int64_t *nparts, ndt_context_t *ctx)
     }
     nrows = *nparts;
 
-    ncols = get_shape(shape, x->type, ctx);
+    ncols = get_shape(shape, x->type, max_outer, ctx);
     if (ncols < 0) {
         return NULL;
     }

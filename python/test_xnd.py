@@ -2832,6 +2832,20 @@ class TestSplit(XndTestCase):
                     b = xnd.split(x, n)
                     self.assertEqual(a, b)
 
+    def test_split_limit_outer(self):
+        skip_if(SKIP_LONG, "use --long argument to enable these tests")
+
+        for lst in gen_fixed():
+            x = xnd(lst)
+            for n in range(1, 10):
+                for m in range(x.type.ndim + 2):
+                    try:
+                        a = split_xnd(x, n, max_outer=m)
+                    except ValueError:
+                        continue
+                    b = xnd.split(x, n, max_outer=m)
+                    self.assertEqual(a, b, msg="%s  %s  %s" % (x, n, m))
+
 
 class TestSpec(XndTestCase):
 

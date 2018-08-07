@@ -2024,19 +2024,40 @@ free_slices(xnd_t *lst, int64_t start, int64_t stop)
 }
 
 static PyObject *
-pyxnd_split(PyObject *self, PyObject *nparts)
+pyxnd_split(PyObject *self, PyObject *args, PyObject *kwds)
 {
+    static char *kwlist[] = {"n", "max_outer", NULL};
     NDT_STATIC_CONTEXT(ctx);
+    PyObject *max = Py_None;
+    PyObject *nparts;
+    int max_outer = NDT_MAX_DIM;
     PyObject *res;
     xnd_t *slices;
     int64_t n;
 
-    n = PyLong_AsLong(nparts);
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", kwlist, &nparts, &max)) {
+        return NULL;
+    }
+
+    n = PyLong_AsLongLong(nparts);
     if (n == -1 && PyErr_Occurred()) {
         return NULL;
     }
 
-    slices = xnd_split(XND(self), &n, &ctx);
+    if (max != Py_None) {
+        long l = PyLong_AsLong(max);
+        if (l == -1 && PyErr_Occurred()) {
+            return NULL;
+        }
+        if (l < 0 || l > NDT_MAX_DIM) {
+            PyErr_SetString(PyExc_ValueError,
+                "max_outer must be in [0, NDT_MAX_DIM]");
+            return NULL;
+        }
+        max_outer = (int)l;
+    }
+
+    slices = xnd_split(XND(self), &n, max_outer, &ctx);
     if (slices == NULL) {
         return seterr(&ctx);
     }
@@ -2244,7 +2265,7 @@ static PyMethodDef pyxnd_methods [] =
   /* Methods */
   { "short_value", (PyCFunction)pyxnd_short_value, METH_VARARGS|METH_KEYWORDS, doc_short_value },
   { "strict_equal", (PyCFunction)pyxnd_strict_equal, METH_O, NULL },
-  { "split", (PyCFunction)pyxnd_split, METH_O, NULL },
+  { "split", (PyCFunction)pyxnd_split, METH_VARARGS|METH_KEYWORDS, NULL },
 
   /* Class methods */
   { "empty", (PyCFunction)pyxnd_empty, METH_O|METH_CLASS, doc_empty },
