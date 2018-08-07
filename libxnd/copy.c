@@ -381,7 +381,7 @@ copy_uint64(xnd_t * const x, const uint64_t u64, ndt_context_t *ctx)
     }
 
     default:
-        return 0;
+        return type_error(ctx);
     }
 }
 
@@ -592,7 +592,7 @@ xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
         int64_t i;
 
         if (u->tag != FixedDim || u->FixedDim.shape != t->FixedDim.shape) {
-            return 0;
+            return type_error(ctx);
         }
 
         for (i = 0; i < t->FixedDim.shape; i++) {
