@@ -2567,6 +2567,27 @@ Xnd_Subscript(const PyObject *self, const PyObject *key)
     return pyxnd_subscript((XndObject *)self, (PyObject *)key);
 }
 
+/*
+ * The 'xnd' argument provides a link to the owner of the memory and type
+ * resources.  'x' is a view (usually a subtree or a slice) that is based
+ * on 'xnd'. x->type belongs to 'x' and ownership is transferred to the
+ * result.
+ *
+ * In case of an error, x->type is deallocated.
+ */
+static PyObject *
+Xnd_FromXndMoveType(const PyObject *xnd, xnd_t *x)
+{
+    if (!Xnd_Check(xnd)) {
+        PyErr_SetString(PyExc_TypeError,
+            "Xnd_FromXndMoveType() called on non-xnd object");
+        ndt_del((ndt_t *)x->type);
+        return NULL;
+    }
+
+    return pyxnd_view_move_type((const XndObject *)xnd, x);
+}
+
 
 static PyObject *
 init_api(void)
@@ -2578,6 +2599,7 @@ init_api(void)
     xnd_api[Xnd_ViewMoveNdt_INDEX] = (void *)Xnd_ViewMoveNdt;
     xnd_api[Xnd_FromXnd_INDEX] = (void *)Xnd_FromXnd;
     xnd_api[Xnd_Subscript_INDEX] = (void *)Xnd_Subscript;
+    xnd_api[Xnd_FromXndMoveType_INDEX] = (void *)Xnd_FromXndMoveType;
 
     return PyCapsule_New(xnd_api, "xnd._xnd._API", NULL);
 }
