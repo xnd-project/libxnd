@@ -1765,32 +1765,6 @@ _pyxnd_value(const xnd_t * const x, const int64_t maxshape)
 /******************************************************************************/
 
 static PyObject *
-pyxnd_view_copy_type(const XndObject *src, const xnd_t *x)
-{
-    XndObject *view;
-    PyObject *type;
-
-    type = Ndt_CopySubtree(src->type, x->type);
-    if (type == NULL) {
-        return NULL;
-    }
-
-    view = pyxnd_alloc(Py_TYPE(src));
-    if (view == NULL) {
-        Py_DECREF(type);
-        return NULL;
-    }
-
-    Py_INCREF(src->mblock);
-    view->mblock = src->mblock;
-    view->type = type;
-    view->xnd = *x;
-    view->xnd.type = CONST_NDT(type);
-
-    return (PyObject *)view;
-}
-
-static PyObject *
 pyxnd_view_move_type(const XndObject *src, xnd_t *x)
 {
     XndObject *view;
@@ -1977,31 +1951,11 @@ convert_key(xnd_index_t *indices, int *len, PyObject *key)
 }
 
 static PyObject *
-_pyxnd_subscript(const XndObject *self, const xnd_index_t *indices, int len,
-                 bool have_slice)
-{
-    NDT_STATIC_CONTEXT(ctx);
-
-    if (have_slice) {
-        xnd_t x = xnd_multikey(&self->xnd, indices, len, &ctx);
-        if (x.ptr == NULL) {
-            return seterr(&ctx);
-        }
-        return pyxnd_view_move_type(self, &x);
-    }
-    else {
-        const xnd_t x = xnd_subtree(&self->xnd, indices, len, &ctx);
-        if (x.ptr == NULL) {
-            return seterr(&ctx);
-        }
-        return pyxnd_view_copy_type(self, &x);
-    }
-}
-
-static PyObject *
 pyxnd_subscript(XndObject *self, PyObject *key)
 {
+    NDT_STATIC_CONTEXT(ctx);
     xnd_index_t indices[NDT_MAX_DIM];
+    xnd_t x;
     int len;
     uint8_t flags;
 
@@ -2010,7 +1964,12 @@ pyxnd_subscript(XndObject *self, PyObject *key)
         return NULL;
     }
 
-    return _pyxnd_subscript(self, indices, len, flags & KEY_SLICE);
+    x = xnd_subscript(&self->xnd, indices, len, &ctx);
+    if (x.ptr == NULL) {
+        return seterr(&ctx);
+    }
+
+    return pyxnd_view_move_type(self, &x);
 }
 
 static void
@@ -2608,26 +2567,6 @@ Xnd_Subscript(const PyObject *self, const PyObject *key)
     return pyxnd_subscript((XndObject *)self, (PyObject *)key);
 }
 
-static PyObject *
-Xnd_Subscript2(const PyObject *self, const xnd_index_t *indices, int len)
-{
-    bool have_slice = false;
-
-    if (!Xnd_Check(self)) {
-        PyErr_SetString(PyExc_TypeError,
-            "xnd subscript2 function called on non-xnd object");
-        return NULL;
-    }
-
-    for (int i = 0; i < len; i++) {
-        if (indices[i].tag == Slice) {
-            have_slice = true;
-            break;
-        }
-    }
-
-    return _pyxnd_subscript((const XndObject *)self, indices, len, have_slice);
-}
 
 static PyObject *
 init_api(void)
@@ -2639,7 +2578,6 @@ init_api(void)
     xnd_api[Xnd_ViewMoveNdt_INDEX] = (void *)Xnd_ViewMoveNdt;
     xnd_api[Xnd_FromXnd_INDEX] = (void *)Xnd_FromXnd;
     xnd_api[Xnd_Subscript_INDEX] = (void *)Xnd_Subscript;
-    xnd_api[Xnd_Subscript2_INDEX] = (void *)Xnd_Subscript2;
 
     return PyCapsule_New(xnd_api, "xnd._xnd._API", NULL);
 }

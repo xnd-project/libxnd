@@ -1133,6 +1133,41 @@ xnd_slice(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *c
     }
 }
 
+xnd_t
+xnd_subscript(const xnd_t *x, const xnd_index_t indices[], int len,
+              ndt_context_t *ctx)
+{
+    bool have_slice = false;
+
+    for (int i = 0; i < len; i++) {
+        if (indices[i].tag == Slice) {
+            have_slice = true;
+            break;
+        }
+    }
+
+    if (have_slice) {
+        return xnd_multikey(x, indices, len, ctx);
+    }
+    else {
+        xnd_t res = xnd_subtree(x, indices, len, ctx);
+        const ndt_t *t;
+
+        if (res.ptr == NULL) {
+            return xnd_error;
+        }
+
+        t = ndt_copy(res.type, ctx);
+        if (t == NULL) {
+            return xnd_error;
+        }
+
+        res.type = t;
+        return res;
+    }
+}
+
+
 /*****************************************************************************/
 /*                                Float format                               */
 /*****************************************************************************/

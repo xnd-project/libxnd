@@ -62,12 +62,12 @@ def check_buffer(x):
 class XndTestCase(unittest.TestCase):
 
     def assertStrictEqual(self, x, y):
-        self.assertTrue(x.strict_equal(y), msg="x: %s  y: %s" % (x, y))
-        self.assertEqual(x, y, msg="x: %s  y: %s" % (x, y))
+        self.assertTrue(x.strict_equal(y))
+        self.assertEqual(x, y)
 
     def assertNotStrictEqual(self, x, y):
-        self.assertFalse(x.strict_equal(y), msg="x: %s  y: %s" % (x, y))
-        self.assertNotEqual(x, y, msg="x: %s  y: %s" % (x, y))
+        self.assertFalse(x.strict_equal(y))
+        self.assertNotEqual(x, y)
 
 
 class TestModule(XndTestCase):
@@ -2844,7 +2844,7 @@ class TestSplit(XndTestCase):
                     except ValueError:
                         continue
                     b = xnd.split(x, n, max_outer=m)
-                    self.assertEqual(a, b, msg="%s  %s  %s" % (x, n, m))
+                    self.assertEqual(a, b)
 
 
 class TestSpec(XndTestCase):
