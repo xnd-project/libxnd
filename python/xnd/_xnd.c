@@ -2578,6 +2578,58 @@ Xnd_FromXndMoveType(const PyObject *xnd, xnd_t *x)
     return pyxnd_view_move_type((const XndObject *)xnd, x);
 }
 
+/* Get the type from __init__.py with the pretty representation. */
+static PyTypeObject *
+Xnd_GetType(void)
+{
+    static PyTypeObject *type = NULL;
+
+    if (type == NULL) {
+        PyObject *obj = PyImport_ImportModule("xnd");
+        if (obj == NULL) {
+            return NULL;
+        }
+
+        type = (PyTypeObject *)PyObject_GetAttrString(obj, "xnd");
+        Py_CLEAR(obj);
+        if (type == NULL) {
+            return NULL;
+        }
+    }
+
+    Py_INCREF(type);
+    return type;
+}
+
+/*
+ * This function handles two common view cases:
+ *
+ *   a) A pristine view that owns everything, including new memory.
+ *   b) A view that owns its type after xnd_subscript().
+ */
+static PyObject *
+Xnd_FromXndView(xnd_view_t *x)
+{
+    if (x->obj == NULL && (x->flags&XND_OWN_ALL)==XND_OWN_ALL) {
+        PyTypeObject *type = Xnd_GetType();
+        if (type == NULL) {
+            xnd_view_clear(x);
+            return NULL;
+        }
+
+        return Xnd_FromXnd(type, &x->view);
+    }
+    else if (x->obj != NULL && (x->flags&XND_OWN_TYPE)) {
+        return Xnd_FromXndMoveType(x->obj, &x->view);
+    }
+    else {
+        PyErr_SetString(PyExc_TypeError,
+            "Xnd_FromXndView: unsupported combination of flags and "
+            "resource owner");
+        xnd_view_clear(x);
+        return NULL;
+    }
+}
 
 static PyObject *
 init_api(void)
@@ -2590,6 +2642,8 @@ init_api(void)
     xnd_api[Xnd_FromXnd_INDEX] = (void *)Xnd_FromXnd;
     xnd_api[Xnd_Subscript_INDEX] = (void *)Xnd_Subscript;
     xnd_api[Xnd_FromXndMoveType_INDEX] = (void *)Xnd_FromXndMoveType;
+    xnd_api[Xnd_FromXndView_INDEX] = (void *)Xnd_FromXndView;
+    xnd_api[Xnd_GetType_INDEX] = (void *)Xnd_GetType;
 
     return PyCapsule_New(xnd_api, "xnd._xnd._API", NULL);
 }

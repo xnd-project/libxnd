@@ -1165,6 +1165,64 @@ xnd_subscript(const xnd_t *x, const xnd_index_t indices[], int len,
 
 
 /*****************************************************************************/
+/*                                Unstable API                               */
+/*****************************************************************************/
+
+/* error return value */
+const xnd_view_t xnd_view_error = {
+  .flags = 0,
+  .obj = NULL,
+  .view = { .bitmap = {.data=NULL, .size=0, .next=NULL},
+            .index = 0,
+            .type = NULL,
+            .ptr = NULL }
+};
+
+int
+xnd_view_err_occurred(const xnd_view_t *x)
+{
+    return x->view.ptr == NULL;
+}
+
+void
+xnd_view_clear(xnd_view_t *x)
+{
+    xnd_del_buffer(&x->view, x->flags);
+    x->flags = 0;
+    x->obj = NULL;
+}
+
+xnd_view_t
+xnd_view_from_xnd(const void *obj, const xnd_t *x)
+{
+    xnd_view_t res;
+
+    res.flags = 0;
+    res.obj = obj;
+    res.view = *x;
+
+    return res;
+}
+
+xnd_view_t
+xnd_view_subscript(const xnd_view_t *x, const xnd_index_t indices[], int len,
+                   ndt_context_t *ctx)
+{
+    xnd_view_t res;
+
+    res.flags = XND_OWN_TYPE;
+    res.obj = x->obj;
+
+    res.view = xnd_subscript(&x->view, indices, len, ctx);
+    if (xnd_err_occurred(&res.view)) {
+        return xnd_view_error;
+    }
+
+    return res;
+}
+
+
+/*****************************************************************************/
 /*                                Float format                               */
 /*****************************************************************************/
 

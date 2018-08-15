@@ -128,6 +128,14 @@ typedef struct {
 } xnd_index_t;
 
 
+/* Unstable API: view with ownership tracking. */
+typedef struct xnd_view {
+    uint32_t flags;  /* flags that indicate resource ownership by the view */
+    const void *obj; /* object that holds shared resources */
+    xnd_t view;      /* typed memory */
+} xnd_view_t;
+
+
 /*****************************************************************************/
 /*                         Create xnd memory blocks                          */
 /*****************************************************************************/
@@ -184,6 +192,20 @@ XND_API int xnd_is_na(const xnd_t *x);
 
 XND_API extern const xnd_t xnd_error;
 XND_API extern const xnd_bitmap_t xnd_bitmap_empty;
+
+
+/*****************************************************************************/
+/*                                 Unstable API                              */
+/*****************************************************************************/
+
+XND_API extern const xnd_view_t xnd_view_error;
+
+XND_API int xnd_view_err_occurred(const xnd_view_t *x);
+XND_API void xnd_view_clear(xnd_view_t *x);
+XND_API xnd_view_t xnd_view_from_xnd(const void *obj, const xnd_t *x);
+XND_API xnd_view_t xnd_view_subscript(const xnd_view_t *x, const xnd_index_t indices[],
+                                      int len, ndt_context_t *ctx);
+
 
 
 /*****************************************************************************/

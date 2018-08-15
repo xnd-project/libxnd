@@ -126,7 +126,15 @@ typedef struct {
 #define Xnd_FromXndMoveType_RETURN PyObject *
 #define Xnd_FromXndMoveType_ARGS (const PyObject *xnd, xnd_t *x)
 
-#define XND_MAX_API 8
+#define Xnd_FromXndView_INDEX 8
+#define Xnd_FromXndView_RETURN PyObject *
+#define Xnd_FromXndView_ARGS (xnd_view_t *x)
+
+#define Xnd_GetType_INDEX 9
+#define Xnd_GetType_RETURN PyTypeObject *
+#define Xnd_GetType_ARGS (void)
+
+#define XND_MAX_API 10
 
 
 #ifdef XND_MODULE
@@ -138,6 +146,8 @@ static Xnd_ViewMoveNdt_RETURN Xnd_ViewMoveNdt Xnd_ViewMoveNdt_ARGS;
 static Xnd_FromXnd_RETURN Xnd_FromXnd Xnd_FromXnd_ARGS;
 static Xnd_Subscript_RETURN Xnd_Subscript Xnd_Subscript_ARGS;
 static Xnd_FromXndMoveType_RETURN Xnd_FromXndMoveType Xnd_FromXndMoveType_ARGS;
+static Xnd_FromXndView_RETURN Xnd_FromXndView Xnd_FromXndView_ARGS;
+static Xnd_GetType_RETURN Xnd_GetType Xnd_GetType_ARGS;
 #else
 static void **_xnd_api;
 
@@ -164,6 +174,12 @@ static void **_xnd_api;
 
 #define Xnd_FromXndMoveType \
     (*(Xnd_FromXndMoveType_RETURN (*)Xnd_FromXndMoveType_ARGS) _xnd_api[Xnd_FromXndMoveType_INDEX])
+
+#define Xnd_FromXndView \
+    (*(Xnd_FromXndView_RETURN (*)Xnd_FromXndView_ARGS) _xnd_api[Xnd_FromXndView_INDEX])
+
+#define Xnd_GetType \
+    (*(Xnd_GetType_RETURN (*)Xnd_GetType_ARGS) _xnd_api[Xnd_GetType_INDEX])
 
 static int
 import_xnd(void)
