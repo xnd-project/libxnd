@@ -2694,6 +2694,41 @@ _test_view_subscript(PyObject *module UNUSED, PyObject *args, PyObject *kwds)
     return Xnd_FromXndView(&u);
 }
 
+static PyObject *
+_test_view_new(PyObject *module UNUSED, PyObject *args UNUSED)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    xnd_view_t x = xnd_view_error;
+    double *d;
+    ndt_t *t;
+    char *ptr;
+
+    t = ndt_from_string("3 * float64", &ctx);
+    if (t == NULL) {
+        return seterr(&ctx);
+    }
+
+    ptr = ndt_aligned_calloc(8, 3 * sizeof(double));
+    if (ptr == NULL) {
+        ndt_del(t);
+        (void)ndt_memory_error(&ctx);
+        return seterr(&ctx);
+    }
+
+    d = (double *)ptr;
+    d[0] = 1.1;
+    d[1] = 2.2;
+    d[2] = 3.3;
+
+    x.flags = XND_OWN_ALL;
+    x.obj = NULL;
+    x.view.index = 0;
+    x.view.type = t;
+    x.view.ptr = ptr;
+
+    return Xnd_FromXndView(&x);
+}
+
 
 /****************************************************************************/
 /*                                  Module                                  */
@@ -2702,6 +2737,7 @@ _test_view_subscript(PyObject *module UNUSED, PyObject *args, PyObject *kwds)
 static PyMethodDef _xnd_methods [] =
 {
   { "_test_view_subscript", (PyCFunction)_test_view_subscript, METH_VARARGS|METH_KEYWORDS, NULL},
+  { "_test_view_new", (PyCFunction)_test_view_new, METH_NOARGS, NULL},
   { NULL, NULL, 1, NULL }
 };
 
