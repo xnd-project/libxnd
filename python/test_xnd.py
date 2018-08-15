@@ -34,6 +34,7 @@ import sys, unittest, argparse
 from math import isinf, isnan
 from ndtypes import ndt, typedef
 from xnd import xnd, XndEllipsis
+from xnd._xnd import _test_view_subscript
 from xnd_support import *
 from xnd_randvalue import *
 from _testbuffer import ndarray, ND_WRITABLE
@@ -2847,6 +2848,18 @@ class TestSplit(XndTestCase):
                     self.assertEqual(a, b)
 
 
+class TestView(XndTestCase):
+
+    def test_view_subscript(self):
+        x = xnd([[1,2,3], [4,5,6]])
+        y = _test_view_subscript(x, key=(0, 1))
+        self.assertEqual(y, xnd(2))
+
+        x = xnd([[1,2,3], [4,5,6]])
+        y = _test_view_subscript(x, key=(1, slice(None, None, -1)))
+        self.assertEqual(y, xnd([6,5,4]))
+
+
 class TestSpec(XndTestCase):
 
     def __init__(self, *, constr,
@@ -3099,6 +3112,7 @@ ALL_TESTS = [
   TestRepr,
   TestBuffer,
   TestSplit,
+  TestView,
   LongIndexSliceTest,
 ]
 

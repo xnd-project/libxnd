@@ -2650,17 +2650,67 @@ init_api(void)
 
 
 /****************************************************************************/
+/*            Test functions (will be moved into a separate module)         */
+/****************************************************************************/
+
+/* Test the xnd_view_t API. */
+static PyObject *
+_test_view_subscript(PyObject *module UNUSED, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"x", "key", NULL};
+    NDT_STATIC_CONTEXT(ctx);
+    PyObject *x = NULL;
+    PyObject *key = NULL;
+    xnd_index_t indices[NDT_MAX_DIM];
+    xnd_view_t v, u;
+    int len;
+    uint8_t flags;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &x, &key)) {
+        return NULL;
+    }
+
+    if (!Xnd_Check(x)) {
+        PyErr_SetString(PyExc_TypeError,
+            "_test_view expects an xnd argument");
+        return NULL;
+    }
+
+    flags = convert_key(indices, &len, key);
+    if (flags & KEY_ERROR) {
+        return NULL;
+    }
+
+    /* Fill in the view (this sets the resource owner). */
+    v = xnd_view_from_xnd(x, XND(x));
+
+    /* Subscript the view (this updates all resource flags). */
+    u = xnd_view_subscript(&v, indices, len, &ctx);
+    if (ndt_err_occurred(&ctx)) {
+        return seterr(&ctx);
+
+    }
+
+    return Xnd_FromXndView(&u);
+}
+
+
+/****************************************************************************/
 /*                                  Module                                  */
 /****************************************************************************/
 
-
+static PyMethodDef _xnd_methods [] =
+{
+  { "_test_view_subscript", (PyCFunction)_test_view_subscript, METH_VARARGS|METH_KEYWORDS, NULL},
+  { NULL, NULL, 1, NULL }
+};
 
 static struct PyModuleDef xnd_module = {
     PyModuleDef_HEAD_INIT,        /* m_base */
     "_xnd",                       /* m_name */
     doc_module,                   /* m_doc */
     -1,                           /* m_size */
-    NULL,                         /* m_methods */
+    _xnd_methods,                 /* m_methods */
     NULL,                         /* m_slots */
     NULL,                         /* m_traverse */
     NULL,                         /* m_clear */
