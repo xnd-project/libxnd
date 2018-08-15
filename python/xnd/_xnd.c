@@ -1139,16 +1139,11 @@ mblock_init(xnd_t * const x, PyObject *v)
             "'Char' type semantics need to be defined");
         return -1;
 
-    case Module:
-        PyErr_SetString(PyExc_NotImplementedError,
-            "'Module' type not implemented");
-        return -1;
-
     /* NOT REACHED: intercepted by ndt_is_abstract(). */
+    case Module: case Function:
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
     case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
     case ComplexKind: case FixedStringKind: case FixedBytesKind:
-    case Function:
         PyErr_SetString(PyExc_RuntimeError, "unexpected abstract type");
         return -1;
     }
@@ -1740,16 +1735,11 @@ _pyxnd_value(const xnd_t * const x, const int64_t maxshape)
             "'Char' type semantics need to be defined");
         return NULL;
 
-    case Module:
-        PyErr_SetString(PyExc_NotImplementedError,
-            "'Module' type not implemented");
-        return NULL;
-
     /* NOT REACHED: intercepted by ndt_is_abstract(). */
+    case Module: case Function:
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
     case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
     case ComplexKind: case FixedStringKind: case FixedBytesKind:
-    case Function:
         PyErr_SetString(PyExc_RuntimeError, "unexpected abstract type");
         return NULL;
     }

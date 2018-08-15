@@ -265,11 +265,11 @@ xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx)
     case String: case Bytes:
         return 0;
 
+    /* NOT REACHED: intercepted by ndt_is_abstract(). */
     case Module: case Function:
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
     case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
     case ComplexKind: case FixedStringKind: case FixedBytesKind:
-        /* NOT REACHED: intercepted by ndt_is_abstract(). */
         ndt_err_format(ctx, NDT_RuntimeError, "unexpected abstract type");
         return -1;
     }
@@ -580,15 +580,11 @@ xnd_clear(xnd_t * const x, const uint32_t flags)
         /* Just a scalar. */
         return;
 
-    case Module:
-        /* XXX Not implemented. */
-        return;
-
     /* NOT REACHED: intercepted by ndt_is_abstract(). */
+    case Module: case Function:
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
     case ScalarKind: case SignedKind: case UnsignedKind: case FloatKind:
     case ComplexKind: case FixedStringKind: case FixedBytesKind:
-    case Function:
         return;
     }
 }
