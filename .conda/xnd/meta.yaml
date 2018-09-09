@@ -17,18 +17,19 @@ test:
     - ndtypes ==0.2.0dev3
     - nomkl
     - numpy
+    - python ==3.7
 
 requirements:
   build:
-    - python =={{ PY_VER }}
     - libndtypes ==0.2.0dev3
     - libxnd ==0.2.0dev3
     - ndtypes ==0.2.0dev3
+    - python ==3.7
   run:
-    - python =={{ PY_VER }}
     - libndtypes ==0.2.0dev3
     - libxnd ==0.2.0dev3
     - ndtypes ==0.2.0dev3
+    - python ==3.7
 
 about:
   home: https://github.com/plures/
