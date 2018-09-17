@@ -666,8 +666,8 @@ EQUAL_TEST_CASES = [
      eq=True),
 
    T(v=R['x': [b''], 'y': 2 * [2.0j], 'z': 3 * ["y"]],
-     t="{x: 1 * fixed_bytes(size=10), y: 2 * complex128, z: 3 * string}",
-     u="{x: 1 * fixed_bytes(size=10, align=256), y: 2 * complex128, z: 3 * string}",
+     t="{x: 1 * fixed_bytes(size=512), y: 2 * complex128, z: 3 * string}",
+     u="{x: 1 * fixed_bytes(size=512, align=256), y: 2 * complex128, z: 3 * string}",
      w=None,
      eq=True),
 

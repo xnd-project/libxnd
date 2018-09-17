@@ -317,15 +317,15 @@ class TestFixedDim(XndTestCase):
                (1 * [0 * [v]], "1 * 0 * %s" % t, "1 * 0 * %s" % u)]:
 
                 ttt = ndt(tt)
-                uuu = ndt(tt)
 
                 x = xnd(vv, type=ttt)
-
                 y = xnd(vv, type=ttt)
                 self.assertStrictEqual(x, y)
 
-                y = xnd(vv, type=uuu)
-                self.assertStrictEqual(x, y)
+                if u is not None:
+                    uuu = ndt(uu)
+                    y = xnd(vv, type=uuu)
+                    self.assertStrictEqual(x, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -342,7 +342,7 @@ class TestFixedDim(XndTestCase):
                (3 * [40 * [v]], "3 * 40 * %s" % t, "3 * 40 * %s" % u, (1, 32))]:
 
                 ttt = ndt(tt)
-                uuu = ndt(tt)
+                uuu = ndt(uu)
 
                 x = xnd(vv, type=ttt)
 
@@ -568,15 +568,15 @@ class TestFortran(XndTestCase):
                (1 * [0 * [v]], "!1 * 0 * %s" % t, "!1 * 0 * %s" % u)]:
 
                 ttt = ndt(tt)
-                uuu = ndt(tt)
 
                 x = xnd(vv, type=ttt)
-
                 y = xnd(vv, type=ttt)
                 self.assertStrictEqual(x, y)
 
-                y = xnd(vv, type=uuu)
-                self.assertStrictEqual(x, y)
+                if u is not None:
+                    uuu = ndt(uu)
+                    y = xnd(vv, type=uuu)
+                    self.assertStrictEqual(x, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -593,10 +593,8 @@ class TestFortran(XndTestCase):
                (3 * [40 * [v]], "!3 * 40 * %s" % t, "!3 * 40 * %s" % u, (1, 32))]:
 
                 ttt = ndt(tt)
-                uuu = ndt(tt)
 
                 x = xnd(vv, type=ttt)
-
                 y = xnd(vv, type=ttt)
                 if eq:
                     self.assertStrictEqual(x, y)
@@ -604,6 +602,7 @@ class TestFortran(XndTestCase):
                     self.assertNotStrictEqual(x, y)
 
                 if u is not None:
+                    uuu = ndt(uu)
                     y = xnd(vv, type=uuu)
                     if eq:
                         self.assertStrictEqual(x, y)
@@ -804,15 +803,15 @@ class TestVarDim(XndTestCase):
                                "var(offsets=[0,1]) * var(offsets=[0,0]) * %s" % u)]:
 
                 ttt = ndt(tt)
-                uuu = ndt(tt)
 
                 x = xnd(vv, type=ttt)
-
                 y = xnd(vv, type=ttt)
                 self.assertStrictEqual(x, y)
 
-                y = xnd(vv, type=uuu)
-                self.assertStrictEqual(x, y)
+                if u is not None:
+                    uuu = ndt(uu)
+                    y = xnd(vv, type=uuu)
+                    self.assertStrictEqual(x, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -829,10 +828,8 @@ class TestVarDim(XndTestCase):
                                          "var(offsets=[0,3]) * var(offsets=[0,1,3,8]) * %s" % u, (2, 3))]:
 
                 ttt = ndt(tt)
-                uuu = ndt(tt)
 
                 x = xnd(vv, type=ttt)
-
                 y = xnd(vv, type=ttt)
                 if eq:
                     self.assertStrictEqual(x, y)
@@ -840,6 +837,7 @@ class TestVarDim(XndTestCase):
                     self.assertNotStrictEqual(x, y)
 
                 if u is not None:
+                    uuu = ndt(uu)
                     y = xnd(vv, type=uuu)
                     if eq:
                         self.assertStrictEqual(x, y)
@@ -1038,20 +1036,20 @@ class TestTuple(XndTestCase):
                (((0 * [v],),), "((0 * %s))" % t, "((0 * %s))" % u)]:
 
                 ttt = ndt(tt)
-                uuu = ndt(tt)
 
                 x = xnd(vv, type=ttt)
-
                 y = xnd(vv, type=ttt)
                 self.assertStrictEqual(x, y)
 
-                y = xnd(vv, type=uuu)
-                self.assertStrictEqual(x, y)
+                if u is not None:
+                    uuu = ndt(uu)
+                    y = xnd(vv, type=uuu)
+                    self.assertStrictEqual(x, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
                ((v,), "(%s)" % t, "(%s)" % u, (0,)),
-               (((v,),), "((%s))" % t, "(%s)" % u, (0, 0)),
+               (((v,),), "((%s))" % t, "((%s))" % u, (0, 0)),
                ((((v,),),), "(((%s)))" % t, "(((%s)))" % u, (0, 0, 0)),
 
                ((1 * [v],), "(1 * %s)" % t, "(1 * %s)" % u, (0, 0)),
@@ -1059,10 +1057,8 @@ class TestTuple(XndTestCase):
                ((3 * [v],), "(3 * %s)" % t, "(3 * %s)" % u, (0, 2))]:
 
                 ttt = ndt(tt)
-                uuu = ndt(tt)
 
                 x = xnd(vv, type=ttt)
-
                 y = xnd(vv, type=ttt)
                 if eq:
                     self.assertStrictEqual(x, y)
@@ -1070,6 +1066,7 @@ class TestTuple(XndTestCase):
                     self.assertNotStrictEqual(x, y)
 
                 if u is not None:
+                    uuu = ndt(uu)
                     y = xnd(vv, type=uuu)
                     if eq:
                         self.assertStrictEqual(x, y)
@@ -1238,15 +1235,16 @@ class TestRecord(XndTestCase):
                ({'x': {'y': 0 * [v]}}, "{x: {y: 0 * %s}}" % t, "{x: {y: 0 * %s}}" % u)]:
 
                 ttt = ndt(tt)
-                uuu = ndt(tt)
 
                 x = xnd(vv, type=ttt)
 
                 y = xnd(vv, type=ttt)
                 self.assertStrictEqual(x, y)
 
-                y = xnd(vv, type=uuu)
-                self.assertStrictEqual(x, y)
+                if u is not None:
+                    uuu = ndt(uu)
+                    y = xnd(vv, type=uuu)
+                    self.assertStrictEqual(x, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -1256,7 +1254,7 @@ class TestRecord(XndTestCase):
                ({'x': 3 * [v]}, "{x: 3 * %s}" % t, "{x: 3 * %s}" % u, (0, 2))]:
 
                 ttt = ndt(tt)
-                uuu = ndt(tt)
+                uuu = ndt(uu)
 
                 x = xnd(vv, type=ttt)
 
@@ -1388,15 +1386,16 @@ class TestRef(XndTestCase):
                (0 * [v], "ref(ref(ref(0 * %s)))" % t, "ref(ref(ref(0 * %s)))" % u)]:
 
                 ttt = ndt(tt)
-                uuu = ndt(tt)
 
                 x = xnd(vv, type=ttt)
 
                 y = xnd(vv, type=ttt)
                 self.assertStrictEqual(x, y)
 
-                y = xnd(vv, type=uuu)
-                self.assertStrictEqual(x, y)
+                if u is not None:
+                    uuu = ndt(uu)
+                    y = xnd(vv, type=uuu)
+                    self.assertStrictEqual(x, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -1407,7 +1406,7 @@ class TestRef(XndTestCase):
                (3 * [v], "ref(3 * %s)" % t, "ref(3 * %s)" % u, (2,))]:
 
                 ttt = ndt(tt)
-                uuu = ndt(tt)
+                uuu = ndt(uu)
 
                 x = xnd(vv, type=ttt)
 
@@ -1534,15 +1533,15 @@ class TestConstr(XndTestCase):
                (0 * [v], "A(B(C(0 * %s)))" % t, "A(B(C(0 * %s)))" % u)]:
 
                 ttt = ndt(tt)
-                uuu = ndt(tt)
 
                 x = xnd(vv, type=ttt)
-
                 y = xnd(vv, type=ttt)
                 self.assertStrictEqual(x, y)
 
-                y = xnd(vv, type=uuu)
-                self.assertStrictEqual(x, y)
+                if u is not None:
+                    uuu = ndt(uu)
+                    y = xnd(vv, type=uuu)
+                    self.assertStrictEqual(x, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -1553,7 +1552,7 @@ class TestConstr(XndTestCase):
                (3 * [v], "A(3 * %s)" % t, "A(3 * %s)" % u, (2,))]:
 
                 ttt = ndt(tt)
-                uuu = ndt(tt)
+                uuu = ndt(uu)
 
                 x = xnd(vv, type=ttt)
 
