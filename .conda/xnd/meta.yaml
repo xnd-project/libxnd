@@ -15,7 +15,7 @@ test:
     - libndtypes ==0.2.0dev3
     - libxnd ==0.2.0dev3
     - ndtypes ==0.2.0dev3
-    - nomkl
+    - nomkl # [not win]
     - numpy
     - python ==3.7
 
