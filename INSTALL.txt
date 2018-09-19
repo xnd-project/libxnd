@@ -109,4 +109,27 @@ python3 setup.py install --local="$PWD/../python"
 python.exe setup.py install --local="%cd%\..\python"
 
 
+Alternative install with conda (for developing)
+-----------------------------------------------
+
+# Install the xnd package into a local directory.
+
+# Create and activate a new conda environment:
+conda create --name xnd python=3
+conda activate xnd
+
+# Use conda to install ndtype (if you want to work also on the ndtype,
+# please check the project repository https://github.com/plures/ndtypes)
+conda install -c xnd/label/dev ndtypes
+
+# Use conda to install numpy (optional, some tests require the library)
+conda install numpy
+
+# Use conda to build libxnd and xnd:
+conda build .conda/libxnd -c xnd/label/dev
+conda build .conda/xnd -c xnd/label/dev
+
+# Use conda to install the local version of the library and the
+# Python module:
+conda install --use-local xnd
 
