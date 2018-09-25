@@ -43,5 +43,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'pry'
   spec.add_development_dependency 'pry-byebug'
 
-  spec.add_runtime_dependency 'ndtypes', '>= 0.2.0dev4'
+  spec.add_runtime_dependency 'ndtypes', '>= 0.2.0dev5'
 end
