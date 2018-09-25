@@ -111,7 +111,7 @@ mod(long long a, long long b)
     return r < 0 ? r + b : r;
 }
 
-static inline int
+static inline void
 rb_range_unpack(VALUE range, long long *begin, long long *end, long long *step, size_t size)
 {
   /* FIXME: As of 27 Aug. 2018 Ruby trunk implements step as a property of
