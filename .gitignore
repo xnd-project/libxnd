@@ -18,3 +18,8 @@ doc/build/
 python/xnd/xnd.h
 *.egg-info
 __pycache__
+
+# Ignore ruby generated files
+ruby/Gemfile.lock
+*.gem
+ruby/tmp/
