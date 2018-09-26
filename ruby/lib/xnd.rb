@@ -31,7 +31,6 @@
 require 'ndtypes'
 require "ruby_xnd.so"
 
-require 'xnd/monkeys'
 require 'xnd/version'
 
 INF = Float::INFINITY
