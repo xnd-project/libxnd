@@ -29,7 +29,12 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 require 'ndtypes'
-require "ruby_xnd.so"
+begin
+  require "ruby_xnd.so"
+rescue LoadError
+  require 'ruby_xnd/ruby_xnd.so'
+end
+
 
 require 'xnd/monkeys'
 require 'xnd/version'

@@ -14,7 +14,7 @@ end
 
 # libndtypes config
 
-ndtypes_version = ">= 0.2.0dev3"
+ndtypes_version = ">= 0.2.0dev5"
 ndtypes_spec = Gem::Specification.find_by_name("ndtypes", ndtypes_version)
 ndtypes_extdir = File.join(ndtypes_spec.gem_dir, 'ext', 'ruby_ndtypes')
 ndtypes_includedir = File.join(ndtypes_extdir, 'include')
@@ -51,6 +51,10 @@ headers = File.expand_path(File.join(File.dirname(__FILE__) + "/include/"))
 
 find_library("xnd", nil, binaries)
 find_header("xnd.h", headers)
+
+FileUtils.copy_file File.expand_path(File.join(File.dirname(__FILE__) +
+                                               "/ruby_xnd.h")),
+                    "#{headers}/ruby_xnd.h"
 
 dir_config("xnd", [headers], [binaries])
 
