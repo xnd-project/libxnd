@@ -36,7 +36,6 @@ rescue LoadError
 end
 
 
-require 'xnd/monkeys'
 require 'xnd/version'
 
 INF = Float::INFINITY
