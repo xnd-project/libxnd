@@ -243,8 +243,8 @@ nnn            }.to raise_error(NotImplementedError)
 
       it "creates FixedString utf32 - figure a way to specify 32bit codepoints." do
         t = "2 * fixed_string(3, 'utf32')"
-        v = ["\x00\x01\x11\x11\x00\x02\x22\x22\x00\x03\x33\x33".u32,
-             "\x00\x01\x11\x12\x00\x02\x22\x23\x00\x03\x33\x34".u32]
+        v = ["\x00\x01\x11\x11\x00\x02\x22\x22\x00\x03\x33\x33".encode('UTF-32'),
+             "\x00\x01\x11\x12\x00\x02\x22\x23\x00\x03\x33\x34".encode('UTF-32')]
         x = XND.new v, type: t
         
         expect(x.value).to eq(v)
