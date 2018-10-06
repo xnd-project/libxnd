@@ -1,4 +1,4 @@
-require 'test_helper'
+require_relative 'test_helper'
 
 class TestModule < Minitest::Test
   def test_module
@@ -69,7 +69,7 @@ class TestFixedDim < Minitest::Test
         [[[v] * 2] * 2, "2 * 2 * #{s}" ],
         [[[v] * 3] * 2, "2 * 3 * #{s}" ],
         [[[v] * 2] * 3, "3 * 2 * #{s}" ],
-        [[[v] * 40] *3 , "3 * 40 * #{s}" ]
+        [[[v] * 40] * 3 , "3 * 40 * #{s}" ]
       ].each do |vv, ss|
         t = NDT.new ss
         x = XND.empty ss
@@ -255,8 +255,8 @@ class TestFixedDim < Minitest::Test
 
       3.times do |i|
         2.times do |k|
-          assert_equal @x[i][k].value, @arr[i][k]
-          assert_equal @x[i, k].value, @arr[i][k]    
+          assert @x[i][k].value == @arr[i][k]
+          assert @x[i, k].value == @arr[i][k]    
         end
       end
 
@@ -400,8 +400,8 @@ class TestFortran < Minitest::Test
 
       (0).upto(2) do |i|
         (0).upto(1) do |k|
-          assert_equal x[i][k].value, arr[i][k]
-          assert_equal x[i, k].value, arr[i][k]
+          assert x[i][k].value == arr[i][k]
+          assert x[i, k].value == arr[i][k]
         end
       end
 
@@ -930,7 +930,7 @@ class TestEllipsisDim < Minitest::Test
       ].each do |err, ss|
         t = NDT.new ss
         
-        assert_raises(err) { XND.empty ss } 
+        assert_raises(err) { XND.empty t } 
       end
     end
   end
@@ -1228,7 +1228,7 @@ class TestRecord < Minitest::Test
       x['y'] = v['y']
       x['z'] = v['z']
       
-      assert_equal @x.value, v
+      assert_equal x.value, v
     end
   end
 
@@ -1412,8 +1412,8 @@ class TestRef < Minitest::Test
         t = NDT.new ss
         x = XND.empty ss
         
-        assert_equal x.type, t
-        assert_equal x.value, vv
+        assert x.type == t
+        assert x.value == vv
       end
     end
   end
@@ -1585,8 +1585,8 @@ class TestConstr < Minitest::Test
         t = NDT.new ss
         x = XND.empty ss
         
-        assert_equal x.type, t
-        assert_equal x.value, vv
+        assert x.type == t
+        assert x.value == vv
         if vv == 0
           assert_raises(NoMethodError) { x.size }
         end
@@ -1765,8 +1765,8 @@ class TestNominal < Minitest::Test
         t = NDT.new ss
         x = XND.empty ss
         
-        assert_equal x.type, t
-        assert_equal x.value, vv
+        assert_equal x.type == t
+        assert_equal x.value == vv
         if vv == 0
           assert_raises(NoMethodError) { x.size }
         end
@@ -1998,11 +1998,13 @@ class TestFixedString < Minitest::Test
 
       y[[]] = w
 
-      asserts_strict_unequal x, y
+      assert_strict_unequal x, y
     end
   end
 
   def test_fixed_string_assign
+    skip "Figure how to deal with UTF-32 strings in Ruby."
+    
     t = "2 * fixed_string(3, 'utf32')"
     v = ["\U00011111\U00022222\U00033333", "\U00011112\U00022223\U00033334"]
     x = XND.new(v, type: t)
@@ -2195,8 +2197,8 @@ end # class TestBytes
 
 class TestChar < Minitest::Test
   def test_char
-    assert_raises(NotImplemetedError) { XND.empty("char('utf8')")}
-    assert_raises(NotImplemetedError) { XND.new(1, "char('utf8')")}
+    assert_raises(NotImplementedError) { XND.empty("char('utf8')")}
+    assert_raises(NotImplementedError) { XND.new(1, "char('utf8')")}
   end
 end # class TestChar
 
@@ -2221,7 +2223,7 @@ class TestBool < Minitest::Test
     assert_equal x.value, true
 
     x = XND.new nil, type: "?bool"
-    assert_equal x.value, nil
+    assert_nil x.value
 
     assert_raises(TypeError) {
       XND.new nil, type: "bool"
@@ -2567,6 +2569,67 @@ class TestTypevar < Minitest::Test
 end # class TestTypevar
 
 class TestTypeInference < Minitest::Test
+  def test_accumulate
+    arr = [1,2,3,4,5]
+    result = [1,3,6,10,15]
+
+    assert_equal XND::TypeInference.accumulate(arr), result
+  end
+
+  def test_search
+    data = [[0, 1], [2, 3, 4], [5, 6, 7, 8]]
+    result = [[3], [2, 3, 4], [0, 1, 2, 3, 4, 5, 6, 7, 8], *(Array.new(MAX_DIM-2) { [] })]
+    
+    min_level = MAX_DIM + 1
+    max_level = 0
+    acc = Array.new(MAX_DIM + 1) { [] }
+    minmax = [min_level, max_level]
+
+    XND::TypeInference.search max_level, data, acc, minmax
+
+    assert_equal acc, result
+    assert_equal minmax[0], minmax[1]
+  end
+
+  def test_data_shapes
+    # extract shape of nested Array data
+    data = [[0, 1], [2, 3, 4], [5, 6, 7, 8]]
+    result = [[0, 1, 2, 3, 4, 5, 6, 7, 8], [[2, 3, 4], [3]]]
+
+    assert_equal XND::TypeInference.data_shapes(data), result
+
+    # empty array
+    data = []
+    result = [[], [[0]]]
+
+    assert_equal XND::TypeInference.data_shapes(data), result
+
+    # empty nested array
+    data = [[]]
+    result = [[], [[0], [1]]]
+
+    assert_equal XND::TypeInference.data_shapes(data), result
+  end
+
+  def test_type_of
+    # correct ndtype of fixed array
+    value = [
+      [1,2,3],
+      [5,6,7]
+    ]
+    type = NDTypes.new "2 * 3 * int64"
+
+    assert_equal XND::TypeInference.type_of(value), type
+
+    # generates correct ndtype for hash
+    value = {
+      "a" => "xyz",
+      "b" => [1,2,3]
+    }
+    type = NDTypes.new "{a : string, b : 3 * int64}"
+    assert_equal XND::TypeInference.type_of(value), type
+  end
+  
   def test_tuple
     d = {'a' => XND::T.new(2.0, "bytes".b), 'b' => XND::T.new("str", Float::INFINITY) }
     typeof_d = "{a: (float64, bytes), b: (string, float64)}"
@@ -2630,12 +2693,10 @@ class TestTypeInference < Minitest::Test
       [[d] * 2, "2 * %s" % typeof_d],
       [[[d] * 2] * 10, "10 * 2 * #{typeof_d}"]
     ].each do |v, t|
-      it "type: #{t}" do
-        x = XND.new v
+      x = XND.new v
 
-        assert_equal x.type, NDT.new(t)
-        assert_equal x.value, v
-      end
+      assert_equal x.type, NDT.new(t)
+      assert_equal x.value, v
     end
   end
 
@@ -2653,12 +2714,10 @@ class TestTypeInference < Minitest::Test
       [[d] * 2, "2 * #{typeof_d}"],
       [[[d] * 2] * 10, "10 * 2 * #{typeof_d}"]
     ].each do |v, t|
-      it "type: #{t}" do
-        x = XND.new v
+      x = XND.new v
 
-        assert_equal x.type, NDT.new(t)
-        assert_equal x.value, v     
-      end
+      assert_equal x.type, NDT.new(t)
+      assert_equal x.value, v
     end
   end
 
@@ -2731,12 +2790,10 @@ class TestTypeInference < Minitest::Test
       [[nil, 'abc'.b], "2 * ?bytes"],
       [[nil, 'abc'], "2 * ?string"]
     ].each do |v, t|
-      it "type: #{t}" do
-        x = XND.new v
+      x = XND.new v
 
-        assert_equal x.type, NDT.new(t)
-        assert_equal x.value, v
-      end
+      assert_equal x.type, NDT.new(t)
+      assert x.value == v
     end
 
     [
@@ -2789,14 +2846,14 @@ class TestAPI < Minitest::Test
     assert_equal x.short_value(1), [XND::Ellipsis]
     assert_equal x.short_value(2), [[1, XND::Ellipsis], XND::Ellipsis]
     assert_equal x.short_value(3), [[1, 2], [3]]
-    assert_raises(ValueError) { x.short_value -1 }
+    assert_raises(ValueError) { x.short_value(-1) }
     
     x = XND.new({'a' => 1, 'b' => 2 })
     assert_equal x.short_value(0), {}
     assert_equal x.short_value(1), {XND::Ellipsis => XND::Ellipsis}
     assert_equal x.short_value(2), {'a' => 1, XND::Ellipsis => XND::Ellipsis}
     assert_equal x.short_value(3), {'a' => 1, 'b'=> 2}
-    assert_raises(ValueError){ x.short_value -1 }
+    assert_raises(ValueError){ x.short_value(-1) }
   end
 end # class TestAPI
 
@@ -2843,3 +2900,4 @@ class TestView < Minitest::Test
     
   end
 end
+

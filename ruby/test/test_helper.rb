@@ -4,6 +4,10 @@ require 'xnd'
 require 'minitest/autorun'
 require 'minitest/hooks'
 
+MAX_DIM = NDT::MAX_DIM
+
+Minitest::Test.parallelize_me!
+
 def assert_strict_equal x1, x2
   assert x1.strict_equal(x2)
   assert_equal x1, x2

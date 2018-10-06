@@ -1,6 +1,5 @@
 require 'rake'
 require 'rake/extensiontask'
-require 'rspec/core/rake_task'
 require 'bundler/gem_tasks'
 require 'rake/testtask'
 require 'fileutils'
@@ -12,6 +11,12 @@ ext_name = "ruby_xnd"
 Rake::ExtensionTask.new(ext_name, gemspec) do |ext|
   ext.ext_dir = "ext/#{ext_name}"
   ext.source_pattern = "**/*.{c,h}"
+end
+
+Rake::TestTask.new(:test) do |t|
+  t.libs << "test"
+  t.libs << "lib"
+  t.test_files = FileList['test/**/test_*.rb']
 end
 
 def run *cmd
@@ -54,60 +59,18 @@ VALGRIND_MEMORYFILL_OPTIONS = [
     "--free-fill=66 ",
 ]
 
-GDB_OPTIONS = []
+# partial-loads-ok and undef-value-errors necessary to ignore
+# spurious (and eminently ignorable) warnings from the ruby
+# interpreter
 
-namespace :spec do
-  # partial-loads-ok and undef-value-errors necessary to ignore
-  # spurious (and eminently ignorable) warnings from the ruby
-  # interpreter
-
-  RSPEC_CMD = [ 'ruby', '-S', 'rspec', '-Ilib:ext', SPECDIR.to_s ]
-
-  desc "Run specs under GDB."
-  task :gdb => [ :compile ] do |task|
-          cmd = [ 'gdb' ] + GDB_OPTIONS
-    cmd += [ '--args' ]
-    cmd += RSPEC_CMD
-    run( *cmd )
-  end
-
-  desc "Run specs under cgdb."
-  task :cgdb => [ :compile ] do |task|
-    cmd = [ 'cgdb' ] + GDB_OPTIONS
-    cmd += [ '--args' ]
-    cmd += RSPEC_CMD
-    run( *cmd )
-  end
-
-  desc "Run specs under Valgrind."
-  task :valgrind => [ :compile ] do |task|
-    cmd = [ 'valgrind' ] + VALGRIND_OPTIONS
-    cmd += RSPEC_CMD
-    run( *cmd )
-  end
-
-  desc "Run specs under Callgrind."
-  task :callgrind => [ :compile ] do |task|
-    cmd = [ 'valgrind' ] + CALLGRIND_OPTIONS
-    cmd += RSPEC_CMD
-    run( *cmd )
-  end
-end
-
-LEAKCHECK_CMD = [ 'ruby', '-Ilib:ext', "#{SPECDIR}/leakcheck.rb" ]
-
-desc "Run leakcheck script."
-task :leakcheck => [ :compile ] do |task|
+desc "Run specs under Valgrind."
+task :valgrind => [ :compile ] do |task|
   cmd = [ 'valgrind' ] + VALGRIND_OPTIONS
-  cmd += LEAKCHECK_CMD
+  cmd += [" rake test "]
   run( *cmd )
 end
 
-Rake::TestTask.new(:test) do |t|
-  t.libs << "test"
-  t.libs << "lib"
-  t.test_files = FileList['test/**/test_*.rb']
-end
+LEAKCHECK_CMD = [ 'ruby', '-Ilib:ext', "#{SPECDIR}/leakcheck.rb" ]
 
 task :clobber do |task|
   [
