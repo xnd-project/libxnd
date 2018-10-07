@@ -23,3 +23,9 @@ __pycache__
 ruby/Gemfile.lock
 *.gem
 ruby/tmp/
+
+# tag files
+GPATH
+GRTAGS
+GTAGS
+

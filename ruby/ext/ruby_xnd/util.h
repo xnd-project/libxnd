@@ -44,127 +44,18 @@
 #include "ndtypes.h"
 
 /* Raise an error stored in $!. Clears it before raising. */
-inline void
-raise_error(void)
-{
-  VALUE exeception = rb_errinfo();
+void raise_error(void);
 
-  rb_set_errinfo(Qnil);
-  rb_exc_raise(exeception);
-}
+void set_error_info(VALUE err, const char * msg);
 
-inline void
-set_error_info(VALUE err, const char * msg)
-{
-  rb_set_errinfo(rb_exc_new2(err, msg));
-}
+size_t safe_downcast(int64_t size);
 
-static inline size_t
-safe_downcast(int64_t size)
-{
-#if SIZE_MAX < INT64_MAX
-    if (size > INT32_MAX) {
-      rb_raise(rb_eSizeError,
-                "sizes should never exceed INT32_MAX on 32-bit platforms.");
-    }
-#endif
-    return (size_t)size;
-}
+bool check_invariants(const ndt_t *t);
 
-static inline bool
-check_invariants(const ndt_t *t)
-{
-#if SIZE_MAX < INT64_MAX
-    return safe_downcast(t->datasize) >= 0;
-#else
-    (void)t;
-    return 1;
-#endif
-}
+VALUE array_new(int64_t size);
 
-static inline VALUE
-array_new(int64_t size)
-{
-#if SIZE_MAX < INT64_MAX
-    size_t n = safe_downcast(size);
-    return n < 0 ? NULL : rb_ary_new2(n);
-#else
-    return rb_ary_new2(size);
-#endif
-}
+VALUE bytes_from_string_and_size(const char *str, int64_t size);
 
-static inline VALUE
-bytes_from_string_and_size(const char *str, int64_t size)
-{
-#if SIZE_MAX < INT64_MAX
-    size_t n = safe_downcast(size);
-    return n < 0 ? NULL : rb_str_new(str, n);
-#else
-    return rb_str_new(str, size);
-#endif
-}
-
-static long long
-mod(long long a, long long b)
-{
-    long long r = a % b;
-    return r < 0 ? r + b : r;
-}
-
-static inline void
-rb_range_unpack(VALUE range, long long *begin, long long *end, long long *step, size_t size)
-{
-  /* FIXME: As of 27 Aug. 2018 Ruby trunk implements step as a property of
-     Range and XND will support it as and when it is available. Maybe for 
-     now we can implement a #step iterator in a separate method.
-  */
-  *step = 1;
-  VALUE rb_begin = rb_funcall(range, rb_intern("begin"), 0, NULL);
-  VALUE rb_end = rb_funcall(range, rb_intern("end"), 0, NULL);
-  int exclude_end = RTEST(rb_funcall(range, rb_intern("exclude_end?"), 0, NULL));
-
-  if (RB_TYPE_P(rb_begin, T_FLOAT)) {
-    double value = RFLOAT_VALUE(rb_begin);
-
-    if (isinf(value)) {
-      *begin = 0;  
-    }
-  }
-  else {
-    long long temp = NUM2LL(rb_begin);
-
-    if (temp < 0) {            /* if negative index map to positive. */
-      temp = mod(temp, (long long)size);
-    }
-
-    *begin = temp;
-  }
-
-  if (RB_TYPE_P(rb_end, T_FLOAT)) {
-    double value = RFLOAT_VALUE(rb_end);
-
-    if (isinf(value)) {
-      *end = INT64_MAX;
-      return;
-    }
-  }
-  else {
-    long long temp = NUM2LL(rb_end);
-
-    if (temp < 0) {              /* if negative index map to ppositive. */
-      temp = mod(temp, (long long)size);
-    }
-
-    *end = temp;
-  }
-
-  /* a[0..0] in Ruby returns the 0th index. 
-     a[0...0] in Ruby returns empty array like a[0:0] in Python.
-     libxnd does not include the last index by default.  
-     */
-  if (!exclude_end) {          
-    *end += 1;
-  }
-}
+int ndt_exists(void);
 
 #endif  /* UTIL_H */

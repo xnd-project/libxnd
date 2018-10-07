@@ -66,7 +66,7 @@ $INSTALLFILES = [
 # for macOS
 append_ldflags("-Wl,-rpath #{binaries}")
 
-basenames = %w{float_pack_unpack gc_guard ruby_xnd}
+basenames = %w{util float_pack_unpack gc_guard ruby_xnd}
 $objs = basenames.map { |b| "#{b}.o"   }
 $srcs = basenames.map { |b| "#{b}.c" }
 

@@ -34,6 +34,14 @@
    Author: Sameer Deshmukh (@v0dro)
 */
 
+int rb_xnd_pack_float32(double num, unsigned char* ptr, int le);
+
+int rb_xnd_unpack_float32(float *x, unsigned char* ptr, int le);
+
+int rb_xnd_pack_float64(double num, unsigned char *ptr, int le);
+
+int rb_xnd_unpack_float64(double *x, unsigned char *ptr, int le);
+
 #ifdef XND_DEBUG
 void run_float_pack_unpack_tests(void);
 #endif

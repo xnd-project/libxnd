@@ -35,12 +35,11 @@ rescue LoadError
   require 'ruby_xnd/ruby_xnd.so'
 end
 
-
 require 'xnd/version'
 
 INF = Float::INFINITY
 
-class RubyXND
+class XND
   class Ellipsis
     def to_s
       "..."

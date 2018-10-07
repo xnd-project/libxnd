@@ -2047,13 +2047,11 @@ class TestFixedBytes < Minitest::Test
       [r, '{a: fixed_bytes(size=3), b: fixed_bytes(size=10)}'],
       [[[r] * 3] * 2, '2 * 3 * {a: fixed_bytes(size=3), b: fixed_bytes(size=10)}']
     ].each do |v, s|
-      it "type: #{s}" do
-        t = NDT.new s
-        x = XND.empty s
+      t = NDT.new s
+      x = XND.empty s
 
-        assert_equal x.type, t
-        assert_equal x.value, v
-      end
+      assert_equal x.type, t
+      assert_equal x.value, v
     end
   end
 
@@ -2197,8 +2195,8 @@ end # class TestBytes
 
 class TestChar < Minitest::Test
   def test_char
-    assert_raises(NotImplementedError) { XND.empty("char('utf8')")}
-    assert_raises(NotImplementedError) { XND.new(1, "char('utf8')")}
+    #assert_raises(NotImplementedError) { XND.empty("char('utf8')")}
+    assert_raises(NotImplementedError) { XND.new(1, type: "char('utf8')")}
   end
 end # class TestChar
 
@@ -2837,8 +2835,8 @@ class TestAPI < Minitest::Test
   def test_short_value
     x = XND.new [1,2]
     assert_equal x.short_value(0), []
-    assert_equal x.short_value(1), [XND::Ellipsis]
-    assert_equal x.short_value(2), [1, XND::Ellipsis]
+    assert_equal x.short_value(1), [XND::Ellipsis.new]
+    assert_equal x.short_value(2), [1, XND::Ellipsis.new]
     assert_equal x.short_value(3), [1, 2]
 
     x = XND.new [[1,2], [3]]

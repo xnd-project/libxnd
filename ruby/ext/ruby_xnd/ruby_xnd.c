@@ -40,7 +40,7 @@
 VALUE cRubyXND;
 VALUE cXND;
 static VALUE cRubyXND_MBlock;
-static VALUE cRubyXND_Ellipsis;
+static VALUE cXND_Ellipsis;
 static const rb_data_type_t MemoryBlockObject_type;
 static const rb_data_type_t XndObject_type;
 
@@ -72,7 +72,7 @@ obj_inspect(const char* msg, VALUE obj)
 static VALUE
 xnd_ellipsis(void)
 {
-  return rb_funcall(cRubyXND_Ellipsis, rb_intern("initialize"), 0, NULL);
+  return rb_funcall(cXND_Ellipsis, rb_intern("initialize"), 0, NULL);
 }
 
 /****************************************************************************/
@@ -213,13 +213,6 @@ _strncpy(char *dest, const void *src, size_t len, size_t size)
     memset(dest+len, '\0', size-len);
 }
 
-/* Return true if String is unicode. */
-static int
-string_is_unicode(VALUE str)
-{
-  
-}
-
 static int
 string_is_ascii(VALUE str)
 {
@@ -239,14 +232,6 @@ string_is_u8(VALUE str)
                     rb_const_get(rb_cEncoding, rb_intern("UTF_8"))
                           )
                );
-}
-
-/* Encode a string to enc. enc should be name of the constant in Encoding::*. */
-static VALUE
-string_encode(VALUE str, const char * enc)
-{
-  return rb_funcall(str, rb_intern("encode"), 1,
-                    rb_const_get(rb_cEncoding, rb_intern(enc)));
 }
 
 static int64_t
@@ -1459,7 +1444,7 @@ convert_single(xnd_index_t *key, VALUE obj, size_t size)
       rb_raise(rb_eIndexError, "Cannot use Range on this type.");
     };
     
-    size_t begin, end, step;
+    long long begin, end, step;
 
     rb_range_unpack(obj, &begin, &end, &step, size);
     key->tag = Slice;
@@ -1536,11 +1521,10 @@ XND_array_aref(int argc, VALUE *argv, VALUE self)
   NDT_STATIC_CONTEXT(ctx);
   xnd_index_t indices[NDT_MAX_DIM];
   xnd_t x;
-  int len, state;
+  int len;
   uint8_t flags;
   XndObject *xnd_p;
   size_t size;
-  VALUE rb_size;
 
   if (argc == 0) {
     rb_raise(rb_eArgError, "expected atleast one argument for #[].");
@@ -1789,6 +1773,27 @@ XND_each(VALUE self)
   
 }
 
+/* Implement XND#short_value */
+static VALUE
+XND_short_value(VALUE self, VALUE maxshape)
+{
+  if (maxshape == Qnil) {
+    return XND_value(self);
+  }
+  else {
+    long max = NUM2LONG(maxshape);
+    XndObject *self_p;
+
+    GET_XND(self, self_p);
+
+    if (max < 0) {
+      rb_raise(rb_eArgError, "maxshape must be positive.");
+    }
+
+    return _XND_value(XND(self_p), max);
+  }
+}
+
 /*************************** Singleton methods ********************************/
 
 static VALUE
@@ -1910,11 +1915,27 @@ rb_xnd_get_type(void)
 
 void Init_ruby_xnd(void)
 {
+  NDT_STATIC_CONTEXT(ctx);
+  static int initialized = 0;
+
+  if (!initialized) {
+    if (xnd_init_float(&ctx) < 0) {
+      seterr(&ctx);
+      raise_error();
+    }
+
+    if (!ndt_exists()) {
+      rb_raise(rb_eLoadError, "NDT does not exist.");
+    }
+
+    initialized = 1;
+  }
+  
   /* init classes */
   cRubyXND = rb_define_class("RubyXND", rb_cObject);
   cXND = rb_define_class("XND", cRubyXND);
   cRubyXND_MBlock = rb_define_class_under(cRubyXND, "MBlock", rb_cObject);
-  cRubyXND_Ellipsis = rb_define_class_under(cRubyXND, "Ellipsis", rb_cObject);
+  cXND_Ellipsis = rb_define_class_under(cXND, "Ellipsis", rb_cObject);
   mRubyXND_GCGuard = rb_define_module_under(cRubyXND, "GCGuard");
 
   /* errors */
@@ -1934,6 +1955,7 @@ void Init_ruby_xnd(void)
   rb_define_method(cXND, "<=>", XND_spaceship, 1);
   rb_define_method(cXND, "strict_equal", XND_strict_equal, 1);
   rb_define_method(cXND, "size", XND_size, 0);
+  rb_define_method(cXND, "short_value", XND_short_value, 1);
 
   /* iterators */
   rb_define_method(cXND, "each", XND_each, 0);
