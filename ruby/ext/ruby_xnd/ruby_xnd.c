@@ -40,7 +40,6 @@
 VALUE cRubyXND;
 VALUE cXND;
 static VALUE cRubyXND_MBlock;
-static VALUE cXND_Ellipsis;
 static const rb_data_type_t MemoryBlockObject_type;
 static const rb_data_type_t XndObject_type;
 
@@ -72,7 +71,8 @@ obj_inspect(const char* msg, VALUE obj)
 static VALUE
 xnd_ellipsis(void)
 {
-  return rb_funcall(cXND_Ellipsis, rb_intern("initialize"), 0, NULL);
+  return rb_funcall(rb_const_get_at(cXND, rb_intern("Ellipsis")),
+                    rb_intern("new"), 0, NULL);
 }
 
 /****************************************************************************/
@@ -998,6 +998,7 @@ XND_type(VALUE self)
 
   GET_XND(self, xnd_p);
 
+
   return xnd_p->type;
 }
 
@@ -1056,6 +1057,9 @@ _XND_value(const xnd_t * const x, const int64_t maxshape)
     if (shape < 0) {
       seterr(&ctx);
       raise_error();
+    }
+    if (shape > maxshape) {
+      shape = maxshape;
     }
 
     array = array_new(shape);
@@ -1116,7 +1120,7 @@ _XND_value(const xnd_t * const x, const int64_t maxshape)
     hash = rb_hash_new();
 
     for (i = 0; i < shape; ++i) {
-      if (i == maxshape - i) {
+      if (i == maxshape - 1) {
         rb_hash_aset(hash, xnd_ellipsis(), xnd_ellipsis());
         break;
       }
@@ -1547,6 +1551,15 @@ XND_array_aref(int argc, VALUE *argv, VALUE self)
   return RubyXND_view_move_type(xnd_p, &x);
 }
 
+/* Compare between data of an XND object and Ruby object. */
+static VALUE
+convert_compare(VALUE self, VALUE other)
+{
+  VALUE vcmp = XND_value(self);
+
+  return rb_funcall(vcmp, rb_intern("=="), 1, other);
+}
+
 /* Implementation for #== method. 
 
    @param other Other Ruby object to compare with.
@@ -1560,7 +1573,7 @@ XND_eqeq(VALUE self, VALUE other)
   int r;
 
   if (!XND_CHECK_TYPE(other)) {
-    return Qfalse;
+    return convert_compare(self, other);
   }
 
   GET_XND(self, left_p);
@@ -1935,7 +1948,6 @@ void Init_ruby_xnd(void)
   cRubyXND = rb_define_class("RubyXND", rb_cObject);
   cXND = rb_define_class("XND", cRubyXND);
   cRubyXND_MBlock = rb_define_class_under(cRubyXND, "MBlock", rb_cObject);
-  cXND_Ellipsis = rb_define_class_under(cXND, "Ellipsis", rb_cObject);
   mRubyXND_GCGuard = rb_define_module_under(cRubyXND, "GCGuard");
 
   /* errors */

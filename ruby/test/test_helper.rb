@@ -4,9 +4,9 @@ require 'xnd'
 require 'minitest/autorun'
 require 'minitest/hooks'
 
-MAX_DIM = NDT::MAX_DIM
-
 Minitest::Test.parallelize_me!
+
+MAX_DIM = NDT::MAX_DIM
 
 def assert_strict_equal x1, x2
   assert x1.strict_equal(x2)
@@ -670,8 +670,8 @@ EQUAL_TEST_CASES = [
         true),
 
   T.new({'x' => ["".b], 'y' => [2.0i] * 2, 'z' => ["y"] * 3},
-        "{x: 1 * fixed_bytes(size=10), y: 2 * complex128, z: 3 * string}",
-        "{x: 1 * fixed_bytes(size=10, align=256), y: 2 * complex128, z: 3 * string}",
+        "{x: 1 * fixed_bytes(size=512), y: 2 * complex128, z: 3 * string}",
+        "{x: 1 * fixed_bytes(size=512, align=256), y: 2 * complex128, z: 3 * string}",
         nil,
         true),
 

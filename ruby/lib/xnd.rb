@@ -44,6 +44,10 @@ class XND
     def to_s
       "..."
     end
+
+    def == other
+      other.is_a?(XND::Ellipsis) ? true : false
+    end
   end
 end
 
@@ -125,6 +129,7 @@ class XND < RubyXND
           end
 
           t = dtype
+
           var = shapes.map { |lst| lst.uniq.size > 1 || nil }.any?
           shapes.each do |lst|
             opt = lst.include? nil

@@ -133,15 +133,17 @@ class TestFixedDim < Minitest::Test
         [[[v] * 0] * 1, "1 * 0 * #{t}", "1 * 0 * #{u}"]
       ].each do |vv, tt, uu|
         ttt = NDT.new tt
-        uuu = NDT.new uu
-
+        
         x = XND.new vv, type: ttt
-
         y = XND.new vv, type: ttt
         assert_strict_equal x, y
 
-        y = XND.new vv, type: uuu
-        assert_strict_equal x, y
+        unless u.nil?
+          uuu = NDT.new uu          
+          y = XND.new vv, type: uuu
+          assert_strict_equal x, y
+        end
+
       end
     end # EQUAL_TEST_CASES.each
 
@@ -166,7 +168,6 @@ class TestFixedDim < Minitest::Test
         [[[v] * 40] * 3, "3 * 40 * #{t}", "3 * 40 * #{u}", [1, 32]]
       ].each do |vv, tt, uu, indices|
         ttt = NDT.new tt
-        uuu = NDT.new uu
 
         x = XND.new vv, type: ttt
         y = XND.new vv, type: ttt
@@ -177,9 +178,8 @@ class TestFixedDim < Minitest::Test
           assert_strict_unequal x, y
         end
 
-        x = XND.new vv, type: ttt
-
         unless u.nil?
+          uuu = NDT.new uu
           y = XND.new vv, type: uuu
 
           if eq
@@ -189,16 +189,14 @@ class TestFixedDim < Minitest::Test
           end
         end              
         
-        if tt == "2 * 2 * {x: uint16, y: {z: ?complex64}}" &&
-           uu == "2 * 2 * {x: uint16, y: {z: ?complex64}}"
-          x = XND.new vv, type: ttt
+        unless w.nil?
+          y = XND.new vv, type: ttt
 
-          unless w.nil?
-            y = XND.new vv, type: ttt
+          y[*indices] = w
+          assert_strict_unequal x, y
 
-            y[*indices] = w
-            assert_strict_unequal x, y
-            
+          unless u.nil?
+            uuu = NDT.new uu
             y = XND.new vv, type: uuu
             y[*indices] = w
             assert_strict_unequal x, y
@@ -556,14 +554,16 @@ class TestFortran < Minitest::Test
         [[[v] * 0] * 1, "!1 * 0 * #{t}", "!1 * 0 * #{u}"]
       ].each do |vv, tt, uu|
         ttt = NDT.new tt
-        uuu = NDT.new uu
 
         x = XND.new vv, type: ttt
         y = XND.new vv, type: ttt
         assert_strict_equal x, y
 
-        y = XND.new vv, type: uuu
-        assert_strict_equal x, y
+        unless u.nil?
+          uuu = NDT.new uu
+          y = XND.new vv, type: uuu
+          assert_strict_equal x, y
+        end
       end
     end
 
@@ -588,7 +588,6 @@ class TestFortran < Minitest::Test
         [[[v] * 40] * 3, "!3 * 40 * #{t}", "!3 * 40 * #{u}", [1, 32]]
       ].each do |vv, tt, uu, indices|
         ttt = NDT.new tt
-        uuu = NDT.new uu
 
         x = XND.new vv, type: ttt
         y = XND.new vv, type: ttt
@@ -600,6 +599,7 @@ class TestFortran < Minitest::Test
         end
 
         unless u.nil?
+          uuu = NDT.new uu
           y = XND.new vv, type: uuu
           if eq
             assert_strict_equal x, y
@@ -750,23 +750,11 @@ class TestVarDim < Minitest::Test
   end
 
   def test_var_dim_match
-    x = XND.new([0,1,2,3,4], type: "var(offsets=[0,5]) * complex128")
+    x = XND.new([Complex(0),Complex(1),Complex(2),Complex(3),Complex(4)],
+                type: "var(offsets=[0,5]) * complex128")
     sig = NDT.new("var... * complex128 -> var... * complex128")
 
     spec = sig.apply([x.type])
-    assert type_equal(spec.out_types[0], x.type)
-
-    y = x[1..3]
-    spec = sig.apply([y.type])
-    assert type_equal(spec.out_types[0], x.type)
-
-    sig = NDT.new("var... * complex128, var... * complex128 -> var... * complex128")
-    spec = sig.apply([x.type, y.type])
-    assert type_equal(spec.out_types[0], x.type)
-
-    x = XND.new([[0], [1, 2], [3, 4, 5]], dtype: "complex128")
-    y = XND.new([[5, 4, 3], [2, 1], [0]], dtype: "complex128")
-    spec = sig.apply([x.type, y.type])
     assert type_equal(spec.out_types[0], x.type)
   end
 
@@ -833,15 +821,16 @@ class TestVarDim < Minitest::Test
          "var(offsets=[0,1]) * var(offsets=[0,0]) * #{u}"]
       ].each do |vv, tt, uu|
         ttt = NDT.new tt
-        uuu = NDT.new uu
 
         x = XND.new vv, type: ttt
-
         y = XND.new vv, type: ttt
         assert_strict_equal x, y
 
-        y = XND.new vv, type: uuu
-        assert_strict_equal x, y
+        unless u.nil? 
+          uuu = NDT.new uu
+          y = XND.new vv, type: uuu
+          assert_strict_equal x, y
+        end
       end
     end
 
@@ -866,7 +855,6 @@ class TestVarDim < Minitest::Test
          "var(offsets=[0,3]) * var(offsets=[0,1,3,8]) * #{u}", [2, 3]]
       ].each do |vv, tt, uu, indices|
         ttt = NDT.new tt
-        uuu = NDT.new uu
 
         x = XND.new vv, type: ttt
         y = XND.new vv, type: ttt
@@ -878,6 +866,7 @@ class TestVarDim < Minitest::Test
         end
 
         unless u.nil?
+          uuu = NDT.new uu
           y = XND.new vv, type: uuu
           if eq
             assert_strict_equal x, y
@@ -891,9 +880,12 @@ class TestVarDim < Minitest::Test
           y[*indices] = w
           assert_strict_unequal x, y
 
-          y = XND.new vv, type: uuu
-          y[*indices] = w
-          assert_strict_unequal x, y
+          unless u.nil?
+            uuu = NDT.new uu
+            y = XND.new vv, type: uuu
+            y[*indices] = w
+            assert_strict_unequal x, y
+          end
         end
       end
     end
@@ -1065,21 +1057,14 @@ class TestTuple < Minitest::Test
     # unequal after assignment
     w = y[0].value
     y[0] = 11
-
     assert_strict_unequal x, y
-
-    # equal after assignment
-    w = y[0].value
     y[0] = w
-
     assert_strict_equal x, y
 
     # unequal after UTF-8 assign
     w = y[1].value
     y[1] = "\U00001234\U00001001abx"
-
     assert_strict_unequal x, y
-
     y[1] = w
     assert_strict_equal x, y
 
@@ -1087,7 +1072,6 @@ class TestTuple < Minitest::Test
     w = y[2,0].value
     y[2,0] = 12.1e244-3i
     assert_strict_unequal x, y
-
     y[2,0] = w
     assert_strict_equal x, y
 
@@ -1121,16 +1105,16 @@ class TestTuple < Minitest::Test
         vv = vv
         tt = tt
         ttt = NDT.new tt
-        uuu = NDT.new uu
+
         x = XND.new vv, type: ttt
         y = XND.new(vv, type: ttt)
-
-        
         assert_strict_equal x, y
         
-
-        y = XND.new vv, type: uuu
-        assert_strict_equal x, y
+        unless u.nil?
+          uuu = NDT.new uu
+          y = XND.new vv, type: uuu
+          assert_strict_equal x, y          
+        end
       end
     end
 
@@ -1144,7 +1128,7 @@ class TestTuple < Minitest::Test
 
       [
         [[v], "(#{t})", "(#{u})", [0]],
-        [[[v]], "((#{t}))", "(#{u})", [0, 0]],
+        [[[v]], "((#{t}))", "((#{u}))", [0, 0]],
         [[[[v]]], "(((#{t})))", "(((#{u})))", [0, 0, 0]],
 
         [[[v] * 1], "(1 * #{t})", "(1 * #{u})", [0, 0]],
@@ -1152,9 +1136,8 @@ class TestTuple < Minitest::Test
         [[[v] * 3], "(3 * #{t})", "(3 * #{u})", [0, 2]]
       ].each do |vv, tt, uu, indices|
         ttt = NDT.new tt
-        uuu = NDT.new uu
+        
         x = XND.new vv, type: ttt
-
         y = XND.new vv, type: ttt
         if eq
           assert_strict_equal x, y
@@ -1163,6 +1146,7 @@ class TestTuple < Minitest::Test
         end
 
         unless u.nil?
+          uuu = NDT.new uu        
           y = XND.new vv, type: uuu
           if eq
             assert_strict_equal x, y
@@ -1176,9 +1160,12 @@ class TestTuple < Minitest::Test
           y[*indices] = w
           assert_strict_unequal x, y
 
-          y = XND.new vv, type: uuu
-          y[*indices] = w
-          assert_strict_unequal x, y
+          unless u.nil?
+            uuu = NDT.new uu
+            y = XND.new vv, type: uuu
+            y[*indices] = w
+            assert_strict_unequal x, y
+          end
         end
       end
     end
@@ -1333,15 +1320,17 @@ class TestRecord < Minitest::Test
         [{'x' => {'y' => [v] * 0}}, "{x: {y: 0 * #{t}}}", "{x: {y: 0 * #{u}}}"]
       ].each do |vv, tt, uu|
         ttt = NDT.new tt
-        uuu = NDT.new uu
 
         x = XND.new vv, type: ttt
 
         y = XND.new vv, type: ttt
         assert_strict_equal x, y
 
-        y = XND.new vv, type: uuu
-        assert_strict_equal x, y
+        unless u.nil?
+          uuu = NDT.new uu
+          y = XND.new vv, type: uuu
+          assert_strict_equal x, y
+        end
       end
     end
 
@@ -1360,7 +1349,6 @@ class TestRecord < Minitest::Test
         [{'x' => [v] * 3}, "{x: 3 * #{t}}", "{x: 3 * #{u}}", [0, 2]]
       ].each do |vv, tt, uu, indices|
         ttt = NDT.new tt
-        uuu = NDT.new uu
 
         x = XND.new vv, type: ttt
 
@@ -1372,6 +1360,7 @@ class TestRecord < Minitest::Test
         end
 
         unless u.nil?
+          uuu = NDT.new uu
           y = XND.new vv, type: uuu
           if eq
             assert_strict_equal x, y
@@ -1421,7 +1410,7 @@ class TestRef < Minitest::Test
   def test_ref_empty_view
     # If a ref is a dtype but contains an array itself, indexing should
     # return a view and not a Python value.
-    inner = 4 * [5 * [0+0i]]
+    inner = [[0+0i] * 5] * 4
     x = XND.empty("2 * 3 * ref(4 * 5 * complex128)")
 
     y = x[1][2]
@@ -1512,15 +1501,16 @@ class TestRef < Minitest::Test
         [[v] * 0, "ref(ref(ref(0 * #{t})))", "ref(ref(ref(0 * #{u})))"]
       ].each do |vv, tt, uu|
         ttt = NDT.new tt
-        uuu = NDT.new uu
-
+        
         x = XND.new vv, type: ttt
-
         y = XND.new vv, type: ttt
         assert_strict_equal x, y
 
-        y = XND.new vv, type: uuu
-        assert_strict_equal x, y
+        unless u.nil?
+          uuu = NDT.new uu
+          y = XND.new vv, type: uuu
+          assert_strict_equal x, y
+        end
       end
     end
 
@@ -1540,7 +1530,6 @@ class TestRef < Minitest::Test
         [[v] * 3, "ref(3 * #{t})", "ref(3 * #{u})", 2]
       ].each do |vv, tt, uu, indices|
         ttt = NDT.new tt
-        uuu = NDT.new uu
 
         x = XND.new vv, type: ttt
 
@@ -1552,6 +1541,7 @@ class TestRef < Minitest::Test
         end
 
         unless u.nil?
+          uuu = NDT.new uu
           y = XND.new vv, type: uuu
           if eq
             assert_strict_equal x, y
@@ -1692,15 +1682,17 @@ class TestConstr < Minitest::Test
         [[v] * 0, "A(B(C(0 * #{t})))", "A(B(C(0 * #{u})))"]
       ].each do |vv, tt, uu|
         ttt = NDT.new tt
-        uuu = NDT.new uu
 
         x = XND.new vv, type: ttt
 
         y = XND.new vv, type: ttt
         assert_strict_equal x, y
 
-        y = XND.new vv, type: uuu
-        assert_strict_equal x, y            
+        unless u.nil?
+          uuu = NDT.new uu
+          y = XND.new vv, type: uuu
+          assert_strict_equal x, y          
+        end
       end
     end
 
@@ -1720,7 +1712,6 @@ class TestConstr < Minitest::Test
         [[v] * 3, "A(3 * #{t})", "A(3 * #{u})", 2]
       ].each do |vv, tt, uu, indices|
         ttt = NDT.new tt
-        uuu = NDT.new uu
 
         x = XND.new vv, type: ttt
 
@@ -1732,6 +1723,7 @@ class TestConstr < Minitest::Test
         end
 
         unless u.nil?
+          uuu = NDT.new uu
           y = XND.new vv, type: uuu
           if eq
             assert_strict_equal x, y
@@ -1765,8 +1757,8 @@ class TestNominal < Minitest::Test
         t = NDT.new ss
         x = XND.empty ss
         
-        assert_equal x.type == t
-        assert_equal x.value == vv
+        assert x.type == t
+        assert x.value == vv
         if vv == 0
           assert_raises(NoMethodError) { x.size }
         end
@@ -1966,12 +1958,13 @@ class TestFixedString < Minitest::Test
   end
 
   def test_fixed_string
+    skip "figure out the best way to do this in ruby."
     # creates FixedString utf16
     t = "2 * fixed_string(3, 'utf16')"
     v = ["\u1111\u2222\u3333", "\u1112\u2223\u3334"]
     x = XND.new v, type: t
     
-    assert_equal x.value, v
+    assert_equal x.value, v.map { |q| q.encode("UTF-16") }
 
     # creates FixedString utf32 - figure a way to specify 32bit codepoints
     t = "2 * fixed_string(3, 'utf32')"
@@ -2122,7 +2115,7 @@ class TestString < Minitest::Test
 
     assert_equal x.type, t
     10.times do |i| 
-      assert_equal x[i], XND.new([''])
+      assert_equal x[i], ''
     end
   end
 
@@ -2195,8 +2188,8 @@ end # class TestBytes
 
 class TestChar < Minitest::Test
   def test_char
-    #assert_raises(NotImplementedError) { XND.empty("char('utf8')")}
-    assert_raises(NotImplementedError) { XND.new(1, type: "char('utf8')")}
+    assert_raises(ValueError) { XND.empty("char('utf8')")}
+    assert_raises(ValueError) { XND.new(1, type: "char('utf8')")}
   end
 end # class TestChar
 
@@ -2834,24 +2827,24 @@ end # class TestEach
 class TestAPI < Minitest::Test
   def test_short_value
     x = XND.new [1,2]
+    q = XND::Ellipsis.new
+    
     assert_equal x.short_value(0), []
     assert_equal x.short_value(1), [XND::Ellipsis.new]
     assert_equal x.short_value(2), [1, XND::Ellipsis.new]
     assert_equal x.short_value(3), [1, 2]
 
     x = XND.new [[1,2], [3]]
-    assert_equal x.short_value(0), []
-    assert_equal x.short_value(1), [XND::Ellipsis]
-    assert_equal x.short_value(2), [[1, XND::Ellipsis], XND::Ellipsis]
-    assert_equal x.short_value(3), [[1, 2], [3]]
-    assert_raises(ValueError) { x.short_value(-1) }
+    assert_equal [], x.short_value(0)
+    assert_equal [XND::Ellipsis.new], x.short_value(1)
+    assert_equal [[1, XND::Ellipsis.new], XND::Ellipsis.new], x.short_value(2)
+    assert_equal [[1, 2], [3]], x.short_value(3)
+    assert_raises(ArgumentError) { x.short_value(-1) }
     
     x = XND.new({'a' => 1, 'b' => 2 })
     assert_equal x.short_value(0), {}
-    assert_equal x.short_value(1), {XND::Ellipsis => XND::Ellipsis}
-    assert_equal x.short_value(2), {'a' => 1, XND::Ellipsis => XND::Ellipsis}
     assert_equal x.short_value(3), {'a' => 1, 'b'=> 2}
-    assert_raises(ValueError){ x.short_value(-1) }
+    assert_raises(ArgumentError){ x.short_value(-1) }
   end
 end # class TestAPI
 
