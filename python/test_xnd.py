@@ -146,6 +146,11 @@ class TestFixedDim(XndTestCase):
                 self.assertEqual(x.value, vv)
                 self.assertEqual(len(x), len(vv))
 
+        self.assertRaises(NotImplementedError, xnd.empty, "?3 * int64")
+        self.assertRaises(NotImplementedError, xnd.empty, "?2 * 3 * int64")
+        self.assertRaises(NotImplementedError, xnd.empty, "2 * ?3 * int64")
+        self.assertRaises(NotImplementedError, xnd.empty, "?2 * ?3 * int64")
+
     def test_fixed_dim_subscript(self):
         test_cases = [
             ([[11.12-2.3j, -1222+20e8j],
@@ -642,6 +647,11 @@ class TestVarDim(XndTestCase):
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
                 self.assertEqual(len(x), len(vv))
+
+        self.assertRaises(NotImplementedError, xnd.empty, "?var(offsets=[0, 3]) * int64")
+        self.assertRaises(NotImplementedError, xnd.empty, "?var(offsets=[0, 2]) * var(offsets=[0, 3, 10]) * int64")
+        self.assertRaises(NotImplementedError, xnd.empty, "var(offsets=[0, 2]) * ?var(offsets=[0, 3, 10]) * int64")
+        self.assertRaises(NotImplementedError, xnd.empty, "?var(offsets=[0, 2]) * ?var(offsets=[0, 3, 10]) * int64")
 
     def test_var_dim_assign(self):
         ### Regular data ###
