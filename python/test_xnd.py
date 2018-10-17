@@ -2463,6 +2463,27 @@ class TestTypevar(XndTestCase):
 
 class TestTypeInference(XndTestCase):
 
+    def test_fixed_dimension(self):
+        d = [(None, 10), (None, 20), ("x", 30)]
+        typeof_d = "3 * (?string, int64)"
+
+        test_cases = [
+          ((), "()"),
+          (((),), "(())"),
+          (((), ()), "((), ())"),
+          ((((),), ()), "((()), ())"),
+          ((((),), ((), ())), "((()), ((), ()))"),
+          ((1, 2, 3), "(int64, int64, int64)"),
+          ((1.0, 2, "str"), "(float64, int64, string)"),
+          ((1.0, 2, ("str", b"bytes", d)),
+           "(float64, int64, (string, bytes, %s))" % typeof_d)
+        ]
+
+        for v, t in test_cases:
+            x = xnd(v)
+            self.assertEqual(x.type, ndt(t))
+            self.assertEqual(x.value, v)
+
     def test_tuple(self):
         d = R['a': (2.0, b"bytes"), 'b': ("str", float('inf'))]
         typeof_d = "{a: (float64, bytes), b: (string, float64)}"

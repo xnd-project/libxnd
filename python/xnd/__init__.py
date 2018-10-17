@@ -151,7 +151,9 @@ class xnd(Xnd):
 # ======================================================================
 
 def typeof(value, *, dtype=None):
-    return ndt(_typeof(value, dtype=dtype))
+    s = _typeof(value, dtype=dtype)
+    t = s.replace("Any", "float64")
+    return ndt(t)
 
 def _choose_dtype(lst):
     for x in lst:
@@ -177,7 +179,7 @@ def _typeof(value, *, dtype=None):
                     if x is not None:
                         t = _typeof(x)
                         if t != dtype:
-                            raise ValueError("dtype mismatch: have %s and %s" % (dtype, t))
+                            dtype = str(ndt(t).unify(ndt(dtype)))
 
             if opt:
                 dtype = '?' + dtype
@@ -203,7 +205,7 @@ def _typeof(value, *, dtype=None):
         raise ValueError("all dict keys must be strings")
 
     elif value is None:
-        return '?float64'
+        return '?Any'
 
     elif isinstance(value, float):
         return 'float64'
