@@ -1932,7 +1932,7 @@ convert_key(xnd_index_t *indices, int *len, PyObject *key)
             }
         }
 
-        *len = size;
+        *len = (int)size;
         return flags;
     }
 
@@ -2458,12 +2458,14 @@ static PyTypeObject Xnd_Type =
 /*                               Type inference                             */
 /****************************************************************************/
 
+#undef max
 static int
 max(int x, int y)
 {
     return x >= y ? x : y;
 }
 
+#undef min
 static int
 min(int x, int y)
 {
