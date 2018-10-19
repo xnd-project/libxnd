@@ -2455,6 +2455,149 @@ static PyTypeObject Xnd_Type =
 
 
 /****************************************************************************/
+/*                               Type inference                             */
+/****************************************************************************/
+
+static int
+max(int x, int y)
+{
+    return x >= y ? x : y;
+}
+
+static int
+min(int x, int y)
+{
+    return x <= y ? x : y;
+}
+
+static int
+search(int level, PyObject *v, PyObject *acc[NDT_MAX_DIM+1],
+       int *min_level, int *max_level)
+{
+    PyObject *current;
+    int next_level;
+
+    if (level > NDT_MAX_DIM) {
+        PyErr_Format(PyExc_ValueError,
+            "too many dimensions, max %d", NDT_MAX_DIM);
+        return -1;
+    }
+
+    current = acc[level];
+
+    if (v == Py_None) {
+        if (PyList_Append(current, v) < 0) {
+            return -1;
+        }
+    }
+    else if (PyList_Check(v)) {
+        Py_ssize_t len = PyList_GET_SIZE(v);
+
+        PyObject *shape = PyLong_FromSsize_t(len);
+        if (shape == NULL) {
+            return -1;
+        }
+
+        if (PyList_Append(current, shape) < 0) {
+            return -1;
+        }
+
+        next_level = level + 1;
+        *max_level = max(next_level, *max_level);
+
+        if (len == 0) {
+            *min_level = min(next_level, *min_level);
+        }
+        else {
+            for (Py_ssize_t i = 0; i < len; i++) {
+                if (search(level+1, PyList_GET_ITEM(v, i),
+                           acc, min_level, max_level) < 0) {
+                    return -1;
+                }
+            }
+        }
+    }
+    else {
+        if (PyList_Append(acc[*max_level], v) < 0) {
+            return -1;
+        }
+        *min_level = min(level, *min_level);
+    }
+
+    return 0;
+}
+
+static PyObject *
+data_shapes(PyObject *m UNUSED, PyObject *v)
+{
+    PyObject *acc[NDT_MAX_DIM+1] = {NULL};
+    PyObject *data = NULL;
+    PyObject *shapes = NULL;
+    PyObject *tuple = NULL;
+    int min_level = NDT_MAX_DIM+1;
+    int max_level = 0;
+    bool all_none = true;
+    int i, k;
+
+    for (i = 0; i < NDT_MAX_DIM+1; i++) {
+        acc[i] = PyList_New(0);
+        if (acc[i] == NULL) {
+            goto error;
+        }
+    }
+
+    if (search(0, v, acc, &min_level, &max_level) < 0) {
+        goto error;
+    }
+
+    Py_ssize_t len = PyList_GET_SIZE(acc[max_level]);
+    for (Py_ssize_t i = 0; i < len; i++) {
+        if (PyList_GET_ITEM(acc[max_level], i) != Py_None) {
+            all_none = false;
+        }
+    }
+
+    if (len > 0 && all_none) {
+        ; /* min_level is not set in this special case, hence the check. */
+    }
+    else if (min_level != max_level) {
+        PyErr_Format(PyExc_ValueError,
+            "unbalanced tree: min depth: %d max depth: %d",
+            min_level, max_level);
+        goto error;
+    }
+
+    shapes = PyList_New(max_level);
+    if (shapes == NULL) {
+        goto error;
+    }
+
+    for (i=0, k=max_level-1; i < max_level; i++, k--) {
+        PyList_SET_ITEM(shapes, i, acc[k]);
+    }
+
+    data = acc[max_level];
+
+    tuple = PyTuple_New(2);
+    if (tuple == NULL) {
+        Py_DECREF(data);
+        Py_DECREF(shapes);
+        return NULL;
+    }
+    PyTuple_SET_ITEM(tuple, 0, data);
+    PyTuple_SET_ITEM(tuple, 1, shapes);
+
+    return tuple;
+
+error:
+    for (i = 0; i < NDT_MAX_DIM+1; i++) {
+        Py_XDECREF(acc[i]);
+    }
+    return NULL;
+}
+
+
+/****************************************************************************/
 /*                                   C-API                                  */
 /****************************************************************************/
 
@@ -2736,6 +2879,7 @@ _test_view_new(PyObject *module UNUSED, PyObject *args UNUSED)
 
 static PyMethodDef _xnd_methods [] =
 {
+  { "data_shapes", (PyCFunction)data_shapes, METH_O, NULL},
   { "_test_view_subscript", (PyCFunction)_test_view_subscript, METH_VARARGS|METH_KEYWORDS, NULL},
   { "_test_view_new", (PyCFunction)_test_view_new, METH_NOARGS, NULL},
   { NULL, NULL, 1, NULL }

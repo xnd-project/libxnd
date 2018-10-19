@@ -46,7 +46,7 @@ Importing PEP-3118 buffers is supported.
 
 # Ensure that libndtypes is loaded and initialized.
 from ndtypes import ndt, instantiate, MAX_DIM
-from ._xnd import Xnd, XndEllipsis
+from ._xnd import Xnd, XndEllipsis, data_shapes
 from itertools import accumulate
 from .contrib.pretty import pretty
 
@@ -238,55 +238,3 @@ def add_dim(*, opt=False, shapes=None, typ=None, use_var=False):
         assert n <= 1 and not None in shapes
         shape = 0 if n == 0 else shapes[0]
         return "%d * %s" % (shape, typ)
-
-def data_shapes(tree):
-    """Extract array data and dimension shapes from a nested list. The
-       list may contain None for missing data or dimensions.
-
-       >>> data_shapes([[0, 1], [2, 3, 4], [5, 6, 7, 8]])
-       ([0, 1, 2, 3, 4, 5, 6, 7, 8], [[2, 3, 4], [3]])
-                     ^                    ^       ^
-                     |                    |       `--- ndim=2: single shape 3
-                     |                    `-- ndim=1: shapes 2, 3, 4
-                     `--- ndim=0: extracted array data
-    """
-    acc = [[] for _ in range(MAX_DIM+1)]
-    min_level = MAX_DIM + 1
-    max_level = 0
-
-    def search(level, a):
-        nonlocal min_level, max_level
-
-        if level > MAX_DIM:
-            raise ValueError("too many dimensions")
-
-        current = acc[level]
-        if a is None:
-            current.append(a)
-        elif isinstance(a, list):
-            current.append(len(a))
-            next_level = level + 1
-            max_level = max(next_level, max_level)
-            if not a:
-                min_level = min(next_level, min_level)
-            else:
-                for item in a:
-                    search(level+1, item)
-        else:
-            acc[max_level].append(a)
-            min_level = min(level, min_level)
-
-    search(max_level, tree)
-    if acc[max_level] and all(x is None for x in acc[max_level]):
-        pass # min_level is not set in this special case, hence the check.
-    elif min_level != max_level:
-        raise ValueError("unbalanced tree: min depth: %d max depth: %d" %
-                         (min_level, max_level))
-
-    data = acc[max_level]
-    shapes = list(reversed(acc[0:max_level]))
-
-    return data, shapes
-
-
-
