@@ -36,6 +36,7 @@
 
 
 #include <Python.h>
+#include <longintrepr.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
@@ -176,6 +177,30 @@ pyslice_unpack(PyObject *_r,
     }
 
     return 0;
+}
+
+/* longobject.c */
+static inline int
+long_compare(PyLongObject *a, PyLongObject *b)
+{
+    Py_ssize_t sign;
+
+    if (Py_SIZE(a) != Py_SIZE(b)) {
+        sign = Py_SIZE(a) - Py_SIZE(b);
+    }
+    else {
+        Py_ssize_t i = Py_ABS(Py_SIZE(a));
+        while (--i >= 0 && a->ob_digit[i] == b->ob_digit[i])
+            ;
+        if (i < 0)
+            sign = 0;
+        else {
+            sign = (sdigit)a->ob_digit[i] - (sdigit)b->ob_digit[i];
+            if (Py_SIZE(a) < 0)
+                sign = -sign;
+        }
+    }
+    return sign < 0 ? -1 : sign > 0 ? 1 : 0;
 }
 
 

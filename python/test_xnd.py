@@ -33,7 +33,7 @@
 import sys, unittest, argparse
 from math import isinf, isnan
 from ndtypes import ndt, typedef
-from xnd import xnd, XndEllipsis
+from xnd import xnd, XndEllipsis, data_shapes
 from xnd._xnd import _test_view_subscript, _test_view_new
 from xnd_support import *
 from xnd_randvalue import *
@@ -2462,6 +2462,72 @@ class TestTypevar(XndTestCase):
 
 
 class TestTypeInference(XndTestCase):
+
+    def test_data_shape_extraction(self):
+
+        test_cases = [
+            (None, [None], []),
+            (1, [1], []),
+            ((1, 2), [(1, 2)], []),
+            ([], [], [[0]]),
+            ([None], [None], [[1]]),
+            ([1], [1], [[1]]),
+            ([()], [()], [[1]]),
+            ([(1, 2)], [(1, 2)], [[1]]),
+            ([[]], [], [[0], [1]]),
+            ([[None]], [None], [[1], [1]]),
+            ([[None, 1]], [None, 1], [[2], [1]]),
+            ([[1, None]], [1, None], [[2], [1]]),
+            ([None, []], [], [[None, 0], [2]]),
+            ([[], None], [], [[0, None], [2]]),
+            ([[None], None], [None], [[1, None], [2]]),
+            ([None, [None]], [None], [[None, 1], [2]]),
+            ([None, [1]], [1], [[None, 1], [2]]),
+            ([[1], None], [1], [[1, None], [2]]),
+            ([[], []], [], [[0, 0], [2]]),
+            ([[1], []], [1], [[1, 0], [2]]),
+            ([[], [1]], [1], [[0, 1], [2]]),
+            ([[1], [2]], [1, 2], [[1, 1], [2]]),
+            ([[2], [1]], [2, 1], [[1, 1], [2]]),
+            ([[1], [2, 3]], [1, 2, 3], [[1, 2], [2]]),
+            ([[1, 2], [3]], [1, 2, 3], [[2, 1], [2]]),
+            ([None, [1], [2, 3]], [1, 2, 3], [[None, 1, 2], [3]]),
+            ([[1], None, [2, 3]], [1, 2, 3], [[1, None, 2], [3]]),
+            ([[1], [2, 3], None], [1, 2, 3], [[1, 2, None], [3]]),
+            ([None, [[1], []], [[2, 3]]], [1, 2, 3], [[1, 0, 2], [None, 2, 1], [3]]),
+            ([[[1], []], None, [[2, 3]]], [1, 2, 3], [[1, 0, 2], [ 2, None, 1], [3]]),
+            ([[[1], []], [[2, 3]], None], [1, 2, 3], [[1, 0, 2], [2, 1, None], [3]]),
+        ]
+
+        for v, expected_data, expected_shapes in test_cases:
+            data, shapes = data_shapes(v)
+            self.assertEqual(data, expected_data)
+            self.assertEqual(shapes, expected_shapes)
+
+        v = [1]
+        for i in range(127):
+            v = [v]
+        data, shapes = data_shapes(v)
+        self.assertEqual(data, [1])
+        self.assertEqual(shapes, [[1]] * 128)
+
+        # Exceptions:
+        v = [1, []]
+        self.assertRaises(ValueError, data_shapes, v)
+
+        v = [[], 1]
+        self.assertRaises(ValueError, data_shapes, v)
+
+        v = [[[1,2]], [3, 4]]
+        self.assertRaises(ValueError, data_shapes, v)
+
+        v = [[1, 2], [[3, 4]]]
+        self.assertRaises(ValueError, data_shapes, v)
+
+        v = [1]
+        for i in range(128):
+            v = [v]
+        self.assertRaises(ValueError, data_shapes, v)
 
     def test_fixed_dimension(self):
         d = [(None, 10), (None, 20), ("x", 30)]
