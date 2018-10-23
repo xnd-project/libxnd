@@ -2842,7 +2842,7 @@ offsets_from_shapes(top_type_t *t, PyObject *lst)
 /*               Infer the dtype from a flat list of data             */
 /**********************************************************************/
 
-static ndt_t *typeof(PyObject *v, bool replace_any);
+static ndt_t *typeof(PyObject *v, bool replace_any, bool shortcut);
 
 
 #define XND_FLOAT64    0x0001U
@@ -2893,7 +2893,7 @@ fast_dtypes(bool *opt, const PyObject *data)
 }
 
 static ndt_t *
-unify_dtypes(const PyObject *data)
+unify_dtypes(const PyObject *data, bool shortcut)
 {
     NDT_STATIC_CONTEXT(ctx);
     PyObject *v;
@@ -2908,14 +2908,14 @@ unify_dtypes(const PyObject *data)
     }
 
     v = PyList_GET_ITEM(data, 0);
-    dtype = typeof(v, false);
+    dtype = typeof(v, false, shortcut);
     if (dtype == NULL) {
         return NULL;
     }
 
     for (i = 1; i < PyList_GET_SIZE(data); i++) {
          v = PyList_GET_ITEM(data, i);
-         t = typeof(v, false);
+         t = typeof(v, false, shortcut);
          if (t == NULL) {
              ndt_del(dtype);
              return NULL;
@@ -2933,6 +2933,10 @@ unify_dtypes(const PyObject *data)
              }
              dtype = u;
         }
+
+        if (shortcut && ndt_is_concrete(dtype)) {
+            break;
+        }
     }
 
     if (ndt_is_abstract(dtype)) {
@@ -2948,7 +2952,7 @@ unify_dtypes(const PyObject *data)
 }
 
 ndt_t *
-typeof_data(const PyObject *data)
+typeof_data(const PyObject *data, bool shortcut)
 {
     NDT_STATIC_CONTEXT(ctx);
     uint16_opt_t align = {None, 0};
@@ -2975,7 +2979,7 @@ typeof_data(const PyObject *data)
         dtype = ndt_bytes(align, &ctx);
         break;
     default:
-        dtype = unify_dtypes(data);
+        dtype = unify_dtypes(data, shortcut);
         if (dtype == NULL) {
             return NULL;
         }
@@ -2998,7 +3002,7 @@ typeof_data(const PyObject *data)
 /**********************************************************************/
 
 static top_type_t
-typeof_list_top(PyObject *v, const ndt_t *dtype)
+typeof_list_top(PyObject *v, const ndt_t *dtype, bool shortcut)
 {
     top_type_t t = {NULL, NULL, NULL};
     NDT_STATIC_CONTEXT(ctx);
@@ -3018,7 +3022,7 @@ typeof_list_top(PyObject *v, const ndt_t *dtype)
     shapes = PyTuple_GET_ITEM(tuple, 1);
 
     if (dtype == NULL) {
-        dt = typeof_data(data);
+        dt = typeof_data(data, shortcut);
         if (dt == NULL) {
             Py_DECREF(tuple);
             return t;
@@ -3050,7 +3054,7 @@ typeof_list_top(PyObject *v, const ndt_t *dtype)
 }
 
 static ndt_t *
-typeof_list(PyObject *v)
+typeof_list(PyObject *v, bool shortcut)
 {
     PyObject *tuple;
     PyObject *data;
@@ -3066,7 +3070,7 @@ typeof_list(PyObject *v)
     data = PyTuple_GET_ITEM(tuple, 0);
     shapes = PyTuple_GET_ITEM(tuple, 1);
 
-    dtype = typeof_data(data);
+    dtype = typeof_data(data, shortcut);
     if (dtype == NULL) {
         Py_DECREF(tuple);
         return NULL;
@@ -3086,7 +3090,7 @@ typeof_list(PyObject *v)
 }
 
 static ndt_t *
-typeof_tuple(PyObject *v, bool replace_any)
+typeof_tuple(PyObject *v, bool replace_any, bool shortcut)
 {
     NDT_STATIC_CONTEXT(ctx);
     uint16_opt_t none = {None, 0};
@@ -3110,7 +3114,7 @@ typeof_tuple(PyObject *v, bool replace_any)
     }
 
     for (i = 0; i < shape; i++) {
-        t = typeof(PyTuple_GET_ITEM(v, i), replace_any);
+        t = typeof(PyTuple_GET_ITEM(v, i), replace_any, shortcut);
         if (t == NULL) {
             ndt_field_array_del(fields, i);
             return NULL;
@@ -3132,7 +3136,7 @@ typeof_tuple(PyObject *v, bool replace_any)
 }
 
 static ndt_t *
-typeof_dict(PyObject *v, bool replace_any)
+typeof_dict(PyObject *v, bool replace_any, bool shortcut)
 {
     NDT_STATIC_CONTEXT(ctx);
     uint16_opt_t none = {None, 0};
@@ -3173,7 +3177,7 @@ typeof_dict(PyObject *v, bool replace_any)
     }
 
     for (i = 0; i < shape; i++) {
-        t = typeof(PyList_GET_ITEM(values, i), replace_any);
+        t = typeof(PyList_GET_ITEM(values, i), replace_any, shortcut);
         if (t == NULL) {
             ndt_field_array_del(fields, i);
             Py_DECREF(keys);
@@ -3218,19 +3222,19 @@ typeof_dict(PyObject *v, bool replace_any)
 }
 
 static ndt_t *
-typeof(PyObject *v, bool replace_any)
+typeof(PyObject *v, bool replace_any, bool shortcut)
 {
     NDT_STATIC_CONTEXT(ctx);
     ndt_t *t;
 
     if (PyList_Check(v)) {
-        return typeof_list(v);
+        return typeof_list(v, shortcut);
     }
     if (PyTuple_Check(v)) {
-        return typeof_tuple(v, replace_any);
+        return typeof_tuple(v, replace_any, shortcut);
     }
     if (PyDict_Check(v)) {
-        return typeof_dict(v, replace_any);
+        return typeof_dict(v, replace_any, shortcut);
     }
 
     if (PyFloat_Check(v)) {
@@ -3269,12 +3273,13 @@ typeof(PyObject *v, bool replace_any)
 static PyObject *
 xnd_typeof(PyObject *m UNUSED, PyObject *args, PyObject *kwds)
 {
-    static char *kwlist[] = {"value", "dtype", NULL};
+    static char *kwlist[] = {"value", "dtype", "shortcut", NULL};
     PyObject *value = NULL;
     PyObject *dtype = Py_None;
+    int shortcut = 0;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", kwlist, &value,
-        &dtype)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|Op", kwlist, &value,
+        &dtype, &shortcut)) {
         return NULL;
     }
 
@@ -3287,7 +3292,7 @@ xnd_typeof(PyObject *m UNUSED, PyObject *args, PyObject *kwds)
         top_type_t t;
         const ndt_t *dt = dtype==Py_None ? NULL : CONST_NDT(dtype);
 
-        t = typeof_list_top(value, dt);
+        t = typeof_list_top(value, dt, (bool)shortcut);
         if (t.type == NULL) {
             return NULL;
         }
@@ -3300,7 +3305,7 @@ xnd_typeof(PyObject *m UNUSED, PyObject *args, PyObject *kwds)
         }
     }
     else if (dtype == Py_None) {
-        ndt_t *t = typeof(value, true);
+        ndt_t *t = typeof(value, true, (bool)shortcut);
         if (t == NULL) {
             return NULL;
         }

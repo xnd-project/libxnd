@@ -147,4 +147,4 @@ class xnd(Xnd):
 def typeof(v, dtype=None):
     if isinstance(dtype, str):
         dtype = ndt(dtype)
-    return _typeof(v, dtype=dtype)
+    return _typeof(v, dtype=dtype, shortcut=True)
