@@ -3012,7 +3012,6 @@ typeof_list_top(PyObject *v, const ndt_t *dtype, bool shortcut)
     ndt_t *dt;
 
     assert(PyList_Check(v));
-    assert(*offsets == NULL);
 
     tuple = data_shapes(NULL, v);
     if (tuple == NULL) {
