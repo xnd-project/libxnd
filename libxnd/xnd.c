@@ -1100,7 +1100,7 @@ xnd_slice(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *c
         ret.type = ndt_var_dim((ndt_t *)next.type,
                                 ExternalOffsets,
                                 t->Concrete.VarDim.noffsets, t->Concrete.VarDim.offsets,
-                                nslices, slices,
+                                nslices, slices, false,
                                 ctx);
         if (ret.type == NULL) {
             return xnd_error;

@@ -146,10 +146,10 @@ class TestFixedDim(XndTestCase):
                 self.assertEqual(x.value, vv)
                 self.assertEqual(len(x), len(vv))
 
-        self.assertRaises(NotImplementedError, xnd.empty, "?3 * int64")
-        self.assertRaises(NotImplementedError, xnd.empty, "?2 * 3 * int64")
-        self.assertRaises(NotImplementedError, xnd.empty, "2 * ?3 * int64")
-        self.assertRaises(NotImplementedError, xnd.empty, "?2 * ?3 * int64")
+        self.assertRaises(ValueError, xnd.empty, "?3 * int64")
+        self.assertRaises(ValueError, xnd.empty, "?2 * 3 * int64")
+        self.assertRaises(ValueError, xnd.empty, "2 * ?3 * int64")
+        self.assertRaises(ValueError, xnd.empty, "?2 * ?3 * int64")
 
     def test_fixed_dim_subscript(self):
         test_cases = [

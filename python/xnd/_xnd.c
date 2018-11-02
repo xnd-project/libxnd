@@ -2964,19 +2964,19 @@ typeof_data(const PyObject *data, bool shortcut)
 
     switch (dtypes) {
     case XND_FLOAT64:
-        dtype = ndt_primitive(Float64, 0, &ctx);
+        dtype = ndt_primitive(Float64, opt, &ctx);
         break;
     case XND_COMPLEX128:
-        dtype = ndt_primitive(Complex128, 0, &ctx);
+        dtype = ndt_primitive(Complex128, opt, &ctx);
         break;
     case XND_INT64:
-        dtype = ndt_primitive(Int64, 0, &ctx);
+        dtype = ndt_primitive(Int64, opt, &ctx);
         break;
     case XND_STRING:
-        dtype = ndt_string(&ctx);
+        dtype = ndt_string(opt, &ctx);
         break;
     case XND_BYTES:
-        dtype = ndt_bytes(align, &ctx);
+        dtype = ndt_bytes(align, opt, &ctx);
         break;
     default:
         dtype = unify_dtypes(data, shortcut);
@@ -2988,9 +2988,6 @@ typeof_data(const PyObject *data, bool shortcut)
 
     if (dtype == NULL) {
         return seterr_ndt(&ctx);
-    }
-    if (opt) {
-        dtype = ndt_option(dtype);
     }
 
     return dtype;
@@ -3102,7 +3099,7 @@ typeof_tuple(PyObject *v, bool replace_any, bool shortcut)
 
     shape = PyTuple_GET_SIZE(v);
     if (shape == 0) {
-        t = ndt_tuple(Nonvariadic, NULL, 0, none, none, &ctx);
+        t = ndt_tuple(Nonvariadic, NULL, 0, none, none, false, &ctx);
         return t == NULL ? seterr_ndt(&ctx) : t;
     }
 
@@ -3130,7 +3127,7 @@ typeof_tuple(PyObject *v, bool replace_any, bool shortcut)
         }
     }
 
-    t = ndt_tuple(Nonvariadic, fields, shape, none, none, &ctx);
+    t = ndt_tuple(Nonvariadic, fields, shape, none, none, false, &ctx);
     return t == NULL ? seterr_ndt(&ctx) : t;
 }
 
@@ -3152,7 +3149,7 @@ typeof_dict(PyObject *v, bool replace_any, bool shortcut)
 
     shape = PyMapping_Size(v);
     if (shape == 0) {
-        t = ndt_record(Nonvariadic, NULL, 0, none, none, &ctx);
+        t = ndt_record(Nonvariadic, NULL, 0, none, none, false, &ctx);
         return t == NULL ? seterr_ndt(&ctx) : t;
     }
 
@@ -3216,7 +3213,7 @@ typeof_dict(PyObject *v, bool replace_any, bool shortcut)
     Py_DECREF(keys);
     Py_DECREF(values);
 
-    t = ndt_record(Nonvariadic, fields, shape, none, none, &ctx);
+    t = ndt_record(Nonvariadic, fields, shape, none, none, false, &ctx);
     return t == NULL ? seterr_ndt(&ctx) : t;
 }
 
@@ -3246,20 +3243,19 @@ typeof(PyObject *v, bool replace_any, bool shortcut)
         t = ndt_primitive(Int64, 0, &ctx);
     }
     else if (PyUnicode_Check(v)) {
-        t = ndt_string(&ctx);
+        t = ndt_string(false, &ctx);
     }
     else if (PyBytes_Check(v)) {
         uint16_opt_t align = {None, 0};
-        t = ndt_bytes(align, &ctx);
+        t = ndt_bytes(align, false, &ctx);
     }
     else if (v == Py_None) {
         if (replace_any) {
-            t = ndt_primitive(Float64, 0, &ctx);
+            t = ndt_primitive(Float64, NDT_OPTION, &ctx);
         }
         else {
-            t = ndt_any_kind(&ctx);
+            t = ndt_any_kind(true, &ctx);
         }
-        t = t != NULL ? ndt_option(t) : t;
     }
     else {
         PyErr_SetString(PyExc_ValueError, "type inference failed");
