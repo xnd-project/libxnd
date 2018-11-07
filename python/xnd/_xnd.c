@@ -2845,12 +2845,13 @@ offsets_from_shapes(top_type_t *t, PyObject *lst)
 static ndt_t *typeof(PyObject *v, bool replace_any, bool shortcut);
 
 
-#define XND_FLOAT64    0x0001U
-#define XND_COMPLEX128 0x0002U
-#define XND_INT64      0x0004U
-#define XND_STRING     0x0008U
-#define XND_BYTES      0x0010U
-#define XND_OTHER      0x0020U
+#define XND_BOOL       0x0001U
+#define XND_FLOAT64    0x0002U
+#define XND_COMPLEX128 0x0004U
+#define XND_INT64      0x0008U
+#define XND_STRING     0x0010U
+#define XND_BYTES      0x0020U
+#define XND_OTHER      0x0040U
 
 static inline uint32_t
 fast_dtypes(bool *opt, const PyObject *data)
@@ -2864,6 +2865,9 @@ fast_dtypes(bool *opt, const PyObject *data)
 
         if (v == Py_None) {
             *opt = true;
+        }
+        else if (PyBool_Check(v)) {
+            dtypes |= XND_BOOL;
         }
         else if (PyFloat_Check(v)) {
             dtypes |= XND_FLOAT64;
@@ -2963,6 +2967,9 @@ typeof_data(const PyObject *data, bool shortcut)
     dtypes = fast_dtypes(&opt, data);
 
     switch (dtypes) {
+    case XND_BOOL:
+        dtype = ndt_primitive(Bool, opt, &ctx);
+        break;
     case XND_FLOAT64:
         dtype = ndt_primitive(Float64, opt, &ctx);
         break;
@@ -3233,7 +3240,10 @@ typeof(PyObject *v, bool replace_any, bool shortcut)
         return typeof_dict(v, replace_any, shortcut);
     }
 
-    if (PyFloat_Check(v)) {
+    if (PyBool_Check(v)) {
+        t = ndt_primitive(Bool, 0, &ctx);
+    }
+    else if (PyFloat_Check(v)) {
         t = ndt_primitive(Float64, 0, &ctx);
     }
     else if (PyComplex_Check(v)) {

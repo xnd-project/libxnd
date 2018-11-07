@@ -2589,6 +2589,25 @@ class TestTypeInference(XndTestCase):
             self.assertEqual(x.type, ndt(t))
             self.assertEqual(x.value, v)
 
+    def test_bool(self):
+        t = [True, None, False]
+        typeof_t = "3 * ?bool"
+
+        test_cases = [
+          ([0], "1 * int64"),
+          ([0, 1], "2 * int64"),
+          ([[0], [1]], "2 * 1 * int64"),
+
+          (t, typeof_t),
+          ([t] * 2, "2 * %s" % typeof_t),
+          ([[t] * 2] * 10, "10 * 2 * %s" % typeof_t)
+        ]
+
+        for v, t in test_cases:
+            x = xnd(v)
+            self.assertEqual(x.type, ndt(t))
+            self.assertEqual(x.value, v)
+
     def test_float64(self):
         d = R['a': 2.221e100, 'b': float('inf')]
         typeof_d = "{a: float64, b: float64}"
