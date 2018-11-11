@@ -114,8 +114,8 @@ bitmap_init(xnd_bitmap_t *b, const ndt_t *t, int64_t nitems, ndt_context_t *ctx)
         n = nitems;
 
         if (t->ndim == 1) {
-            int32_t noffsets = t->Concrete.VarDim.noffsets;
-            n = t->Concrete.VarDim.offsets[noffsets-1];
+            int32_t noffsets = t->Concrete.VarDim.offsets->n;
+            n = t->Concrete.VarDim.offsets->v[noffsets-1];
         }
 
         return bitmap_init(b, t->VarDim.type, n, ctx);

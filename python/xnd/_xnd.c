@@ -77,7 +77,7 @@ seterr_int(ndt_context_t *ctx)
     return -1;
 }
 
-static ndt_t *
+static const ndt_t *
 seterr_ndt(ndt_context_t *ctx)
 {
     (void)Ndt_SetError(ctx);
@@ -226,7 +226,8 @@ mblock_from_xnd(xnd_t *src)
         return (MemoryBlockObject *)seterr(&ctx);
     }
 
-    type = Ndt_FromType((ndt_t *)x->master.type);
+    type = Ndt_FromType(x->master.type);
+    ndt_decref(x->master.type);
     if (type == NULL) {
         xnd_del(x);
         return NULL;
@@ -249,7 +250,8 @@ static PyObject *
 type_from_buffer(const Py_buffer *view)
 {
     NDT_STATIC_CONTEXT(ctx);
-    ndt_t *t, *type;
+    PyObject *ret;
+    const ndt_t *t, *type;
     int64_t shape, step;
     int64_t i;
 
@@ -276,7 +278,7 @@ type_from_buffer(const Py_buffer *view)
     if (ndt_itemsize(type) != view->itemsize) {
         PyErr_SetString(PyExc_RuntimeError,
             "mismatch between computed itemsize and buffer itemsize");
-        ndt_del(type);
+        ndt_decref(type);
         return NULL;
     }
 
@@ -284,12 +286,15 @@ type_from_buffer(const Py_buffer *view)
         shape = view->shape[i];
         step = view->strides[i] / view->itemsize;
         t = ndt_fixed_dim(type, shape, step, &ctx);
+        ndt_decref(type);
         if (t == NULL) {
             return seterr(&ctx);
         }
     }
 
-    return Ndt_FromType(t);
+    ret = Ndt_FromType(t);
+    ndt_decref(t);
+    return ret;
 }
 
 static MemoryBlockObject *
@@ -1767,10 +1772,11 @@ pyxnd_view_move_type(const XndObject *src, xnd_t *x)
     XndObject *view;
     PyObject *type;
 
-    type = Ndt_MoveSubtree(src->type, (ndt_t *)x->type);
+    type = Ndt_FromType(x->type);
     if (type == NULL) {
         return NULL;
     }
+    ndt_decref(x->type);
 
     view = pyxnd_alloc(Py_TYPE(src));
     if (view == NULL) {
@@ -1973,7 +1979,7 @@ static void
 free_slices(xnd_t *lst, int64_t start, int64_t stop)
 {
     for (int64_t i = start; i < stop; i++) {
-        ndt_del((ndt_t *)lst[i].type);
+        ndt_decref(lst[i].type);
     }
 
     ndt_free(lst);
@@ -2093,7 +2099,7 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
     }
 
     if (free_type) {
-        ndt_del((ndt_t *)x.type);
+        ndt_decref((ndt_t *)x.type);
     }
 
     return ret;
@@ -2701,8 +2707,8 @@ require_var(PyObject *lst)
     return false;
 }
 
-static ndt_t *
-fixed_from_shapes(PyObject *lst, ndt_t *dtype)
+static const ndt_t *
+fixed_from_shapes(PyObject *lst, const ndt_t *type)
 {
     NDT_STATIC_CONTEXT(ctx);
     PyObject *shapes;
@@ -2710,12 +2716,13 @@ fixed_from_shapes(PyObject *lst, ndt_t *dtype)
     Py_ssize_t len;
     Py_ssize_t shape;
     Py_ssize_t i;
-    ndt_t *t;
+    const ndt_t *t;
 
     assert(PyList_Check(lst));
 
-    t = dtype;
-    for (i = 0; i < PyList_GET_SIZE(lst); i++) {
+    ndt_incref(type);
+
+    for (i=0, t=type; i < PyList_GET_SIZE(lst); i++, type=t) {
         shapes = PyList_GET_ITEM(lst, i);
         assert(PyList_Check(shapes));
 
@@ -2728,12 +2735,13 @@ fixed_from_shapes(PyObject *lst, ndt_t *dtype)
             v = PyList_GET_ITEM(shapes, 0);
             shape = PyLong_AsSsize_t(v);
             if (shape < 0) {
-                ndt_del(t);
+                ndt_decref(t);
                 return NULL;
             }
         }
 
-        t = ndt_fixed_dim(t, shape, INT64_MAX, &ctx);
+        t = ndt_fixed_dim(type, shape, INT64_MAX, &ctx);
+        ndt_decref(type);
         if (t == NULL) {
             return seterr_ndt(&ctx);
         }
@@ -2759,7 +2767,7 @@ list_set_ssize(PyObject *lst, Py_ssize_t i, Py_ssize_t x)
 typedef struct {
     PyObject *offsets;
     bool *opt;
-    ndt_t *type;
+    const ndt_t *type;
 } top_type_t;
 
 static int
@@ -2842,7 +2850,7 @@ offsets_from_shapes(top_type_t *t, PyObject *lst)
 /*               Infer the dtype from a flat list of data             */
 /**********************************************************************/
 
-static ndt_t *typeof(PyObject *v, bool replace_any, bool shortcut);
+static const ndt_t *typeof(PyObject *v, bool replace_any, bool shortcut);
 
 
 #define XND_BOOL       0x0001U
@@ -2896,13 +2904,13 @@ fast_dtypes(bool *opt, const PyObject *data)
     return dtypes;
 }
 
-static ndt_t *
+static const ndt_t *
 unify_dtypes(const PyObject *data, bool shortcut)
 {
     NDT_STATIC_CONTEXT(ctx);
     PyObject *v;
-    ndt_t *dtype;
-    ndt_t *t, *u;
+    const ndt_t *dtype;
+    const ndt_t *t, *u;
     Py_ssize_t i;
 
     if (!PyList_Check(data) || PyList_GET_SIZE(data) == 0) {
@@ -2921,17 +2929,17 @@ unify_dtypes(const PyObject *data, bool shortcut)
          v = PyList_GET_ITEM(data, i);
          t = typeof(v, false, shortcut);
          if (t == NULL) {
-             ndt_del(dtype);
+             ndt_decref(dtype);
              return NULL;
          }
 
          if (ndt_equal(t, dtype)) {
-             ndt_del(t);
+             ndt_decref(t);
          }
          else {
              u = ndt_unify(t, dtype, &ctx);
-             ndt_del(t);
-             ndt_del(dtype);
+             ndt_decref(t);
+             ndt_decref(dtype);
              if (u == NULL) {
                  return seterr_ndt(&ctx);
              }
@@ -2944,8 +2952,8 @@ unify_dtypes(const PyObject *data, bool shortcut)
     }
 
     if (ndt_is_abstract(dtype)) {
-        ndt_t *u = ndt_unify_replace_any(dtype, dtype, &ctx);
-        ndt_del(dtype);
+        const ndt_t *u = ndt_unify_replace_any(dtype, dtype, &ctx);
+        ndt_decref(dtype);
         if (u == NULL) {
             return seterr_ndt(&ctx);
         }
@@ -2955,12 +2963,12 @@ unify_dtypes(const PyObject *data, bool shortcut)
     return dtype;
 }
 
-ndt_t *
+const ndt_t *
 typeof_data(const PyObject *data, bool shortcut)
 {
     NDT_STATIC_CONTEXT(ctx);
     uint16_opt_t align = {None, 0};
-    ndt_t *dtype = NULL;
+    const ndt_t *dtype = NULL;
     bool opt = false;
     uint32_t dtypes;
 
@@ -3009,11 +3017,10 @@ static top_type_t
 typeof_list_top(PyObject *v, const ndt_t *dtype, bool shortcut)
 {
     top_type_t t = {NULL, NULL, NULL};
-    NDT_STATIC_CONTEXT(ctx);
     PyObject *tuple;
     PyObject *data;
     PyObject *shapes;
-    ndt_t *dt;
+    const ndt_t *dt;
 
     assert(PyList_Check(v));
 
@@ -3032,17 +3039,13 @@ typeof_list_top(PyObject *v, const ndt_t *dtype, bool shortcut)
         }
     }
     else {
-        dt = ndt_copy(dtype, &ctx);
-        if (dt == NULL) {
-            Py_DECREF(tuple);
-            (void)seterr(&ctx);
-            return t;
-        }
+        ndt_incref(dtype);
+        dt = dtype;
     }
 
     if (require_var(shapes)) {
         if (offsets_from_shapes(&t, shapes) < 0) {
-            ndt_del(dt);
+            ndt_decref(dt);
             Py_DECREF(tuple);
             return t;
         }
@@ -3050,19 +3053,20 @@ typeof_list_top(PyObject *v, const ndt_t *dtype, bool shortcut)
     }
     else {
         t.type = fixed_from_shapes(shapes, dt);
+        ndt_decref(dt);
     }
 
     Py_DECREF(tuple);
     return t;
 }
 
-static ndt_t *
+static const ndt_t *
 typeof_list(PyObject *v, bool shortcut)
 {
     PyObject *tuple;
     PyObject *data;
     PyObject *shapes;
-    ndt_t *t, *dtype;
+    const ndt_t *t, *dtype;
 
     assert(PyList_Check(v));
 
@@ -3082,23 +3086,24 @@ typeof_list(PyObject *v, bool shortcut)
     if (require_var(shapes)) {
         PyErr_SetString(PyExc_ValueError,
             "nested var dimensions are not supported");
-        ndt_del(dtype);
+        ndt_decref(dtype);
         Py_DECREF(tuple);
         return NULL;
     }
 
     t = fixed_from_shapes(shapes, dtype);
+    ndt_decref(dtype);
     Py_DECREF(tuple);
     return t;
 }
 
-static ndt_t *
+static const ndt_t *
 typeof_tuple(PyObject *v, bool replace_any, bool shortcut)
 {
     NDT_STATIC_CONTEXT(ctx);
     uint16_opt_t none = {None, 0};
-    ndt_t *t;
     ndt_field_t *fields;
+    const ndt_t *t;
     int64_t shape;
     int64_t i;
 
@@ -3135,18 +3140,19 @@ typeof_tuple(PyObject *v, bool replace_any, bool shortcut)
     }
 
     t = ndt_tuple(Nonvariadic, fields, shape, none, none, false, &ctx);
+    ndt_field_array_del(fields, shape);
     return t == NULL ? seterr_ndt(&ctx) : t;
 }
 
-static ndt_t *
+static const ndt_t *
 typeof_dict(PyObject *v, bool replace_any, bool shortcut)
 {
     NDT_STATIC_CONTEXT(ctx);
     uint16_opt_t none = {None, 0};
     PyObject *keys = NULL;
     PyObject *values = NULL;
-    ndt_t *t;
     ndt_field_t *fields;
+    const ndt_t *t;
     const char *cp;
     char *name;
     int64_t shape;
@@ -3190,8 +3196,8 @@ typeof_dict(PyObject *v, bool replace_any, bool shortcut)
 
         cp = PyUnicode_AsUTF8(PyList_GET_ITEM(keys, i));
         if (cp == NULL) {
-            ndt_del(t);
             ndt_field_array_del(fields, i);
+            ndt_decref(t);
             Py_DECREF(keys);
             Py_DECREF(values);
             return NULL;
@@ -3199,8 +3205,8 @@ typeof_dict(PyObject *v, bool replace_any, bool shortcut)
 
         name = ndt_strdup(cp, &ctx);
         if (name == NULL) {
-            ndt_del(t);
             ndt_field_array_del(fields, i);
+            ndt_decref(t);
             Py_DECREF(keys);
             Py_DECREF(values);
             return seterr_ndt(&ctx);
@@ -3221,14 +3227,15 @@ typeof_dict(PyObject *v, bool replace_any, bool shortcut)
     Py_DECREF(values);
 
     t = ndt_record(Nonvariadic, fields, shape, none, none, false, &ctx);
+    ndt_field_array_del(fields, shape);
     return t == NULL ? seterr_ndt(&ctx) : t;
 }
 
-static ndt_t *
+static const ndt_t *
 typeof(PyObject *v, bool replace_any, bool shortcut)
 {
     NDT_STATIC_CONTEXT(ctx);
-    ndt_t *t;
+    const ndt_t *t;
 
     if (PyList_Check(v)) {
         return typeof_list(v, shortcut);
@@ -3281,6 +3288,7 @@ xnd_typeof(PyObject *m UNUSED, PyObject *args, PyObject *kwds)
     static char *kwlist[] = {"value", "dtype", "shortcut", NULL};
     PyObject *value = NULL;
     PyObject *dtype = Py_None;
+    PyObject *ret;
     int shortcut = 0;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|Op", kwlist, &value,
@@ -3303,18 +3311,25 @@ xnd_typeof(PyObject *m UNUSED, PyObject *args, PyObject *kwds)
         }
 
         if (t.offsets == NULL) {
-            return Ndt_FromType(t.type);
+            ret = Ndt_FromType(t.type);
         }
         else {
-            return Ndt_FromOffsetsAndDtype(t.offsets, t.opt, t.type);
+            ret = Ndt_FromOffsetsAndDtype(t.offsets, t.opt, t.type);
         }
+
+        ndt_decref(t.type);
+        return ret;
     }
     else if (dtype == Py_None) {
-        ndt_t *t = typeof(value, true, (bool)shortcut);
+        const ndt_t *t = typeof(value, true, (bool)shortcut);
         if (t == NULL) {
             return NULL;
         }
-        return Ndt_FromType(t);
+
+        ret = Ndt_FromType(t);
+
+        ndt_decref(t);
+        return ret;
     }
     else {
         PyErr_Format(PyExc_TypeError,
@@ -3350,7 +3365,7 @@ CONST_XND(const PyObject *v)
 }
 
 static PyObject *
-Xnd_EmptyFromType(PyTypeObject *tp, ndt_t *t)
+Xnd_EmptyFromType(PyTypeObject *tp, const ndt_t *t)
 {
     MemoryBlockObject *mblock;
     PyObject *type;
@@ -3378,14 +3393,15 @@ Xnd_ViewMoveNdt(const PyObject *v, ndt_t *t)
 
     if (!Xnd_Check(v)) {
         PyErr_SetString(PyExc_TypeError, "expected xnd object");
-        ndt_del(t);
+        ndt_decref(t);
         return NULL;
     }
 
-    type = Ndt_MoveSubtree(src->type, t);
+    type = Ndt_FromType(t);
     if (type == NULL) {
         return NULL;
     }
+    ndt_decref(t);
 
     view = pyxnd_alloc(Py_TYPE(src));
     if (view == NULL) {
@@ -3441,7 +3457,7 @@ Xnd_FromXndMoveType(const PyObject *xnd, xnd_t *x)
     if (!Xnd_Check(xnd)) {
         PyErr_SetString(PyExc_TypeError,
             "Xnd_FromXndMoveType() called on non-xnd object");
-        ndt_del((ndt_t *)x->type);
+        ndt_decref(x->type);
         return NULL;
     }
 
@@ -3570,7 +3586,7 @@ _test_view_new(PyObject *module UNUSED, PyObject *args UNUSED)
     NDT_STATIC_CONTEXT(ctx);
     xnd_view_t x = xnd_view_error;
     double *d;
-    ndt_t *t;
+    const ndt_t *t;
     char *ptr;
 
     t = ndt_from_string("3 * float64", &ctx);
@@ -3580,7 +3596,7 @@ _test_view_new(PyObject *module UNUSED, PyObject *args UNUSED)
 
     ptr = ndt_aligned_calloc(8, 3 * sizeof(double));
     if (ptr == NULL) {
-        ndt_del(t);
+        ndt_decref(t);
         (void)ndt_memory_error(&ctx);
         return seterr(&ctx);
     }
