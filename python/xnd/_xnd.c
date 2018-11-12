@@ -2750,99 +2750,72 @@ fixed_from_shapes(PyObject *lst, const ndt_t *type)
     return t;
 }
 
-static inline int
-list_set_ssize(PyObject *lst, Py_ssize_t i, Py_ssize_t x)
+static const ndt_t *
+var_from_shapes(PyObject *lst, const ndt_t *dtype)
 {
-    PyObject *v = PyLong_FromSsize_t(x);
-
-    if (v == NULL) {
-        return -1;
-    }
-
-    PyList_SET_ITEM(lst, i, v);
-    return 0;
-}
-
-
-typedef struct {
-    PyObject *offsets;
-    bool *opt;
-    const ndt_t *type;
-} top_type_t;
-
-static int
-offsets_from_shapes(top_type_t *t, PyObject *lst)
-{
-    PyObject *ret;
-    bool *opt;
+    NDT_STATIC_CONTEXT(ctx);
+    const ndt_t *t;
+    ndt_offsets_t *offsets;
+    int32_t *ptr;
     Py_ssize_t len, slen;
     Py_ssize_t sum, shape;
-    Py_ssize_t i, j, k;
+    Py_ssize_t i, k;
+    bool opt;
 
     assert(PyList_Check(lst));
     len = PyList_GET_SIZE(lst);
 
-    ret = PyList_New(len);
-    if (ret == NULL) {
-        PyErr_NoMemory();
-        return -1;
-    }
+    ndt_incref(dtype);
 
-    opt = ndt_calloc(len, sizeof *opt);
-    if (opt == NULL) {
-        Py_DECREF(ret);
-        PyErr_NoMemory();
-        return -1;
-    }
-
-    for (i=len-1, j=0; i >= 0; i--, j++) {
+    for (i=0, t=dtype; i < len; i++, dtype=t) {
         PyObject *shapes = PyList_GET_ITEM(lst, i);
         assert(PyList_Check(shapes));
         slen = PyList_GET_SIZE(shapes);
 
-        PyObject *offsets = PyList_New(slen+1);
-        if (offsets == NULL) {
-            ndt_free(opt);
-            Py_DECREF(ret);
-            return -1;
+        if (slen+1 > INT32_MAX) {
+            PyErr_SetString(PyExc_ValueError,
+                "variable dimension is too large");
+            return NULL;
         }
-        PyList_SET_ITEM(ret, j, offsets);
 
-        sum = 0;
-        if (list_set_ssize(offsets, 0, sum) < 0) {
-            ndt_free(opt);
-            Py_DECREF(ret);
-            return -1;
+        offsets = ndt_offsets_new(slen+1, &ctx);
+        if (offsets == NULL) {
+            return seterr_ndt(&ctx);
         }
+
+        ptr = (int32_t *)offsets->v;
+        ptr[0] = sum = 0;
+        opt = false;
 
         for (k = 0; k < slen; k++) {
             PyObject *v = PyList_GET_ITEM(shapes, k);
 
             if (v == Py_None) {
                 shape = 0;
-                opt[j] = true;
+                opt = true;
             }
             else {
                 shape = PyLong_AsSsize_t(v);
                 if (shape < 0) {
-                    ndt_free(opt);
-                    Py_DECREF(ret);
-                    return -1;
+                    ndt_decref_offsets(offsets);
+                    return NULL;
                 }
             }
             sum += shape;
+            ptr[k+1] = sum;
+        }
 
-            if (list_set_ssize(offsets, k+1, sum) < 0) {
-                ndt_free(opt);
-                Py_DECREF(ret);
-                return -1;
-            }
+        t = ndt_var_dim(dtype, offsets, 0, NULL, opt, &ctx);
+
+        ndt_decref(dtype);
+        ndt_decref_offsets(offsets);
+
+        if (t == NULL) {
+            return seterr_ndt(&ctx);
         }
     }
 
-    t->offsets = ret;
-    t->opt = opt;
-    return 0;
+    return t;
 }
 
 
@@ -3013,47 +2986,26 @@ typeof_data(const PyObject *data, bool shortcut)
 /*                          Main type inference                       */
 /**********************************************************************/
 
-static top_type_t
-typeof_list_top(PyObject *v, const ndt_t *dtype, bool shortcut)
+static const ndt_t *
+typeof_list_top(PyObject *v, const ndt_t *dtype)
 {
-    top_type_t t = {NULL, NULL, NULL};
     PyObject *tuple;
-    PyObject *data;
     PyObject *shapes;
-    const ndt_t *dt;
+    const ndt_t *t;
 
     assert(PyList_Check(v));
 
     tuple = data_shapes(NULL, v);
     if (tuple == NULL) {
-        return t;
+        return NULL;
     }
-    data = PyTuple_GET_ITEM(tuple, 0);
     shapes = PyTuple_GET_ITEM(tuple, 1);
 
-    if (dtype == NULL) {
-        dt = typeof_data(data, shortcut);
-        if (dt == NULL) {
-            Py_DECREF(tuple);
-            return t;
-        }
-    }
-    else {
-        ndt_incref(dtype);
-        dt = dtype;
-    }
-
     if (require_var(shapes)) {
-        if (offsets_from_shapes(&t, shapes) < 0) {
-            ndt_decref(dt);
-            Py_DECREF(tuple);
-            return t;
-        }
-        t.type = dt;
+        t = var_from_shapes(shapes, dtype);
     }
     else {
-        t.type = fixed_from_shapes(shapes, dt);
-        ndt_decref(dt);
+        t = fixed_from_shapes(shapes, dtype);
     }
 
     Py_DECREF(tuple);
@@ -3084,14 +3036,12 @@ typeof_list(PyObject *v, bool shortcut)
     }
 
     if (require_var(shapes)) {
-        PyErr_SetString(PyExc_ValueError,
-            "nested var dimensions are not supported");
-        ndt_decref(dtype);
-        Py_DECREF(tuple);
-        return NULL;
+        t = var_from_shapes(shapes, dtype);
+    }
+    else {
+        t = fixed_from_shapes(shapes, dtype);
     }
 
-    t = fixed_from_shapes(shapes, dtype);
     ndt_decref(dtype);
     Py_DECREF(tuple);
     return t;
@@ -3289,6 +3239,7 @@ xnd_typeof(PyObject *m UNUSED, PyObject *args, PyObject *kwds)
     PyObject *value = NULL;
     PyObject *dtype = Py_None;
     PyObject *ret;
+    const ndt_t *t;
     int shortcut = 0;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|Op", kwlist, &value,
@@ -3296,46 +3247,31 @@ xnd_typeof(PyObject *m UNUSED, PyObject *args, PyObject *kwds)
         return NULL;
     }
 
-    if (dtype != Py_None && !Ndt_Check(dtype)) {
-        PyErr_Format(PyExc_ValueError, "dtype argument must be ndt");
-        return NULL;
-    }
-
-    if (PyList_Check(value)) {
-        top_type_t t;
-        const ndt_t *dt = dtype==Py_None ? NULL : NDT(dtype);
-
-        t = typeof_list_top(value, dt, (bool)shortcut);
-        if (t.type == NULL) {
+    if (dtype != Py_None) {
+        if (!Ndt_Check(dtype)) {
+            PyErr_Format(PyExc_ValueError, "dtype argument must be ndt");
+            return NULL;
+        }
+        if (!PyList_Check(value)) {
+            PyErr_Format(PyExc_TypeError,
+                "value must be a list if dtype != None");
             return NULL;
         }
 
-        if (t.offsets == NULL) {
-            ret = Ndt_FromType(t.type);
-        }
-        else {
-            ret = Ndt_FromOffsetsAndDtype(t.offsets, t.opt, t.type);
-        }
-
-        ndt_decref(t.type);
-        return ret;
-    }
-    else if (dtype == Py_None) {
-        const ndt_t *t = typeof(value, true, (bool)shortcut);
-        if (t == NULL) {
-            return NULL;
-        }
-
-        ret = Ndt_FromType(t);
-
-        ndt_decref(t);
-        return ret;
+        t = typeof_list_top(value, NDT(dtype));
     }
     else {
-        PyErr_Format(PyExc_TypeError,
-            "value must be a list if dtype != None");
+        t = typeof(value, true, (bool)shortcut);
+    }
+
+    if (t == NULL) {
         return NULL;
     }
+
+    ret = Ndt_FromType(t);
+
+    ndt_decref(t);
+    return ret;
 }
  
 
