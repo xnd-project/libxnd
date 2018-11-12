@@ -184,7 +184,7 @@ mblock_empty(PyObject *type)
         return NULL;
     }
 
-    self->xnd = xnd_empty_from_type(CONST_NDT(type), XND_OWN_EMBEDDED, &ctx);
+    self->xnd = xnd_empty_from_type(NDT(type), XND_OWN_EMBEDDED, &ctx);
     if (self->xnd == NULL) {
         Py_DECREF(self);
         return (MemoryBlockObject *)seterr(&ctx);
@@ -344,7 +344,7 @@ mblock_from_buffer(PyObject *obj)
     self->xnd->master.bitmap.size = 0;
     self->xnd->master.bitmap.next = NULL;
     self->xnd->master.index = 0;
-    self->xnd->master.type = CONST_NDT(self->type);
+    self->xnd->master.type = NDT(self->type);
     self->xnd->master.ptr = self->view->buf;
 
     return self;
@@ -399,7 +399,7 @@ mblock_from_buffer_and_type(PyObject *obj, PyObject *type)
     self->xnd->master.bitmap.size = 0;
     self->xnd->master.bitmap.next = NULL;
     self->xnd->master.index = 0;
-    self->xnd->master.type = CONST_NDT(self->type);
+    self->xnd->master.type = NDT(self->type);
     self->xnd->master.ptr = self->view->buf;
 
     return self;
@@ -3303,7 +3303,7 @@ xnd_typeof(PyObject *m UNUSED, PyObject *args, PyObject *kwds)
 
     if (PyList_Check(value)) {
         top_type_t t;
-        const ndt_t *dt = dtype==Py_None ? NULL : CONST_NDT(dtype);
+        const ndt_t *dt = dtype==Py_None ? NULL : NDT(dtype);
 
         t = typeof_list_top(value, dt, (bool)shortcut);
         if (t.type == NULL) {
