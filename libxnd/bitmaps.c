@@ -86,7 +86,13 @@ bitmap_init(xnd_bitmap_t *b, const ndt_t *t, int64_t nitems, ndt_context_t *ctx)
     assert(b->size == 0);
     assert(b->next == NULL);
 
-    if (t->ndim == 0 && ndt_is_optional(t)) {
+    if (ndt_is_optional(t)) {
+         if (t->ndim > 0) {
+             ndt_err_format(ctx, NDT_NotImplementedError,
+                 "optional dimensions are not implemented");
+             return -1;
+         }
+
          b->data = bits_new(nitems, ctx);
          if (b->data == NULL) {
              return -1;
@@ -108,8 +114,8 @@ bitmap_init(xnd_bitmap_t *b, const ndt_t *t, int64_t nitems, ndt_context_t *ctx)
         n = nitems;
 
         if (t->ndim == 1) {
-            int32_t noffsets = t->Concrete.VarDim.noffsets;
-            n = t->Concrete.VarDim.offsets[noffsets-1];
+            int32_t noffsets = t->Concrete.VarDim.offsets->n;
+            n = t->Concrete.VarDim.offsets->v[noffsets-1];
         }
 
         return bitmap_init(b, t->VarDim.type, n, ctx);

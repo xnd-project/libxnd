@@ -56,7 +56,7 @@ static void
 free_slices(xnd_t *lst, int64_t len)
 {
     for (int64_t i = 0; i < len; i++) {
-        ndt_del((ndt_t *)lst[i].type);
+        ndt_decref(lst[i].type);
     }
 
     ndt_free(lst);

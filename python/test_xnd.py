@@ -33,7 +33,7 @@
 import sys, unittest, argparse
 from math import isinf, isnan
 from ndtypes import ndt, typedef
-from xnd import xnd, XndEllipsis
+from xnd import xnd, XndEllipsis, data_shapes
 from xnd._xnd import _test_view_subscript, _test_view_new
 from xnd_support import *
 from xnd_randvalue import *
@@ -145,6 +145,11 @@ class TestFixedDim(XndTestCase):
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
                 self.assertEqual(len(x), len(vv))
+
+        self.assertRaises(ValueError, xnd.empty, "?3 * int64")
+        self.assertRaises(ValueError, xnd.empty, "?2 * 3 * int64")
+        self.assertRaises(ValueError, xnd.empty, "2 * ?3 * int64")
+        self.assertRaises(ValueError, xnd.empty, "?2 * ?3 * int64")
 
     def test_fixed_dim_subscript(self):
         test_cases = [
@@ -643,6 +648,11 @@ class TestVarDim(XndTestCase):
                 self.assertEqual(x.value, vv)
                 self.assertEqual(len(x), len(vv))
 
+        self.assertRaises(NotImplementedError, xnd.empty, "?var(offsets=[0, 3]) * int64")
+        self.assertRaises(NotImplementedError, xnd.empty, "?var(offsets=[0, 2]) * var(offsets=[0, 3, 10]) * int64")
+        self.assertRaises(NotImplementedError, xnd.empty, "var(offsets=[0, 2]) * ?var(offsets=[0, 3, 10]) * int64")
+        self.assertRaises(NotImplementedError, xnd.empty, "?var(offsets=[0, 2]) * ?var(offsets=[0, 3, 10]) * int64")
+
     def test_var_dim_assign(self):
         ### Regular data ###
         x = xnd.empty("var(offsets=[0,2]) * var(offsets=[0,2,5]) * float64")
@@ -853,6 +863,42 @@ class TestVarDim(XndTestCase):
                     y[indices] = w
                     self.assertNotStrictEqual(x, y)
 
+    def test_var_dim_nested(self):
+
+        t = "var(offsets=[0,2]) * var(offsets=[0,1,3]) * (var(offsets=[0,2]) * var(offsets=[0,3,7]) * float32, int64)"
+        v = [[([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0, 6.0]], -1)],
+             [([[7.0, 8.0, 9.0], [10.0, 11.0, 12.0, 13.0]], -2),
+              ([[14.0, 15.0, 16.0], [17.0, 18.0, 19.0, 20.0]], -3)]]
+
+        x = xnd(v, type=t)
+
+        self.assertEqual(x, v)
+        self.assertEqual(x.value, v)
+
+        self.assertEqual(x[0], v[0])
+        self.assertEqual(x[1], v[1])
+
+        self.assertEqual(x[0,0], v[0][0])
+        self.assertEqual(x[1,0], v[1][0])
+        self.assertEqual(x[1,1], v[1][1])
+
+        self.assertEqual(x[0,0,0], v[0][0][0])
+        self.assertEqual(x[0,0,1], v[0][0][1])
+
+        self.assertEqual(x[1,0,0], v[1][0][0])
+        self.assertEqual(x[1,0,1], v[1][0][1])
+
+        self.assertEqual(x[1,1,0], v[1][1][0])
+        self.assertEqual(x[1,1,1], v[1][1][1])
+
+        self.assertEqual(x[0,0,0,0], v[0][0][0][0])
+        self.assertEqual(x[0,0,0,1], v[0][0][0][1])
+
+        self.assertEqual(x[0,0,0,0], v[0][0][0][0])
+        self.assertEqual(x[0,0,0,1], v[0][0][0][1])
+
+        self.assertEqual(x[1,0,0,0,1], v[1][0][0][0][1])
+        self.assertEqual(x[1,0,0,0,1], v[1][0][0][0][1])
 
 class TestSymbolicDim(XndTestCase):
 
@@ -2453,6 +2499,93 @@ class TestTypevar(XndTestCase):
 
 class TestTypeInference(XndTestCase):
 
+    def test_data_shape_extraction(self):
+
+        test_cases = [
+            (None, [None], []),
+            (1, [1], []),
+            ((1, 2), [(1, 2)], []),
+            ([], [], [[0]]),
+            ([None], [None], [[1]]),
+            ([1], [1], [[1]]),
+            ([()], [()], [[1]]),
+            ([(1, 2)], [(1, 2)], [[1]]),
+            ([[]], [], [[0], [1]]),
+            ([[None]], [None], [[1], [1]]),
+            ([[None, 1]], [None, 1], [[2], [1]]),
+            ([[1, None]], [1, None], [[2], [1]]),
+            ([None, []], [], [[None, 0], [2]]),
+            ([[], None], [], [[0, None], [2]]),
+            ([[None], None], [None], [[1, None], [2]]),
+            ([None, [None]], [None], [[None, 1], [2]]),
+            ([None, [1]], [1], [[None, 1], [2]]),
+            ([[1], None], [1], [[1, None], [2]]),
+            ([[], []], [], [[0, 0], [2]]),
+            ([[1], []], [1], [[1, 0], [2]]),
+            ([[], [1]], [1], [[0, 1], [2]]),
+            ([[1], [2]], [1, 2], [[1, 1], [2]]),
+            ([[2], [1]], [2, 1], [[1, 1], [2]]),
+            ([[1], [2, 3]], [1, 2, 3], [[1, 2], [2]]),
+            ([[1, 2], [3]], [1, 2, 3], [[2, 1], [2]]),
+            ([None, [1], [2, 3]], [1, 2, 3], [[None, 1, 2], [3]]),
+            ([[1], None, [2, 3]], [1, 2, 3], [[1, None, 2], [3]]),
+            ([[1], [2, 3], None], [1, 2, 3], [[1, 2, None], [3]]),
+            ([None, [[1], []], [[2, 3]]], [1, 2, 3], [[1, 0, 2], [None, 2, 1], [3]]),
+            ([[[1], []], None, [[2, 3]]], [1, 2, 3], [[1, 0, 2], [ 2, None, 1], [3]]),
+            ([[[1], []], [[2, 3]], None], [1, 2, 3], [[1, 0, 2], [2, 1, None], [3]]),
+        ]
+
+        for v, expected_data, expected_shapes in test_cases:
+            data, shapes = data_shapes(v)
+            self.assertEqual(data, expected_data)
+            self.assertEqual(shapes, expected_shapes)
+
+        v = [1]
+        for i in range(127):
+            v = [v]
+        data, shapes = data_shapes(v)
+        self.assertEqual(data, [1])
+        self.assertEqual(shapes, [[1]] * 128)
+
+        # Exceptions:
+        v = [1, []]
+        self.assertRaises(ValueError, data_shapes, v)
+
+        v = [[], 1]
+        self.assertRaises(ValueError, data_shapes, v)
+
+        v = [[[1,2]], [3, 4]]
+        self.assertRaises(ValueError, data_shapes, v)
+
+        v = [[1, 2], [[3, 4]]]
+        self.assertRaises(ValueError, data_shapes, v)
+
+        v = [1]
+        for i in range(128):
+            v = [v]
+        self.assertRaises(ValueError, data_shapes, v)
+
+    def test_fixed_dimension(self):
+        d = [(None, 10), (None, 20), ("x", 30)]
+        typeof_d = "3 * (?string, int64)"
+
+        test_cases = [
+          ((), "()"),
+          (((),), "(())"),
+          (((), ()), "((), ())"),
+          ((((),), ()), "((()), ())"),
+          ((((),), ((), ())), "((()), ((), ()))"),
+          ((1, 2, 3), "(int64, int64, int64)"),
+          ((1.0, 2, "str"), "(float64, int64, string)"),
+          ((1.0, 2, ("str", b"bytes", d)),
+           "(float64, int64, (string, bytes, %s))" % typeof_d)
+        ]
+
+        for v, t in test_cases:
+            x = xnd(v)
+            self.assertEqual(x.type, ndt(t))
+            self.assertEqual(x.value, v)
+
     def test_tuple(self):
         d = R['a': (2.0, b"bytes"), 'b': ("str", float('inf'))]
         typeof_d = "{a: (float64, bytes), b: (string, float64)}"
@@ -2485,6 +2618,25 @@ class TestTypeInference(XndTestCase):
           (R['x': R['y': {}], 'z': {}], "{x: {y: {}}, z: {}}"),
           (R['x': R['y': {}], 'z': R['a': {}, 'b': {}]], "{x: {y: {}}, z: {a: {}, b: {}}}"),
           (d, typeof_d)
+        ]
+
+        for v, t in test_cases:
+            x = xnd(v)
+            self.assertEqual(x.type, ndt(t))
+            self.assertEqual(x.value, v)
+
+    def test_bool(self):
+        t = [True, None, False]
+        typeof_t = "3 * ?bool"
+
+        test_cases = [
+          ([0], "1 * int64"),
+          ([0, 1], "2 * int64"),
+          ([[0], [1]], "2 * 1 * int64"),
+
+          (t, typeof_t),
+          ([t] * 2, "2 * %s" % typeof_t),
+          ([[t] * 2] * 10, "10 * 2 * %s" % typeof_t)
         ]
 
         for v, t in test_cases:

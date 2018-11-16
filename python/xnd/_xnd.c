@@ -77,6 +77,13 @@ seterr_int(ndt_context_t *ctx)
     return -1;
 }
 
+static const ndt_t *
+seterr_ndt(ndt_context_t *ctx)
+{
+    (void)Ndt_SetError(ctx);
+    return NULL;
+}
+
 
 /****************************************************************************/
 /*                                Singletons                                */
@@ -177,7 +184,7 @@ mblock_empty(PyObject *type)
         return NULL;
     }
 
-    self->xnd = xnd_empty_from_type(CONST_NDT(type), XND_OWN_EMBEDDED, &ctx);
+    self->xnd = xnd_empty_from_type(NDT(type), XND_OWN_EMBEDDED, &ctx);
     if (self->xnd == NULL) {
         Py_DECREF(self);
         return (MemoryBlockObject *)seterr(&ctx);
@@ -219,7 +226,8 @@ mblock_from_xnd(xnd_t *src)
         return (MemoryBlockObject *)seterr(&ctx);
     }
 
-    type = Ndt_FromType((ndt_t *)x->master.type);
+    type = Ndt_FromType(x->master.type);
+    ndt_decref(x->master.type);
     if (type == NULL) {
         xnd_del(x);
         return NULL;
@@ -242,7 +250,8 @@ static PyObject *
 type_from_buffer(const Py_buffer *view)
 {
     NDT_STATIC_CONTEXT(ctx);
-    ndt_t *t, *type;
+    PyObject *ret;
+    const ndt_t *t, *type;
     int64_t shape, step;
     int64_t i;
 
@@ -269,7 +278,7 @@ type_from_buffer(const Py_buffer *view)
     if (ndt_itemsize(type) != view->itemsize) {
         PyErr_SetString(PyExc_RuntimeError,
             "mismatch between computed itemsize and buffer itemsize");
-        ndt_del(type);
+        ndt_decref(type);
         return NULL;
     }
 
@@ -277,12 +286,15 @@ type_from_buffer(const Py_buffer *view)
         shape = view->shape[i];
         step = view->strides[i] / view->itemsize;
         t = ndt_fixed_dim(type, shape, step, &ctx);
+        ndt_decref(type);
         if (t == NULL) {
             return seterr(&ctx);
         }
     }
 
-    return Ndt_FromType(t);
+    ret = Ndt_FromType(t);
+    ndt_decref(t);
+    return ret;
 }
 
 static MemoryBlockObject *
@@ -332,7 +344,7 @@ mblock_from_buffer(PyObject *obj)
     self->xnd->master.bitmap.size = 0;
     self->xnd->master.bitmap.next = NULL;
     self->xnd->master.index = 0;
-    self->xnd->master.type = CONST_NDT(self->type);
+    self->xnd->master.type = NDT(self->type);
     self->xnd->master.ptr = self->view->buf;
 
     return self;
@@ -387,7 +399,7 @@ mblock_from_buffer_and_type(PyObject *obj, PyObject *type)
     self->xnd->master.bitmap.size = 0;
     self->xnd->master.bitmap.next = NULL;
     self->xnd->master.index = 0;
-    self->xnd->master.type = CONST_NDT(self->type);
+    self->xnd->master.type = NDT(self->type);
     self->xnd->master.ptr = self->view->buf;
 
     return self;
@@ -1760,10 +1772,11 @@ pyxnd_view_move_type(const XndObject *src, xnd_t *x)
     XndObject *view;
     PyObject *type;
 
-    type = Ndt_MoveSubtree(src->type, (ndt_t *)x->type);
+    type = Ndt_FromType(x->type);
     if (type == NULL) {
         return NULL;
     }
+    ndt_decref(x->type);
 
     view = pyxnd_alloc(Py_TYPE(src));
     if (view == NULL) {
@@ -1932,7 +1945,7 @@ convert_key(xnd_index_t *indices, int *len, PyObject *key)
             }
         }
 
-        *len = size;
+        *len = (int)size;
         return flags;
     }
 
@@ -1966,7 +1979,7 @@ static void
 free_slices(xnd_t *lst, int64_t start, int64_t stop)
 {
     for (int64_t i = start; i < stop; i++) {
-        ndt_del((ndt_t *)lst[i].type);
+        ndt_decref(lst[i].type);
     }
 
     ndt_free(lst);
@@ -2086,7 +2099,7 @@ pyxnd_assign(XndObject *self, PyObject *key, PyObject *value)
     }
 
     if (free_type) {
-        ndt_del((ndt_t *)x.type);
+        ndt_decref((ndt_t *)x.type);
     }
 
     return ret;
@@ -2455,6 +2468,814 @@ static PyTypeObject Xnd_Type =
 
 
 /****************************************************************************/
+/*                               Type inference                             */
+/****************************************************************************/
+
+/**********************************************************************/
+/*    Extract data and shapes from a value (possibly a nested list)   */
+/**********************************************************************/
+
+#undef max
+static int
+max(int x, int y)
+{
+    return x >= y ? x : y;
+}
+
+#undef min
+static int
+min(int x, int y)
+{
+    return x <= y ? x : y;
+}
+
+#define XND_NONE 0x0001U
+#define XND_DATA 0x0002U
+#define XND_LIST 0x0004U
+
+static inline int
+check_level(int level)
+{
+    if (level >= NDT_MAX_DIM) {
+        PyErr_Format(PyExc_ValueError,
+            "too many dimensions, max %d", NDT_MAX_DIM);
+        return -1;
+    }
+
+    return 0;
+}
+
+static int
+search(int level, PyObject *v, PyObject *data, PyObject *acc[NDT_MAX_DIM],
+       int *min_level, int *max_level)
+{
+    PyObject *shape;
+    PyObject *item;
+    Py_ssize_t len, i;
+    int next_level;
+    int ret;
+
+    if (PyList_Check(v)) {
+        if (check_level(level) < 0) {
+            return -1;
+        }
+
+        len = PyList_GET_SIZE(v);
+        shape = PyLong_FromSsize_t(len);
+        if (shape == NULL) {
+            return -1;
+        }
+
+        ret = PyList_Append(acc[level], shape);
+        Py_DECREF(shape);
+        if (ret < 0) {
+            return -1;
+        }
+
+        next_level = level + 1;
+        *max_level = max(next_level, *max_level);
+
+        if (len == 0) {
+            *min_level = min(next_level, *min_level);
+        }
+        else {
+            uint32_t types = 0;
+            for (i = 0; i < len; i++) {
+                item = PyList_GET_ITEM(v, i);
+                if (item == Py_None) {
+                    types |= XND_NONE;
+                }
+                else if (PyList_Check(item)) {
+                    types |= XND_LIST;
+                }
+                else {
+                    types |= XND_DATA;
+                }
+            }
+
+            if (!(types & XND_LIST)) {
+                for (i = 0; i < len; i++) {
+                    item = PyList_GET_ITEM(v, i);
+                    if (PyList_Append(data, item) < 0) {
+                        return -1;
+                    }
+                }
+                *min_level = min(next_level, *min_level);
+            }
+            else if (!(types & XND_DATA)) {
+                if (check_level(next_level) < 0) {
+                    return -1;
+                }
+
+                for (i = 0; i < len; i++) {
+                    item = PyList_GET_ITEM(v, i);
+                    if (item == Py_None) {
+                        if (PyList_Append(acc[next_level], item) < 0) {
+                            return -1;
+                        }
+                    }
+                    else {
+                        if (search(next_level, item, data, acc,
+                                   min_level, max_level) < 0) {
+                            return -1;
+                        }
+                    }
+                }
+            }
+            else {
+                PyErr_Format(PyExc_ValueError,
+                    "lists that contain both data and lists cannot be typed");
+                return -1;
+            }
+        }
+    }
+    else {
+        if (PyList_Append(data, v) < 0) {
+            return -1;
+        }
+        *min_level = min(level, *min_level);
+    }
+
+    return 0;
+}
+
+static PyObject *
+data_shapes(PyObject *m UNUSED, PyObject *v)
+{
+    PyObject *acc[NDT_MAX_DIM] = {NULL};
+    PyObject *data = NULL;
+    PyObject *shapes = NULL;
+    PyObject *tuple = NULL;
+    int min_level = NDT_MAX_DIM;
+    int max_level = 0;
+    int i, k;
+
+    data = PyList_New(0);
+    if (data == NULL) {
+        return NULL;
+    }
+
+    for (i = 0; i < NDT_MAX_DIM; i++) {
+        acc[i] = PyList_New(0);
+        if (acc[i] == NULL) {
+            goto error;
+        }
+    }
+
+    if (search(0, v, data, acc, &min_level, &max_level) < 0) {
+        goto error;
+    }
+
+    if (min_level != max_level) {
+        PyErr_Format(PyExc_ValueError,
+            "unbalanced nested list: min depth: %d max depth: %d",
+            min_level, max_level);
+        goto error;
+    }
+
+    shapes = PyList_New(max_level);
+    if (shapes == NULL) {
+        goto error;
+    }
+
+    for (i=0, k=max_level-1; i < max_level; i++, k--) {
+        PyList_SET_ITEM(shapes, i, acc[k]);
+    }
+
+    tuple = PyTuple_New(2);
+    if (tuple == NULL) {
+        Py_DECREF(data);
+        Py_DECREF(shapes);
+        return NULL;
+    }
+    PyTuple_SET_ITEM(tuple, 0, data);
+    PyTuple_SET_ITEM(tuple, 1, shapes);
+
+    return tuple;
+
+error:
+    Py_XDECREF(data);
+    for (i = 0; i < NDT_MAX_DIM; i++) {
+        Py_XDECREF(acc[i]);
+    }
+    return NULL;
+}
+
+
+/**********************************************************************/
+/*    Construct fixed or var dimensions from a list of shape lists    */
+/**********************************************************************/
+
+static bool
+require_var(PyObject *lst)
+{
+    PyObject *shapes;
+    PyObject *v, *w;
+    Py_ssize_t len;
+    Py_ssize_t i, k;
+
+    assert(PyList_Check(lst));
+
+    for (i = 0; i < PyList_GET_SIZE(lst); i++) {
+        shapes = PyList_GET_ITEM(lst, i);
+        assert(PyList_Check(shapes));
+
+        len = PyList_GET_SIZE(shapes);
+        if (len == 0) {
+            continue;
+        }
+
+        v = PyList_GET_ITEM(shapes, 0);
+        if (v == Py_None) {
+            return true;
+        }
+        assert(PyLong_Check(v));
+
+        for (k = 1; k < PyList_GET_SIZE(shapes); k++) {
+            w = PyList_GET_ITEM(shapes, k);
+            if (w == Py_None) {
+                return true;
+            }
+            assert(PyLong_Check(w));
+
+            if (long_compare((PyLongObject *)v, (PyLongObject *)w) != 0) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+static const ndt_t *
+fixed_from_shapes(PyObject *lst, const ndt_t *type)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    PyObject *shapes;
+    PyObject *v;
+    Py_ssize_t len;
+    Py_ssize_t shape;
+    Py_ssize_t i;
+    const ndt_t *t;
+
+    assert(PyList_Check(lst));
+
+    ndt_incref(type);
+
+    for (i=0, t=type; i < PyList_GET_SIZE(lst); i++, type=t) {
+        shapes = PyList_GET_ITEM(lst, i);
+        assert(PyList_Check(shapes));
+
+        len = PyList_GET_SIZE(shapes);
+
+        if (len == 0) {
+            shape = 0;
+        }
+        else {
+            v = PyList_GET_ITEM(shapes, 0);
+            shape = PyLong_AsSsize_t(v);
+            if (shape < 0) {
+                ndt_decref(t);
+                return NULL;
+            }
+        }
+
+        t = ndt_fixed_dim(type, shape, INT64_MAX, &ctx);
+        ndt_decref(type);
+        if (t == NULL) {
+            return seterr_ndt(&ctx);
+        }
+    }
+
+    return t;
+}
+
+static const ndt_t *
+var_from_shapes(PyObject *lst, const ndt_t *dtype)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    const ndt_t *t;
+    ndt_offsets_t *offsets;
+    int32_t *ptr;
+    Py_ssize_t len, slen;
+    Py_ssize_t sum, shape;
+    Py_ssize_t i, k;
+    bool opt;
+
+    assert(PyList_Check(lst));
+    len = PyList_GET_SIZE(lst);
+
+    ndt_incref(dtype);
+
+    for (i=0, t=dtype; i < len; i++, dtype=t) {
+        PyObject *shapes = PyList_GET_ITEM(lst, i);
+        assert(PyList_Check(shapes));
+        slen = PyList_GET_SIZE(shapes);
+
+        if (slen+1 > INT32_MAX) {
+            PyErr_SetString(PyExc_ValueError,
+                "variable dimension is too large");
+            return NULL;
+        }
+
+        offsets = ndt_offsets_new(slen+1, &ctx);
+        if (offsets == NULL) {
+            return seterr_ndt(&ctx);
+        }
+
+        ptr = (int32_t *)offsets->v;
+        ptr[0] = sum = 0;
+        opt = false;
+
+        for (k = 0; k < slen; k++) {
+            PyObject *v = PyList_GET_ITEM(shapes, k);
+
+            if (v == Py_None) {
+                shape = 0;
+                opt = true;
+            }
+            else {
+                shape = PyLong_AsSsize_t(v);
+                if (shape < 0) {
+                    ndt_decref_offsets(offsets);
+                    return NULL;
+                }
+            }
+            sum += shape;
+            ptr[k+1] = sum;
+        }
+
+        t = ndt_var_dim(dtype, offsets, 0, NULL, opt, &ctx);
+
+        ndt_decref(dtype);
+        ndt_decref_offsets(offsets);
+
+        if (t == NULL) {
+            return seterr_ndt(&ctx);
+        }
+    }
+
+    return t;
+}
+
+
+/**********************************************************************/
+/*               Infer the dtype from a flat list of data             */
+/**********************************************************************/
+
+static const ndt_t *typeof(PyObject *v, bool replace_any, bool shortcut);
+
+
+#define XND_BOOL       0x0001U
+#define XND_FLOAT64    0x0002U
+#define XND_COMPLEX128 0x0004U
+#define XND_INT64      0x0008U
+#define XND_STRING     0x0010U
+#define XND_BYTES      0x0020U
+#define XND_OTHER      0x0040U
+
+static inline uint32_t
+fast_dtypes(bool *opt, const PyObject *data)
+{
+    uint32_t dtypes = 0;
+
+    assert(PyList_Check(data));
+
+    for (Py_ssize_t i = 0; i < PyList_GET_SIZE(data); i++) {
+        PyObject *v = PyList_GET_ITEM(data, i);
+
+        if (v == Py_None) {
+            *opt = true;
+        }
+        else if (PyBool_Check(v)) {
+            dtypes |= XND_BOOL;
+        }
+        else if (PyFloat_Check(v)) {
+            dtypes |= XND_FLOAT64;
+        }
+        else if (PyComplex_Check(v)) {
+            dtypes |= XND_COMPLEX128;
+        }
+        else if (PyLong_Check(v)) {
+            dtypes |= XND_INT64;
+        }
+        else if (PyUnicode_Check(v)) {
+            dtypes |= XND_STRING;
+        }
+        else if (PyBytes_Check(v)) {
+            dtypes |= XND_BYTES;
+        }
+        else {
+            dtypes |= XND_OTHER;
+        }
+    }
+
+    if (dtypes == 0) {
+        dtypes |= XND_FLOAT64;
+    }
+
+    return dtypes;
+}
+
+static const ndt_t *
+unify_dtypes(const PyObject *data, bool shortcut)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    PyObject *v;
+    const ndt_t *dtype;
+    const ndt_t *t, *u;
+    Py_ssize_t i;
+
+    if (!PyList_Check(data) || PyList_GET_SIZE(data) == 0) {
+        PyErr_Format(PyExc_RuntimeError,
+            "internal error: unify_dtypes expects non-empty list");
+        return NULL;
+    }
+
+    v = PyList_GET_ITEM(data, 0);
+    dtype = typeof(v, false, shortcut);
+    if (dtype == NULL) {
+        return NULL;
+    }
+
+    for (i = 1; i < PyList_GET_SIZE(data); i++) {
+         v = PyList_GET_ITEM(data, i);
+         t = typeof(v, false, shortcut);
+         if (t == NULL) {
+             ndt_decref(dtype);
+             return NULL;
+         }
+
+         if (ndt_equal(t, dtype)) {
+             ndt_decref(t);
+         }
+         else {
+             u = ndt_unify(t, dtype, &ctx);
+             ndt_decref(t);
+             ndt_decref(dtype);
+             if (u == NULL) {
+                 return seterr_ndt(&ctx);
+             }
+             dtype = u;
+        }
+
+        if (shortcut && ndt_is_concrete(dtype)) {
+            break;
+        }
+    }
+
+    if (ndt_is_abstract(dtype)) {
+        const ndt_t *u = ndt_unify_replace_any(dtype, dtype, &ctx);
+        ndt_decref(dtype);
+        if (u == NULL) {
+            return seterr_ndt(&ctx);
+        }
+        dtype = u;
+    }
+
+    return dtype;
+}
+
+const ndt_t *
+typeof_data(const PyObject *data, bool shortcut)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    uint16_opt_t align = {None, 0};
+    const ndt_t *dtype = NULL;
+    bool opt = false;
+    uint32_t dtypes;
+
+    dtypes = fast_dtypes(&opt, data);
+
+    switch (dtypes) {
+    case XND_BOOL:
+        dtype = ndt_primitive(Bool, opt, &ctx);
+        break;
+    case XND_FLOAT64:
+        dtype = ndt_primitive(Float64, opt, &ctx);
+        break;
+    case XND_COMPLEX128:
+        dtype = ndt_primitive(Complex128, opt, &ctx);
+        break;
+    case XND_INT64:
+        dtype = ndt_primitive(Int64, opt, &ctx);
+        break;
+    case XND_STRING:
+        dtype = ndt_string(opt, &ctx);
+        break;
+    case XND_BYTES:
+        dtype = ndt_bytes(align, opt, &ctx);
+        break;
+    default:
+        dtype = unify_dtypes(data, shortcut);
+        if (dtype == NULL) {
+            return NULL;
+        }
+        break;
+    }
+
+    if (dtype == NULL) {
+        return seterr_ndt(&ctx);
+    }
+
+    return dtype;
+}
+
+
+/**********************************************************************/
+/*                          Main type inference                       */
+/**********************************************************************/
+
+static const ndt_t *
+typeof_list_top(PyObject *v, const ndt_t *dtype)
+{
+    PyObject *tuple;
+    PyObject *shapes;
+    const ndt_t *t;
+
+    assert(PyList_Check(v));
+
+    tuple = data_shapes(NULL, v);
+    if (tuple == NULL) {
+        return NULL;
+    }
+    shapes = PyTuple_GET_ITEM(tuple, 1);
+
+    if (require_var(shapes)) {
+        t = var_from_shapes(shapes, dtype);
+    }
+    else {
+        t = fixed_from_shapes(shapes, dtype);
+    }
+
+    Py_DECREF(tuple);
+    return t;
+}
+
+static const ndt_t *
+typeof_list(PyObject *v, bool shortcut)
+{
+    PyObject *tuple;
+    PyObject *data;
+    PyObject *shapes;
+    const ndt_t *t, *dtype;
+
+    assert(PyList_Check(v));
+
+    tuple = data_shapes(NULL, v);
+    if (tuple == NULL) {
+        return NULL;
+    }
+    data = PyTuple_GET_ITEM(tuple, 0);
+    shapes = PyTuple_GET_ITEM(tuple, 1);
+
+    dtype = typeof_data(data, shortcut);
+    if (dtype == NULL) {
+        Py_DECREF(tuple);
+        return NULL;
+    }
+
+    if (require_var(shapes)) {
+        t = var_from_shapes(shapes, dtype);
+    }
+    else {
+        t = fixed_from_shapes(shapes, dtype);
+    }
+
+    ndt_decref(dtype);
+    Py_DECREF(tuple);
+    return t;
+}
+
+static const ndt_t *
+typeof_tuple(PyObject *v, bool replace_any, bool shortcut)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    uint16_opt_t none = {None, 0};
+    ndt_field_t *fields;
+    const ndt_t *t;
+    int64_t shape;
+    int64_t i;
+
+    assert(PyTuple_Check(v));
+
+    shape = PyTuple_GET_SIZE(v);
+    if (shape == 0) {
+        t = ndt_tuple(Nonvariadic, NULL, 0, none, none, false, &ctx);
+        return t == NULL ? seterr_ndt(&ctx) : t;
+    }
+
+    fields = ndt_calloc(shape, sizeof *fields);
+    if (fields == NULL) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    for (i = 0; i < shape; i++) {
+        t = typeof(PyTuple_GET_ITEM(v, i), replace_any, shortcut);
+        if (t == NULL) {
+            ndt_field_array_del(fields, i);
+            return NULL;
+        }
+
+        fields[i].access = t->access;
+        fields[i].name = NULL;
+        fields[i].type = t;
+        if (fields[i].access == Concrete) {
+            fields[i].Concrete.align = t->align;
+            fields[i].Concrete.explicit_align = false;
+            fields[i].Concrete.pad = UINT16_MAX;
+            fields[i].Concrete.explicit_pad = false;
+        }
+    }
+
+    t = ndt_tuple(Nonvariadic, fields, shape, none, none, false, &ctx);
+    ndt_field_array_del(fields, shape);
+    return t == NULL ? seterr_ndt(&ctx) : t;
+}
+
+static const ndt_t *
+typeof_dict(PyObject *v, bool replace_any, bool shortcut)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    uint16_opt_t none = {None, 0};
+    PyObject *keys = NULL;
+    PyObject *values = NULL;
+    ndt_field_t *fields;
+    const ndt_t *t;
+    const char *cp;
+    char *name;
+    int64_t shape;
+    int64_t i;
+
+    assert(PyDict_Check(v));
+
+    shape = PyMapping_Size(v);
+    if (shape == 0) {
+        t = ndt_record(Nonvariadic, NULL, 0, none, none, false, &ctx);
+        return t == NULL ? seterr_ndt(&ctx) : t;
+    }
+
+    keys = PyMapping_Keys(v);
+    if (keys == NULL) {
+        return NULL;
+    }
+
+    values = PyMapping_Values(v);
+    if (values == NULL) {
+        Py_DECREF(keys);
+        return NULL;
+    }
+
+    fields = ndt_calloc(shape, sizeof *fields);
+    if (fields == NULL) {
+        Py_DECREF(keys);
+        Py_DECREF(values);
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    for (i = 0; i < shape; i++) {
+        t = typeof(PyList_GET_ITEM(values, i), replace_any, shortcut);
+        if (t == NULL) {
+            ndt_field_array_del(fields, i);
+            Py_DECREF(keys);
+            Py_DECREF(values);
+            return NULL;
+        }
+
+        cp = PyUnicode_AsUTF8(PyList_GET_ITEM(keys, i));
+        if (cp == NULL) {
+            ndt_field_array_del(fields, i);
+            ndt_decref(t);
+            Py_DECREF(keys);
+            Py_DECREF(values);
+            return NULL;
+        }
+
+        name = ndt_strdup(cp, &ctx);
+        if (name == NULL) {
+            ndt_field_array_del(fields, i);
+            ndt_decref(t);
+            Py_DECREF(keys);
+            Py_DECREF(values);
+            return seterr_ndt(&ctx);
+        }
+
+        fields[i].access = t->access;
+        fields[i].name = name;
+        fields[i].type = t;
+        if (fields[i].access == Concrete) {
+            fields[i].Concrete.align = t->align;
+            fields[i].Concrete.explicit_align = false;
+            fields[i].Concrete.pad = UINT16_MAX;
+            fields[i].Concrete.explicit_pad = false;
+        }
+    }
+
+    Py_DECREF(keys);
+    Py_DECREF(values);
+
+    t = ndt_record(Nonvariadic, fields, shape, none, none, false, &ctx);
+    ndt_field_array_del(fields, shape);
+    return t == NULL ? seterr_ndt(&ctx) : t;
+}
+
+static const ndt_t *
+typeof(PyObject *v, bool replace_any, bool shortcut)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    const ndt_t *t;
+
+    if (PyList_Check(v)) {
+        return typeof_list(v, shortcut);
+    }
+    if (PyTuple_Check(v)) {
+        return typeof_tuple(v, replace_any, shortcut);
+    }
+    if (PyDict_Check(v)) {
+        return typeof_dict(v, replace_any, shortcut);
+    }
+
+    if (PyBool_Check(v)) {
+        t = ndt_primitive(Bool, 0, &ctx);
+    }
+    else if (PyFloat_Check(v)) {
+        t = ndt_primitive(Float64, 0, &ctx);
+    }
+    else if (PyComplex_Check(v)) {
+        t = ndt_primitive(Complex128, 0, &ctx);
+    }
+    else if (PyLong_Check(v)) {
+        t = ndt_primitive(Int64, 0, &ctx);
+    }
+    else if (PyUnicode_Check(v)) {
+        t = ndt_string(false, &ctx);
+    }
+    else if (PyBytes_Check(v)) {
+        uint16_opt_t align = {None, 0};
+        t = ndt_bytes(align, false, &ctx);
+    }
+    else if (v == Py_None) {
+        if (replace_any) {
+            t = ndt_primitive(Float64, NDT_OPTION, &ctx);
+        }
+        else {
+            t = ndt_any_kind(true, &ctx);
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_ValueError, "type inference failed");
+        return NULL;
+    }
+
+    return t == NULL ? seterr_ndt(&ctx) : t;
+}
+
+static PyObject *
+xnd_typeof(PyObject *m UNUSED, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"value", "dtype", "shortcut", NULL};
+    PyObject *value = NULL;
+    PyObject *dtype = Py_None;
+    PyObject *ret;
+    const ndt_t *t;
+    int shortcut = 0;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|Op", kwlist, &value,
+        &dtype, &shortcut)) {
+        return NULL;
+    }
+
+    if (dtype != Py_None) {
+        if (!Ndt_Check(dtype)) {
+            PyErr_Format(PyExc_ValueError, "dtype argument must be ndt");
+            return NULL;
+        }
+        if (!PyList_Check(value)) {
+            PyErr_Format(PyExc_TypeError,
+                "value must be a list if dtype != None");
+            return NULL;
+        }
+
+        t = typeof_list_top(value, NDT(dtype));
+    }
+    else {
+        t = typeof(value, true, (bool)shortcut);
+    }
+
+    if (t == NULL) {
+        return NULL;
+    }
+
+    ret = Ndt_FromType(t);
+
+    ndt_decref(t);
+    return ret;
+}
+ 
+
+/****************************************************************************/
 /*                                   C-API                                  */
 /****************************************************************************/
 
@@ -2480,7 +3301,7 @@ CONST_XND(const PyObject *v)
 }
 
 static PyObject *
-Xnd_EmptyFromType(PyTypeObject *tp, ndt_t *t)
+Xnd_EmptyFromType(PyTypeObject *tp, const ndt_t *t)
 {
     MemoryBlockObject *mblock;
     PyObject *type;
@@ -2508,14 +3329,15 @@ Xnd_ViewMoveNdt(const PyObject *v, ndt_t *t)
 
     if (!Xnd_Check(v)) {
         PyErr_SetString(PyExc_TypeError, "expected xnd object");
-        ndt_del(t);
+        ndt_decref(t);
         return NULL;
     }
 
-    type = Ndt_MoveSubtree(src->type, t);
+    type = Ndt_FromType(t);
     if (type == NULL) {
         return NULL;
     }
+    ndt_decref(t);
 
     view = pyxnd_alloc(Py_TYPE(src));
     if (view == NULL) {
@@ -2571,7 +3393,7 @@ Xnd_FromXndMoveType(const PyObject *xnd, xnd_t *x)
     if (!Xnd_Check(xnd)) {
         PyErr_SetString(PyExc_TypeError,
             "Xnd_FromXndMoveType() called on non-xnd object");
-        ndt_del((ndt_t *)x->type);
+        ndt_decref(x->type);
         return NULL;
     }
 
@@ -2700,7 +3522,7 @@ _test_view_new(PyObject *module UNUSED, PyObject *args UNUSED)
     NDT_STATIC_CONTEXT(ctx);
     xnd_view_t x = xnd_view_error;
     double *d;
-    ndt_t *t;
+    const ndt_t *t;
     char *ptr;
 
     t = ndt_from_string("3 * float64", &ctx);
@@ -2710,7 +3532,7 @@ _test_view_new(PyObject *module UNUSED, PyObject *args UNUSED)
 
     ptr = ndt_aligned_calloc(8, 3 * sizeof(double));
     if (ptr == NULL) {
-        ndt_del(t);
+        ndt_decref(t);
         (void)ndt_memory_error(&ctx);
         return seterr(&ctx);
     }
@@ -2736,6 +3558,8 @@ _test_view_new(PyObject *module UNUSED, PyObject *args UNUSED)
 
 static PyMethodDef _xnd_methods [] =
 {
+  { "data_shapes", (PyCFunction)data_shapes, METH_O, NULL},
+  { "_typeof", (PyCFunction)xnd_typeof, METH_VARARGS|METH_KEYWORDS, NULL},
   { "_test_view_subscript", (PyCFunction)_test_view_subscript, METH_VARARGS|METH_KEYWORDS, NULL},
   { "_test_view_new", (PyCFunction)_test_view_new, METH_NOARGS, NULL},
   { NULL, NULL, 1, NULL }

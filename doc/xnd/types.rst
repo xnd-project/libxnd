@@ -233,21 +233,6 @@ Here, type inference would deduce :c:macro:`int64`, so :c:macro:`uint8` needs
 to be passed explicitly.
 
 
-Performance
-~~~~~~~~~~~
-
-For large arrays, explicit types are significantly faster.  Type inference
-supports arbitrary nesting depth, is complex and still implemented in pure
-Python. Compare:
-
-.. doctest::
-
-   >>> lst = [1] * 1000000
-   >>> x = xnd(lst) # inference
-   >>>
-   >>> x = xnd(lst, type='1000000 * int64') # explicit
-
-
 All supported types
 -------------------
 

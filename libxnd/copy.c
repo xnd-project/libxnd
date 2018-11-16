@@ -474,6 +474,7 @@ copy_float64(xnd_t * const x, const double real, ndt_context_t *ctx)
         }
         uint64_t u64 = (uint64_t)real;
         PACK_SINGLE(x->ptr, u64, uint64_t, t->flags);
+        return 0;
     }
 
     case Float16: {

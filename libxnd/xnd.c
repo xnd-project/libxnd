@@ -288,7 +288,7 @@ xnd_empty_from_string(const char *s, uint32_t flags, ndt_context_t *ctx)
 {
     xnd_bitmap_t b = {.data=NULL, .size=0, .next=NULL};
     xnd_master_t *x;
-    ndt_t *t;
+    const ndt_t *t;
     char *ptr;
 
     if (!(flags & XND_OWN_TYPE)) {
@@ -310,13 +310,13 @@ xnd_empty_from_string(const char *s, uint32_t flags, ndt_context_t *ctx)
 
     if (!ndt_is_concrete(t)) {
         ndt_err_format(ctx, NDT_ValueError, "type must be concrete");
-        ndt_del(t);
+        ndt_decref(t);
         ndt_free(x);
         return NULL;
     }
 
     if (xnd_bitmap_init(&b, t,ctx) < 0) {
-        ndt_del(t);
+        ndt_decref(t);
         ndt_free(x);
         return NULL;
     }
@@ -324,7 +324,7 @@ xnd_empty_from_string(const char *s, uint32_t flags, ndt_context_t *ctx)
     ptr = xnd_new(t, flags, ctx);
     if (ptr == NULL) {
         xnd_bitmap_clear(&b);
-        ndt_del(t);
+        ndt_decref(t);
         ndt_free(x);
         return NULL;
     }
@@ -404,7 +404,7 @@ xnd_from_xnd(xnd_t *src, uint32_t flags, ndt_context_t *ctx)
     x = ndt_alloc(1, sizeof *x);
     if (x == NULL) {
         xnd_clear(src, XND_OWN_ALL);
-        ndt_del((ndt_t *)src->type);
+        ndt_decref(src->type);
         ndt_aligned_free(src->ptr);
         xnd_bitmap_clear(&src->bitmap);
         return ndt_memory_error(ctx);
@@ -603,7 +603,7 @@ xnd_del_buffer(xnd_t *x, uint32_t flags)
             }
 
             if (flags & XND_OWN_TYPE) {
-                ndt_del((ndt_t *)x->type);
+                ndt_decref(x->type);
             }
 
             if (flags & XND_OWN_DATA) {
@@ -964,11 +964,7 @@ xnd_multikey(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t
 
     if (len == 0) {
         xnd_t next = *x;
-        next.type = ndt_copy(t, ctx);
-        if (next.type == NULL) {
-            return xnd_error;
-        }
-
+        ndt_incref(next.type);
         return next;
     }
 
@@ -1059,9 +1055,10 @@ xnd_slice(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *c
         }
 
         xnd_t ret = *x;
-        ret.type = ndt_fixed_dim((ndt_t *)sliced.type, shape,
+        ret.type = ndt_fixed_dim(sliced.type, shape,
                                  t->Concrete.FixedDim.step * step,
                                  ctx);
+        ndt_decref(sliced.type);
         if (ret.type == NULL) {
             return xnd_error;
         }
@@ -1093,15 +1090,14 @@ xnd_slice(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *c
 
         slices = ndt_var_add_slice(&nslices, t, start, stop, step, ctx);
         if (slices == NULL) {
+            ndt_decref(next.type);
             return xnd_error;
         }
 
         xnd_t ret = *x;
-        ret.type = ndt_var_dim((ndt_t *)next.type,
-                                ExternalOffsets,
-                                t->Concrete.VarDim.noffsets, t->Concrete.VarDim.offsets,
-                                nslices, slices,
-                                ctx);
+        ret.type = ndt_var_dim(next.type, t->Concrete.VarDim.offsets,
+                               nslices, slices, false, ctx);
+        ndt_decref(next.type);
         if (ret.type == NULL) {
             return xnd_error;
         }
@@ -1147,18 +1143,11 @@ xnd_subscript(const xnd_t *x, const xnd_index_t indices[], int len,
     }
     else {
         xnd_t res = xnd_subtree(x, indices, len, ctx);
-        const ndt_t *t;
-
         if (res.ptr == NULL) {
             return xnd_error;
         }
 
-        t = ndt_copy(res.type, ctx);
-        if (t == NULL) {
-            return xnd_error;
-        }
-
-        res.type = t;
+        ndt_incref(res.type);
         return res;
     }
 }

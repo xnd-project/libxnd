@@ -46,11 +46,10 @@ Importing PEP-3118 buffers is supported.
 
 # Ensure that libndtypes is loaded and initialized.
 from ndtypes import ndt, instantiate, MAX_DIM
-from ._xnd import Xnd, XndEllipsis
-from itertools import accumulate
+from ._xnd import Xnd, XndEllipsis, data_shapes, _typeof
 from .contrib.pretty import pretty
 
-__all__ = ['xnd', 'XndEllipsis', 'typeof', '_typeof']
+__all__ = ['xnd', 'XndEllipsis', 'typeof']
 
 
 # ======================================================================
@@ -145,146 +144,7 @@ class xnd(Xnd):
             type = ndt(type)
         return cls._unsafe_from_data(obj, type)
 
-
-# ======================================================================
-#                            Type inference
-# ======================================================================
-
-def typeof(value, *, dtype=None):
-    return ndt(_typeof(value, dtype=dtype))
-
-def _choose_dtype(lst):
-    for x in lst:
-        if x is not None:
-            return _typeof(x)
-    return "float64"
-
-def _typeof(value, *, dtype=None):
-    """Infer the type of a Python value.  Only a subset of Datashape is
-       supported.  In general, types need to be explicitly specified when
-       creating xnd objects.
-    """
-    if isinstance(value, list):
-        data, shapes = data_shapes(value)
-        opt = None in data
-
-        if dtype is None:
-            if not data:
-                dtype = 'float64'
-            else:
-                dtype = _choose_dtype(data)
-                for x in data:
-                    if x is not None:
-                        t = _typeof(x)
-                        if t != dtype:
-                            raise ValueError("dtype mismatch: have %s and %s" % (dtype, t))
-
-            if opt:
-                dtype = '?' + dtype
-
-        t = dtype
-        var = any(len(set(lst)) > 1 or None in lst for lst in shapes)
-        for lst in shapes:
-            opt = None in lst
-            lst = [0 if x is None else x for x in lst]
-            t = add_dim(opt=opt, shapes=lst, typ=t, use_var=var)
-
-        return t
-
-    elif dtype is not None:
-        raise TypeError("dtype argument is only supported for arrays")
-
-    elif isinstance(value, tuple):
-        return "(" + ", ".join([_typeof(x) for x in value]) + ")"
-
-    elif isinstance(value, dict):
-        if all(isinstance(k, str) for k in value):
-            return "{" + ", ".join(["%s: %s" % (k, _typeof(v)) for k, v in value.items()]) + "}"
-        raise ValueError("all dict keys must be strings")
-
-    elif value is None:
-        return '?float64'
-
-    elif isinstance(value, float):
-        return 'float64'
-
-    elif isinstance(value, complex):
-        return 'complex128'
-
-    elif isinstance(value, int):
-        return 'int64'
-
-    elif isinstance(value, str):
-        return 'string'
-
-    elif isinstance(value, bytes):
-        return 'bytes'
-
-    else:
-        raise ValueError("cannot infer type for %r" % value)
-
-
-def add_dim(*, opt=False, shapes=None, typ=None, use_var=False):
-    """Construct a new dimension type based on the list of 'shapes' that
-       are present in a dimension.
-    """
-    if use_var:
-        offsets = [0] + list(accumulate(shapes))
-        return "%svar(offsets=%s) * %s" % ('?' if opt else '', offsets, typ)
-    else:
-        n = len(set(shapes))
-        assert n <= 1 and not None in shapes
-        shape = 0 if n == 0 else shapes[0]
-        return "%d * %s" % (shape, typ)
-
-def data_shapes(tree):
-    """Extract array data and dimension shapes from a nested list. The
-       list may contain None for missing data or dimensions.
-
-       >>> data_shapes([[0, 1], [2, 3, 4], [5, 6, 7, 8]])
-       ([0, 1, 2, 3, 4, 5, 6, 7, 8], [[2, 3, 4], [3]])
-                     ^                    ^       ^
-                     |                    |       `--- ndim=2: single shape 3
-                     |                    `-- ndim=1: shapes 2, 3, 4
-                     `--- ndim=0: extracted array data
-    """
-    acc = [[] for _ in range(MAX_DIM+1)]
-    min_level = MAX_DIM + 1
-    max_level = 0
-
-    def search(level, a):
-        nonlocal min_level, max_level
-
-        if level > MAX_DIM:
-            raise ValueError("too many dimensions")
-
-        current = acc[level]
-        if a is None:
-            current.append(a)
-        elif isinstance(a, list):
-            current.append(len(a))
-            next_level = level + 1
-            max_level = max(next_level, max_level)
-            if not a:
-                min_level = min(next_level, min_level)
-            else:
-                for item in a:
-                    search(level+1, item)
-        else:
-            acc[max_level].append(a)
-            min_level = min(level, min_level)
-
-    search(max_level, tree)
-    if acc[max_level] and all(x is None for x in acc[max_level]):
-        pass # min_level is not set in this special case, hence the check.
-    elif min_level != max_level:
-        raise ValueError("unbalanced tree: min depth: %d max depth: %d" %
-                         (min_level, max_level))
-
-    data = acc[max_level]
-    shapes = list(reversed(acc[0:max_level]))
-
-    return data, shapes
-
-
-
+def typeof(v, dtype=None):
+    if isinstance(dtype, str):
+        dtype = ndt(dtype)
+    return _typeof(v, dtype=dtype, shortcut=True)
