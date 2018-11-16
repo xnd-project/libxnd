@@ -95,7 +95,7 @@ task :develop do
 
   puts "cloning xnd repo into ext/ folder..."
   system("git clone https://github.com/plures/xnd #{ext_xnd}")
-p
+
   Dir.chdir(ext_xnd) do
     system("git checkout #{RubyXND::COMMIT}")
   end
