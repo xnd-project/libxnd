@@ -38,6 +38,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdint.h>
+#include <inttypes.h>
 #include <assert.h>
 #include "ndtypes.h"
 
