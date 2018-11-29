@@ -50,8 +50,13 @@
   #else
     #define XND_API
   #endif
+
+  #include "malloc.h"
+  #define ALLOCA(type, name, nmemb) type *name = _alloca(nmemb * sizeof(type))
 #else
   #define XND_API
+
+  #define ALLOCA(type, name, nmemb) type name[nmemb]
 #endif
 
 
@@ -153,14 +158,16 @@ XND_API void xnd_del_buffer(xnd_t *x, uint32_t flags);
 /*                         Traverse xnd memory blocks                        */
 /*****************************************************************************/
 
+XND_API bool have_stored_index(const ndt_t *t);
+XND_API int64_t get_stored_index(const ndt_t *t);
+XND_API xnd_t apply_stored_index(const xnd_t *x, ndt_context_t *ctx);
+XND_API xnd_t apply_stored_indices(const xnd_t *x, ndt_context_t *ctx);
+
 XND_API xnd_t xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len,
                                 ndt_context_t *ctx);
 
 XND_API xnd_t xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len,
                           ndt_context_t *ctx);
-
-XND_API xnd_t xnd_multikey(const xnd_t *x, const xnd_index_t indices[], int len,
-                           ndt_context_t *ctx);
 
 XND_API xnd_t xnd_subscript(const xnd_t *x, const xnd_index_t indices[], int len,
                             ndt_context_t *ctx);
@@ -193,6 +200,8 @@ XND_API int xnd_is_na(const xnd_t *x);
 XND_API extern const xnd_t xnd_error;
 XND_API extern const xnd_bitmap_t xnd_bitmap_empty;
 
+XND_API int xnd_err_occurred(const xnd_t *x);
+
 
 /*****************************************************************************/
 /*                                 Unstable API                              */
@@ -222,6 +231,21 @@ XND_API bool xnd_double_is_big_endian(void);
 /*****************************************************************************/
 /*                           Static inline functions                         */
 /*****************************************************************************/
+
+/* Check index bounds and adjust negative indices. */
+static inline int64_t
+adjust_index(const int64_t i, const int64_t shape, ndt_context_t *ctx)
+{
+    const int64_t k = i < 0 ? i + shape : i;
+
+    if (k < 0 || k >= shape || k > XND_SSIZE_MAX) {
+        ndt_err_format(ctx, NDT_IndexError,
+            "index with value %" PRIi64 " out of bounds", i);
+        return -1;
+    }
+
+    return k;
+}
 
 /*
  * This looks inefficient, but both gcc and clang clean up unused xnd_t members.

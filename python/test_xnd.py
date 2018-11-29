@@ -900,6 +900,7 @@ class TestVarDim(XndTestCase):
         self.assertEqual(x[1,0,0,0,1], v[1][0][0][0][1])
         self.assertEqual(x[1,0,0,0,1], v[1][0][0][0][1])
 
+
 class TestSymbolicDim(XndTestCase):
 
     def test_symbolic_dim_raise(self):
@@ -3186,13 +3187,12 @@ class LongIndexSliceTest(XndTestCase):
         # Multidimensional indexing and slicing, mixed
         skip_if(SKIP_LONG, "use --long argument to enable these tests")
 
-        x = xnd([[1], [2, 3], [4, 5, 6]])
-
-        indices = (0, slice(0,1,1))
-        self.assertRaises(IndexError, x.__getitem__, indices)
-
-        indices = (slice(0,1,1), 0)
-        self.assertRaises(IndexError, x.__getitem__, indices)
+        t = TestSpec(constr=xnd,
+                     values=SUBSCRIPT_VAR_TEST_CASES,
+                     value_generator=gen_var,
+                     indices_generator=mixed_indices,
+                     indices_generator_args=(5,))
+        t.run()
 
     def test_slices_brute_force(self):
         # Test all possible slices for the given ndim and shape

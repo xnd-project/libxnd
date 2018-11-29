@@ -251,6 +251,11 @@ xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx)
     case Categorical:
         return 0;
 
+    case VarDimElem:
+        ndt_err_format(ctx, NDT_ValueError,
+           "cannot initialize var elem dimension");
+        return -1;
+
     case Char:
         ndt_err_format(ctx, NDT_NotImplementedError, "char not implemented");
         return -1;
@@ -516,6 +521,11 @@ xnd_clear(xnd_t * const x, const uint32_t flags)
         return;
     }
 
+    case VarDimElem: {
+        fprintf(stderr, "xnd_clear: internal error: unexpected var elem dimension\n");
+        return;
+    }
+
     case Tuple: {
         for (int64_t i = 0; i < t->Tuple.shape; i++) {
             xnd_t next = _tuple_next(x, i);
@@ -632,27 +642,15 @@ xnd_del(xnd_master_t *x)
 
 
 /*****************************************************************************/
-/*                 Subtrees (single elements are a special case)             */
+/*                                Index checks                               */
 /*****************************************************************************/
 
 static int64_t
 get_index(const xnd_index_t *key, int64_t shape, ndt_context_t *ctx)
 {
     switch (key->tag) {
-    case Index: {
-        int64_t i = key->Index;
-        if (i < 0) {
-            i += shape;
-        }
-
-        if (i < 0 || i >= shape || i > XND_SSIZE_MAX) {
-            ndt_err_format(ctx, NDT_IndexError,
-                "index with value %" PRIi64 " out of bounds", key->Index);
-            return -1;
-        }
-
-        return i;
-    }
+    case Index:
+        return adjust_index(key->Index, shape, ctx);
 
     case FieldName:
         ndt_err_format(ctx, NDT_ValueError,
@@ -668,6 +666,43 @@ get_index(const xnd_index_t *key, int64_t shape, ndt_context_t *ctx)
     /* NOT REACHED: tags should be exhaustive */
     ndt_err_format(ctx, NDT_RuntimeError, "invalid index tag");
     return -1;
+}
+
+/*
+ * Ragged arrays have multiple shapes in a single dimension that are not known
+ * when a VarDimElem is created.  Adjusting the index must be done when the
+ * VarDimElem is accessed and the slices have been applied.
+ */
+static int64_t
+get_index_var_elem(const xnd_index_t *key, ndt_context_t *ctx)
+{
+    switch (key->tag) {
+    case Index: {
+        int64_t i = key->Index;
+
+        if (i < INT32_MIN || i > INT32_MAX) {
+            ndt_err_format(ctx, NDT_IndexError,
+                "index with value %" PRIi64 " out of bounds", key->Index);
+            return INT64_MIN;
+        }
+
+        return i;
+    }
+
+    case FieldName:
+        ndt_err_format(ctx, NDT_ValueError,
+            "expected integer index, got field name: '%s'", key->FieldName);
+        return INT64_MIN;
+
+    case Slice:
+        ndt_err_format(ctx, NDT_ValueError,
+            "expected integer index, got slice");
+        return INT64_MIN;
+    }
+
+    /* NOT REACHED: tags should be exhaustive */
+    ndt_err_format(ctx, NDT_RuntimeError, "invalid index tag");
+    return INT64_MIN;
 }
 
 static int64_t
@@ -709,10 +744,71 @@ set_index_exception(bool indexable, ndt_context_t *ctx)
     }
 }
 
+
+/*****************************************************************************/
+/*                               Stored indices                              */
+/*****************************************************************************/
+
+bool
+have_stored_index(const ndt_t *t)
+{
+    return t->tag == VarDimElem;
+}
+
+int64_t
+get_stored_index(const ndt_t *t)
+{
+    return t->VarDimElem.index;
+}
+
+/* skip stored indices */
+xnd_t
+apply_stored_index(const xnd_t *x, ndt_context_t *ctx)
+{
+    const ndt_t * const t = x->type;
+    int64_t start, step, shape;
+
+    if (t->tag != VarDimElem) {
+        ndt_err_format(ctx, NDT_RuntimeError,
+                       "apply_stored_index: need VarDimElem");
+        return xnd_error;
+    }
+
+    shape = ndt_var_indices(&start, &step, t, x->index, ctx);
+    if (shape < 0) {
+        return xnd_error;
+    }
+
+    const int64_t i = adjust_index(t->VarDimElem.index, shape, ctx);
+    if (i < 0) {
+        return xnd_error;
+    }
+
+    return xnd_var_dim_next(x, start, step, i);
+}
+
+xnd_t
+apply_stored_indices(const xnd_t *x, ndt_context_t *ctx)
+{
+    xnd_t tl = *x;
+
+    while (tl.type->tag == VarDimElem) {
+        tl = apply_stored_index(&tl, ctx);
+    }
+
+    return tl;
+}
+
+
+/*****************************************************************************/
+/*                 Subtrees (single elements are a special case)             */
+/*****************************************************************************/
+
 /* Return a typed subtree of a memory block */
 xnd_t
 xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
 {
+    ALLOCA(int64_t, xindices, len+1);
     const ndt_t * const t = x->type;
 
     assert(ndt_is_concrete(t));
@@ -727,21 +823,28 @@ xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t
         return *x;
     }
 
+    /* Hidden element type, insert the stored index. */
+    if (have_stored_index(t)) {
+        xindices[0] = get_stored_index(t);
+        memcpy(xindices+1, indices, len * (sizeof *indices));
+        indices = xindices;
+        len = len+1;
+    }
+
     const int64_t i = indices[0];
 
     switch (t->tag) {
     case FixedDim: {
-        if (i < 0 || i >= t->FixedDim.shape) {
-            ndt_err_format(ctx, NDT_ValueError,
-                "fixed dim index out of bounds");
+        const int64_t k = adjust_index(i, t->FixedDim.shape, ctx);
+        if (k < 0) {
             return xnd_error;
         }
 
-        const xnd_t next = xnd_fixed_dim_next(x, i);
+        const xnd_t next = xnd_fixed_dim_next(x, k);
         return xnd_subtree_index(&next, indices+1, len-1, ctx);
     }
 
-    case VarDim: {
+    case VarDim: case VarDimElem: {
         int64_t start, step, shape;
 
         shape = ndt_var_indices(&start, &step, t, x->index, ctx);
@@ -749,22 +852,22 @@ xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t
             return xnd_error;
         }
 
-        if (i < 0 || i >= shape) {
-            ndt_err_format(ctx, NDT_ValueError, "var dim index out of bounds");
+        const int64_t k = adjust_index(i, shape, ctx);
+        if (k < 0) {
             return xnd_error;
         }
 
-        const xnd_t next = xnd_var_dim_next(x, start, step, i);
+        const xnd_t next = xnd_var_dim_next(x, start, step, k);
         return xnd_subtree_index(&next, indices+1, len-1, ctx);
     }
 
     case Tuple: {
-        if (i < 0 || i >= t->Tuple.shape) {
-            ndt_err_format(ctx, NDT_ValueError, "tuple index out of bounds");
+        const int64_t k = adjust_index(i, t->Tuple.shape, ctx);
+        if (k < 0) {
             return xnd_error;
         }
 
-        const xnd_t next = xnd_tuple_next(x, i, ctx);
+        const xnd_t next = xnd_tuple_next(x, k, ctx);
         if (next.ptr == NULL) {
             return xnd_error;
         }
@@ -773,12 +876,12 @@ xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t
     }
 
     case Record: {
-        if (i < 0 || i >= t->Record.shape) {
-            ndt_err_format(ctx, NDT_ValueError, "record index out of bounds");
+        const int64_t k = adjust_index(i, t->Record.shape, ctx);
+        if (k < 0) {
             return xnd_error;
         }
 
-        const xnd_t next = xnd_record_next(x, i, ctx);
+        const xnd_t next = xnd_record_next(x, k, ctx);
         if (next.ptr == NULL) {
             return xnd_error;
         }
@@ -827,6 +930,7 @@ static xnd_t
 _xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexable,
              ndt_context_t *ctx)
 {
+    ALLOCA(xnd_index_t, xindices, len+1);
     const ndt_t *t = x->type;
     const xnd_index_t *key;
 
@@ -842,11 +946,20 @@ _xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexabl
         return *x;
     }
 
+    /* Hidden element type, insert the stored index. */
+    if (have_stored_index(t)) {
+        xindices[0].tag = Index;
+        xindices[0].Index = get_stored_index(t);
+        memcpy(xindices+1, indices, len * (sizeof *indices));
+        indices = xindices;
+        len = len+1;
+    }
+
     key = &indices[0];
 
     switch (t->tag) {
     case FixedDim: {
-        int64_t i = get_index(key, t->FixedDim.shape, ctx);
+        const int64_t i = get_index(key, t->FixedDim.shape, ctx);
         if (i < 0) {
             return xnd_error;
         }
@@ -855,16 +968,15 @@ _xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexabl
         return _xnd_subtree(&next, indices+1, len-1, true, ctx);
     }
 
-    case VarDim: {
+    case VarDim: case VarDimElem: {
         int64_t start, step, shape;
-        int64_t i;
 
         shape = ndt_var_indices(&start, &step, t, x->index, ctx);
         if (shape < 0) {
             return xnd_error;
         }
 
-        i = get_index(key, shape, ctx);
+        const int64_t i = get_index(key, shape, ctx);
         if (i < 0) {
             return xnd_error;
         }
@@ -888,7 +1000,7 @@ _xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexabl
     }
 
     case Record: {
-        int64_t i = get_index_record(t, key, ctx);
+        const int64_t i = get_index_record(t, key, ctx);
         if (i < 0) {
             return xnd_error;
         }
@@ -947,7 +1059,7 @@ xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t 
 static xnd_t xnd_index(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *ctx);
 static xnd_t xnd_slice(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *ctx);
 
-xnd_t
+static xnd_t
 xnd_multikey(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *ctx)
 {
     const ndt_t *t = x->type;
@@ -957,7 +1069,7 @@ xnd_multikey(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t
     assert(ndt_is_concrete(t));
     assert(x->ptr != NULL);
 
-    if (len > t->ndim) {
+    if (len > ndt_ndim(t)) {
         ndt_err_format(ctx, NDT_IndexError, "too many indices");
         return xnd_error;
     }
@@ -993,12 +1105,22 @@ xnd_multikey(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t
 static xnd_t
 xnd_index(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *ctx)
 {
+    ALLOCA(xnd_index_t, xindices, len+1);
     const ndt_t *t = x->type;
     const xnd_index_t *key;
 
     assert(len > 0);
     assert(ndt_is_concrete(t));
     assert(x->ptr != NULL);
+
+    /* Hidden element type, insert the stored index. */
+    if (have_stored_index(t)) {
+        xindices[0].tag = Index;
+        xindices[0].Index = get_stored_index(t);
+        memcpy(xindices+1, indices, len * (sizeof *indices));
+        indices = xindices;
+        len = len+1;
+    }
 
     key = &indices[0];
     assert(key->tag == Index);
@@ -1014,10 +1136,35 @@ xnd_index(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *c
         return xnd_multikey(&next, indices+1, len-1, ctx);
     }
 
-    case VarDim: {
-        ndt_err_format(ctx, NDT_IndexError,
-            "mixed indexing and slicing is not supported for var dimensions");
-        return xnd_error;
+    case VarDim: case VarDimElem: {
+        const ndt_t *u;
+
+        if (ndt_is_optional(t)) {
+            ndt_err_format(ctx, NDT_NotImplementedError,
+                "optional dimensions are temporarily disabled");
+            return xnd_error;
+        }
+
+        const int64_t i = get_index_var_elem(key, ctx);
+        if (i == INT64_MIN) {
+            return xnd_error;
+        }
+
+        const xnd_t next = xnd_var_dim_next(x, 0, 1, 0);
+        const xnd_t tail = xnd_multikey(&next, indices+1, len-1, ctx);
+        if (xnd_err_occurred(&tail)) {
+            return xnd_error;
+        }
+
+        u = ndt_convert_to_var_elem(t, tail.type, i, ctx);
+        ndt_decref(tail.type);
+        if (u == NULL) {
+            return xnd_error;
+        }
+
+        xnd_t ret = *x;
+        ret.type = u;
+        return ret;
     }
 
     default:
@@ -1107,6 +1254,32 @@ xnd_slice(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *c
         return ret;
     }
 
+    case VarDimElem: {
+        int64_t i = t->VarDimElem.index;
+
+        if (ndt_is_optional(t)) {
+            ndt_err_format(ctx, NDT_NotImplementedError,
+                "optional dimensions are temporarily disabled");
+            return xnd_error;
+        }
+
+        const xnd_t next = xnd_var_dim_next(x, 0, 1, 0);
+        const xnd_t tail = xnd_multikey(&next, indices, len, ctx);
+        if (xnd_err_occurred(&tail)) {
+            return xnd_error;
+        }
+
+        const ndt_t *u = ndt_convert_to_var_elem(t, tail.type, i, ctx);
+        ndt_decref(tail.type);
+        if (u == NULL) {
+            return xnd_error;
+        }
+
+        xnd_t ret = *x;
+        ret.type = u;
+        return ret;
+    }
+
     case Tuple: {
         ndt_err_format(ctx, NDT_NotImplementedError,
             "slicing tuples is not supported");
@@ -1125,21 +1298,83 @@ xnd_slice(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *c
     }
 }
 
+/* Validate indices for mixed indexed/sliced var dimensions. */
+static bool
+validate_indices(const xnd_t *x, ndt_context_t *ctx)
+{
+    const ndt_t * const t = x->type;
+
+    assert(ndt_is_concrete(t));
+
+    switch (t->tag) {
+    case VarDim: {
+        int64_t start, step, shape;
+
+        shape = ndt_var_indices_non_empty(&start, &step, t, x->index, ctx);
+        if (shape < 0) {
+            return false;
+        }
+
+        for (int64_t i = 0; i < shape; i++) {
+            const xnd_t next = xnd_var_dim_next(x, start, step, i);
+            if (!validate_indices(&next, ctx)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    case VarDimElem: {
+        int64_t start, step, shape;
+
+        shape = ndt_var_indices(&start, &step, t, x->index, ctx);
+        if (shape < 0) {
+            return false;
+        }
+
+        const int64_t k = adjust_index(t->VarDimElem.index, shape, ctx);
+        if (k < 0) {
+            return false;
+        }
+
+        const xnd_t next = xnd_var_dim_next(x, start, step, k);
+        return validate_indices(&next, ctx);
+    }
+
+    default:
+        return true;
+    }
+}
+
 xnd_t
 xnd_subscript(const xnd_t *x, const xnd_index_t indices[], int len,
               ndt_context_t *ctx)
 {
+    bool have_index = false;
     bool have_slice = false;
 
     for (int i = 0; i < len; i++) {
+        if (indices[i].tag == Index) {
+            have_index = true;
+        }
         if (indices[i].tag == Slice) {
             have_slice = true;
-            break;
         }
     }
 
     if (have_slice) {
-        return xnd_multikey(x, indices, len, ctx);
+        xnd_t res = xnd_multikey(x, indices, len, ctx);
+        if (xnd_err_occurred(&res)) {
+            return xnd_error;
+        }
+
+        if (have_index && !validate_indices(&res, ctx)) {
+            ndt_decref(res.type);
+            return xnd_error;
+        }
+
+        return res;
     }
     else {
         xnd_t res = xnd_subtree(x, indices, len, ctx);

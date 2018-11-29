@@ -269,7 +269,7 @@ xnd_split(const xnd_t *x, int64_t *nparts, int max_outer, ndt_context_t *ctx)
     }
 
     for (int64_t i = 0; i < nrows; i++) {
-        result[i] = xnd_multikey(x, indices+(i*ncols), nindices[i], ctx);
+        result[i] = xnd_subscript(x, indices+(i*ncols), nindices[i], ctx);
         if (ndt_err_occurred(ctx)) {
             ndt_free(nindices);
             ndt_free(indices);

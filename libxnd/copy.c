@@ -571,7 +571,24 @@ xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
 {
     const ndt_t * const t = x->type;
     const ndt_t * const u = y->type;
+    xnd_t xtail, ytail;
     int n;
+
+    if (have_stored_index(t)) {
+        xtail = apply_stored_indices(x, ctx);
+        if (xnd_err_occurred(&xtail)) {
+            return -1;
+        }
+        x = &xtail;
+    }
+
+    if (have_stored_index(u)) {
+        ytail = apply_stored_indices(y, ctx);
+        if (xnd_err_occurred(&ytail)) {
+            return -1;
+        }
+        y = &ytail;
+    }
 
     if (xnd_is_na(x)) {
         if (!ndt_is_optional(u)) {
@@ -927,8 +944,12 @@ xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
         return 0;
     }
 
-    /* NOT REACHED: intercepted by equal_ref(). */
+    /* NOT REACHED: intercepted by apply_stored_indices(). */
+    case VarDimElem:
+    /* NOT REACHED: intercepted by copy_ref(). */
     case Ref:
+        ndt_err_format(ctx, NDT_RuntimeError, "unexpected VarDimElem or Ref");
+        return -1;
 
     /* NOT REACHED: xnd types must be concrete. */
     case Module: case Function:
