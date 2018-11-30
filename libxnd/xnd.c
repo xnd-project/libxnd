@@ -805,10 +805,10 @@ apply_stored_indices(const xnd_t *x, ndt_context_t *ctx)
 /*****************************************************************************/
 
 /* Return a typed subtree of a memory block */
-xnd_t
-xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
+static xnd_t
+_xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
 {
-    ALLOCA(int64_t, xindices, len+1);
+    int64_t xindices[NDT_MAX_DIM+1];
     const ndt_t * const t = x->type;
 
     assert(ndt_is_concrete(t));
@@ -826,7 +826,9 @@ xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t
     /* Hidden element type, insert the stored index. */
     if (have_stored_index(t)) {
         xindices[0] = get_stored_index(t);
-        memcpy(xindices+1, indices, len * (sizeof *indices));
+        for (int k = 0; k < len; k++) {
+            xindices[k+1] = indices[k];
+        }
         indices = xindices;
         len = len+1;
     }
@@ -841,7 +843,7 @@ xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t
         }
 
         const xnd_t next = xnd_fixed_dim_next(x, k);
-        return xnd_subtree_index(&next, indices+1, len-1, ctx);
+        return _xnd_subtree_index(&next, indices+1, len-1, ctx);
     }
 
     case VarDim: case VarDimElem: {
@@ -858,7 +860,7 @@ xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t
         }
 
         const xnd_t next = xnd_var_dim_next(x, start, step, k);
-        return xnd_subtree_index(&next, indices+1, len-1, ctx);
+        return _xnd_subtree_index(&next, indices+1, len-1, ctx);
     }
 
     case Tuple: {
@@ -872,7 +874,7 @@ xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t
             return xnd_error;
         }
 
-        return xnd_subtree_index(&next, indices+1, len-1, ctx);
+        return _xnd_subtree_index(&next, indices+1, len-1, ctx);
     }
 
     case Record: {
@@ -886,7 +888,7 @@ xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t
             return xnd_error;
         }
 
-        return xnd_subtree_index(&next, indices+1, len-1, ctx);
+        return _xnd_subtree_index(&next, indices+1, len-1, ctx);
     }
 
     case Ref: {
@@ -895,7 +897,7 @@ xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t
             return xnd_error;
         }
 
-        return xnd_subtree_index(&next, indices, len, ctx);
+        return _xnd_subtree_index(&next, indices, len, ctx);
     }
 
     case Constr: {
@@ -904,7 +906,7 @@ xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t
             return xnd_error;
         }
 
-        return xnd_subtree_index(&next, indices, len, ctx);
+        return _xnd_subtree_index(&next, indices, len, ctx);
     }
 
    case Nominal: {
@@ -913,13 +915,24 @@ xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t
             return xnd_error;
         }
 
-        return xnd_subtree_index(&next, indices, len, ctx);
+        return _xnd_subtree_index(&next, indices, len, ctx);
     }
 
     default:
         ndt_err_format(ctx, NDT_ValueError, "type not indexable");
         return xnd_error;
     }
+}
+
+xnd_t
+xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
+{
+    if (len < 0 || len > NDT_MAX_DIM) {
+        ndt_err_format(ctx, NDT_IndexError, "too many indices");
+        return xnd_error;
+    }
+
+    return _xnd_subtree_index(x, indices, len, ctx);
 }
 
 /*
@@ -930,7 +943,7 @@ static xnd_t
 _xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexable,
              ndt_context_t *ctx)
 {
-    ALLOCA(xnd_index_t, xindices, len+1);
+    xnd_index_t xindices[NDT_MAX_DIM+1];
     const ndt_t *t = x->type;
     const xnd_index_t *key;
 
@@ -950,7 +963,9 @@ _xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexabl
     if (have_stored_index(t)) {
         xindices[0].tag = Index;
         xindices[0].Index = get_stored_index(t);
-        memcpy(xindices+1, indices, len * (sizeof *indices));
+        for (int k = 0; k < len; k++) {
+            xindices[k+1] = indices[k];
+        }
         indices = xindices;
         len = len+1;
     }
@@ -1053,6 +1068,11 @@ _xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexabl
 xnd_t
 xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *ctx)
 {
+    if (len < 0 || len > NDT_MAX_DIM) {
+        ndt_err_format(ctx, NDT_IndexError, "too many indices");
+        return xnd_error;
+    }
+
     return _xnd_subtree(x, indices, len, false, ctx);
 }
 
@@ -1105,7 +1125,7 @@ xnd_multikey(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t
 static xnd_t
 xnd_index(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *ctx)
 {
-    ALLOCA(xnd_index_t, xindices, len+1);
+    xnd_index_t xindices[NDT_MAX_DIM+1];
     const ndt_t *t = x->type;
     const xnd_index_t *key;
 
@@ -1117,7 +1137,9 @@ xnd_index(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *c
     if (have_stored_index(t)) {
         xindices[0].tag = Index;
         xindices[0].Index = get_stored_index(t);
-        memcpy(xindices+1, indices, len * (sizeof *indices));
+        for (int k = 0; k < len; k++) {
+            xindices[k+1] = indices[k];
+        }
         indices = xindices;
         len = len+1;
     }
@@ -1353,6 +1375,11 @@ xnd_subscript(const xnd_t *x, const xnd_index_t indices[], int len,
 {
     bool have_index = false;
     bool have_slice = false;
+
+    if (len < 0 || len > NDT_MAX_DIM) {
+        ndt_err_format(ctx, NDT_IndexError, "too many indices");
+        return xnd_error;
+    }
 
     for (int i = 0; i < len; i++) {
         if (indices[i].tag == Index) {
