@@ -863,6 +863,11 @@ EQUAL_TEST_CASES = [
 #            Definition of generalized slicing and indexing
 # ======================================================================
 
+def have_none(lst):
+    if isinstance(lst, list):
+        return any(have_none(item) for item in lst)
+    return lst is None
+
 def maxlevel(lst):
     """Return maximum nesting depth"""
     maxlev = 0

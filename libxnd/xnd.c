@@ -808,7 +808,7 @@ apply_stored_indices(const xnd_t *x, ndt_context_t *ctx)
 static xnd_t
 _xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_t *ctx)
 {
-    int64_t xindices[NDT_MAX_DIM+1];
+    APPLY_STORED_INDICES_XND(x)
     const ndt_t * const t = x->type;
 
     assert(ndt_is_concrete(t));
@@ -821,16 +821,6 @@ _xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_
 
     if (len == 0) {
         return *x;
-    }
-
-    /* Hidden element type, insert the stored index. */
-    if (have_stored_index(t)) {
-        xindices[0] = get_stored_index(t);
-        for (int k = 0; k < len; k++) {
-            xindices[k+1] = indices[k];
-        }
-        indices = xindices;
-        len = len+1;
     }
 
     const int64_t i = indices[0];
@@ -846,7 +836,7 @@ _xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_
         return _xnd_subtree_index(&next, indices+1, len-1, ctx);
     }
 
-    case VarDim: case VarDimElem: {
+    case VarDim: {
         int64_t start, step, shape;
 
         shape = ndt_var_indices(&start, &step, t, x->index, ctx);
@@ -943,7 +933,7 @@ static xnd_t
 _xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexable,
              ndt_context_t *ctx)
 {
-    xnd_index_t xindices[NDT_MAX_DIM+1];
+    APPLY_STORED_INDICES_XND(x)
     const ndt_t *t = x->type;
     const xnd_index_t *key;
 
@@ -959,17 +949,6 @@ _xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexabl
         return *x;
     }
 
-    /* Hidden element type, insert the stored index. */
-    if (have_stored_index(t)) {
-        xindices[0].tag = Index;
-        xindices[0].Index = get_stored_index(t);
-        for (int k = 0; k < len; k++) {
-            xindices[k+1] = indices[k];
-        }
-        indices = xindices;
-        len = len+1;
-    }
-
     key = &indices[0];
 
     switch (t->tag) {
@@ -983,7 +962,7 @@ _xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexabl
         return _xnd_subtree(&next, indices+1, len-1, true, ctx);
     }
 
-    case VarDim: case VarDimElem: {
+    case VarDim: {
         int64_t start, step, shape;
 
         shape = ndt_var_indices(&start, &step, t, x->index, ctx);
@@ -1089,7 +1068,7 @@ xnd_multikey(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t
     assert(ndt_is_concrete(t));
     assert(x->ptr != NULL);
 
-    if (len > ndt_ndim(t)) {
+    if (len > ndt_logical_ndim(t)) {
         ndt_err_format(ctx, NDT_IndexError, "too many indices");
         return xnd_error;
     }

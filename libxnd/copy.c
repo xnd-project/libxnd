@@ -569,26 +569,11 @@ copy_complex128(xnd_t * const x, const double real, const double imag,
 int
 xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
 {
+    APPLY_STORED_INDICES_INT(x)
+    APPLY_STORED_INDICES_INT(y)
     const ndt_t * const t = x->type;
     const ndt_t * const u = y->type;
-    xnd_t xtail, ytail;
     int n;
-
-    if (have_stored_index(t)) {
-        xtail = apply_stored_indices(x, ctx);
-        if (xnd_err_occurred(&xtail)) {
-            return -1;
-        }
-        x = &xtail;
-    }
-
-    if (have_stored_index(u)) {
-        ytail = apply_stored_indices(y, ctx);
-        if (xnd_err_occurred(&ytail)) {
-            return -1;
-        }
-        y = &ytail;
-    }
 
     if (xnd_is_na(x)) {
         if (!ndt_is_optional(u)) {
@@ -599,6 +584,10 @@ xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
 
         xnd_set_na(y);
         return 0;
+    }
+
+    if (ndt_is_optional(u)) {
+        xnd_set_valid(y);
     }
 
     if (t->tag == Ref || u->tag == Ref) {

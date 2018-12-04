@@ -873,26 +873,11 @@ equal_complex128(const double real, const double imag, const xnd_t * const x)
 int
 xnd_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx)
 {
+    APPLY_STORED_INDICES_INT(x)
+    APPLY_STORED_INDICES_INT(y)
     const ndt_t * const t = x->type;
     const ndt_t * const u = y->type;
-    xnd_t xtail, ytail;
     int n;
-
-    if (have_stored_index(t)) {
-        xtail = apply_stored_indices(x, ctx);
-        if (xnd_err_occurred(&xtail)) {
-            return -1;
-        }
-        x = &xtail;
-    }
-
-    if (have_stored_index(u)) {
-        ytail = apply_stored_indices(y, ctx);
-        if (xnd_err_occurred(&ytail)) {
-            return -1;
-        }
-        y = &ytail;
-    }
 
     if (xnd_is_na(x) || xnd_is_na(y)) {
         return 0;

@@ -471,5 +471,24 @@ le(uint32_t flags)
         dest = _x;                                      \
     } while (0)
 
+#define APPLY_STORED_INDICES_INT(x) \
+    xnd_t _##x##tail;                              \
+    if (have_stored_index(x->type)) {              \
+        _##x##tail = apply_stored_indices(x, ctx); \
+        if (xnd_err_occurred(&_##x##tail)) {       \
+            return -1;                             \
+        }                                          \
+        x = &_##x##tail;                           \
+    }
+
+#define APPLY_STORED_INDICES_XND(x) \
+    xnd_t _##x##tail;                              \
+    if (have_stored_index(x->type)) {              \
+        _##x##tail = apply_stored_indices(x, ctx); \
+        if (xnd_err_occurred(&_##x##tail)) {       \
+            return xnd_error;                      \
+        }                                          \
+        x = &_##x##tail;                           \
+    }
 
 #endif /* XND_H */

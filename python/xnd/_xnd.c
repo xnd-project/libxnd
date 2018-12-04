@@ -2237,6 +2237,32 @@ pyxnd_align(PyObject *self, PyObject *args UNUSED)
     return PyLong_FromUnsignedLong(align);
 }
 
+static PyObject *
+pyxnd_copy_contiguous(PyObject *self, PyObject *args UNUSED)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    XndObject *src = (XndObject *)self;
+    PyObject *dest;
+    const ndt_t *t;
+
+    t = ndt_copy_contiguous(XND_TYPE(src), XND_INDEX(src), &ctx);
+    if (t == NULL) {
+        return seterr(&ctx);
+    }
+
+    dest = Xnd_EmptyFromType(Py_TYPE(src), t);
+    ndt_decref(t);
+    if (dest == NULL) {
+        return NULL;
+    }
+
+    if (xnd_copy(XND(dest), XND(src), src->mblock->xnd->flags, &ctx) < 0) {
+        Py_DECREF(dest);
+        return seterr(&ctx);
+    }
+
+    return dest;
+}
 
 static PyGetSetDef pyxnd_getsets [] =
 {
@@ -2267,6 +2293,7 @@ static PyMethodDef pyxnd_methods [] =
   { "short_value", (PyCFunction)pyxnd_short_value, METH_VARARGS|METH_KEYWORDS, doc_short_value },
   { "strict_equal", (PyCFunction)pyxnd_strict_equal, METH_O, NULL },
   { "split", (PyCFunction)pyxnd_split, METH_VARARGS|METH_KEYWORDS, NULL },
+  { "copy_contiguous", (PyCFunction)pyxnd_copy_contiguous, METH_NOARGS, NULL },
 
   /* Class methods */
   { "empty", (PyCFunction)pyxnd_empty, METH_O|METH_CLASS, doc_empty },

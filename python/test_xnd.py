@@ -3072,6 +3072,13 @@ class TestSpec(XndTestCase):
 
         if isinstance(nd_result, xnd):
             nd_value = nd_result.value
+            # test contiguous copy
+            x = nd_result.copy_contiguous()
+            xvalue = x.value
+            if have_none(xvalue) and have_none(nd_value):
+                self.assertEqual(xvalue, nd_value)
+            else:
+                self.assertEqual(x, nd_result)
         elif np is not None and isinstance(nd_result, np.ndarray):
             nd_value = nd_result.tolist()
         else:
