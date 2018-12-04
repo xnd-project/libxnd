@@ -59,6 +59,15 @@ def check_buffer(x):
         del x
         y.tobytes()
 
+def check_copy_contiguous(self, x):
+    y = x.copy_contiguous()
+    xv = x.value
+    yv = y.value
+    if have_none(xv) and have_none(yv):
+        self.assertEqual(xv, yv)
+    else:
+        self.assertEqual(x, y)
+
 
 class XndTestCase(unittest.TestCase):
 
@@ -180,9 +189,10 @@ class TestFixedDim(XndTestCase):
             for start in list(range(-3, 4)) + [None]:
                 for stop in list(range(-3, 4)) + [None]:
                     for step in list(range(-3, 0)) + list(range(1, 4)) + [None]:
-                        s = slice(start, stop, step)
-                        self.assertEqual(x[s].value, nd[s])
-                        check_buffer(x[s])
+                        sl = slice(start, stop, step)
+                        self.assertEqual(x[sl].value, nd[sl])
+                        check_buffer(x[sl])
+                        check_copy_contiguous(self, x[sl])
 
             self.assertEqual(x[:, 0].value, nd[:, 0])
             self.assertEqual(x[:, 1].value, nd[:, 1])
@@ -431,9 +441,10 @@ class TestFortran(XndTestCase):
             for start in list(range(-3, 4)) + [None]:
                 for stop in list(range(-3, 4)) + [None]:
                     for step in list(range(-3, 0)) + list(range(1, 4)) + [None]:
-                        s = slice(start, stop, step)
-                        self.assertEqual(x[s].value, nd[s])
-                        check_buffer(x[s])
+                        sl = slice(start, stop, step)
+                        self.assertEqual(x[sl].value, nd[sl])
+                        check_buffer(x[sl])
+                        check_copy_contiguous(self, x[sl])
 
             self.assertEqual(x[:, 0].value, nd[:, 0])
             self.assertEqual(x[:, 1].value, nd[:, 1])
@@ -817,11 +828,13 @@ class TestVarDim(XndTestCase):
                 x = xnd(vv, type=ttt)
                 y = xnd(vv, type=ttt)
                 self.assertStrictEqual(x, y)
+                check_copy_contiguous(self, x)
 
                 if u is not None:
                     uuu = ndt(uu)
                     y = xnd(vv, type=uuu)
                     self.assertStrictEqual(x, y)
+                    check_copy_contiguous(self, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -846,6 +859,8 @@ class TestVarDim(XndTestCase):
                 else:
                     self.assertNotStrictEqual(x, y)
 
+                check_copy_contiguous(self, x)
+
                 if u is not None:
                     uuu = ndt(uu)
                     y = xnd(vv, type=uuu)
@@ -853,6 +868,8 @@ class TestVarDim(XndTestCase):
                         self.assertStrictEqual(x, y)
                     else:
                         self.assertNotStrictEqual(x, y)
+
+                    check_copy_contiguous(self, y)
 
                 if w is not None:
                     y = xnd(vv, type=ttt)
@@ -862,6 +879,8 @@ class TestVarDim(XndTestCase):
                     y = xnd(vv, type=uuu)
                     y[indices] = w
                     self.assertNotStrictEqual(x, y)
+
+                    check_copy_contiguous(self, y)
 
     def test_var_dim_nested(self):
 
@@ -899,6 +918,8 @@ class TestVarDim(XndTestCase):
 
         self.assertEqual(x[1,0,0,0,1], v[1][0][0][0][1])
         self.assertEqual(x[1,0,0,0,1], v[1][0][0][0][1])
+
+        check_copy_contiguous(self, x)
 
 
 class TestSymbolicDim(XndTestCase):
@@ -972,17 +993,20 @@ class TestTuple(XndTestCase):
         x[1] = v[1]
         x[2] = v[2]
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
         v = (-2.5+125j, None, None)
         x[0] = v[0]
         x[1] = v[1]
         x[2] = v[2]
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
         x = xnd([("a", 100, 10.5), ("a", 100, 10.5)])
         x[0][1] = 20000000
         self.assertEqual(x[0][1], 20000000)
         self.assertEqual(x[0, 1], 20000000)
+        check_copy_contiguous(self, x)
 
     def test_tuple_overflow(self):
         # Type cannot be created.
@@ -1045,6 +1069,7 @@ class TestTuple(XndTestCase):
         x = xnd(v, type=t)
         y = xnd(v, type=t)
         self.assertStrictEqual(x, y)
+        check_copy_contiguous(self, x)
 
         w = y[0].value
         y[0] = 11
@@ -1087,6 +1112,7 @@ class TestTuple(XndTestCase):
                 x = xnd(vv, type=ttt)
                 y = xnd(vv, type=ttt)
                 self.assertStrictEqual(x, y)
+                check_copy_contiguous(self, x)
 
                 if u is not None:
                     uuu = ndt(uu)
@@ -1111,6 +1137,8 @@ class TestTuple(XndTestCase):
                     self.assertStrictEqual(x, y)
                 else:
                     self.assertNotStrictEqual(x, y)
+
+                check_copy_contiguous(self, x)
 
                 if u is not None:
                     uuu = ndt(uu)
@@ -1159,6 +1187,7 @@ class TestRecord(XndTestCase):
         x['z'] = v['z']
 
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
         ### Optional data ###
         x = xnd.empty("{x: complex64, y: ?bytes, z: ?string}")
@@ -1168,17 +1197,20 @@ class TestRecord(XndTestCase):
         x['y'] = v['y']
         x['z'] = v['z']
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
         v = R['x': -2.5+125j, 'y': None, 'z': None]
         x['x'] = v['x']
         x['y'] = v['y']
         x['z'] = v['z']
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
         x = xnd([R['x': "abc", 'y': 100, 'z': 10.5]])
         x[0][1] = 20000000
         self.assertEqual(x[0][1], 20000000)
         self.assertEqual(x[0, 1], 20000000)
+        check_copy_contiguous(self, x)
 
     def test_record_overflow(self):
         # Type cannot be created.
@@ -1199,6 +1231,7 @@ class TestRecord(XndTestCase):
                R['a': 5, 'b': 6, 'c': None]]
         x = xnd(lst, dtype="{a: ?int64, b: ?int64, c: ?int64}")
         self.assertEqual(x.value, lst)
+        check_copy_contiguous(self, x)
 
     def test_record_richcompare(self):
 
@@ -1244,12 +1277,14 @@ class TestRecord(XndTestCase):
         x = xnd(v, type=t)
         y = xnd(v, type=t)
         self.assertStrictEqual(x, y)
+        check_copy_contiguous(self, x)
 
         w = y[0].value
         y[0] = 11
         self.assertNotStrictEqual(x, y)
         y[0] = w
         self.assertStrictEqual(x, y)
+        check_copy_contiguous(self, x)
 
         w = y[1].value
         y[1] = "\U00001234\U00001001abx"
@@ -1284,6 +1319,7 @@ class TestRecord(XndTestCase):
                 ttt = ndt(tt)
 
                 x = xnd(vv, type=ttt)
+                check_copy_contiguous(self, x)
 
                 y = xnd(vv, type=ttt)
                 self.assertStrictEqual(x, y)
@@ -1292,6 +1328,7 @@ class TestRecord(XndTestCase):
                     uuu = ndt(uu)
                     y = xnd(vv, type=uuu)
                     self.assertStrictEqual(x, y)
+                    check_copy_contiguous(self, y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -1304,6 +1341,7 @@ class TestRecord(XndTestCase):
                 uuu = ndt(uu)
 
                 x = xnd(vv, type=ttt)
+                check_copy_contiguous(self, x)
 
                 y = xnd(vv, type=ttt)
                 if eq:
@@ -1317,11 +1355,13 @@ class TestRecord(XndTestCase):
                         self.assertStrictEqual(x, y)
                     else:
                         self.assertNotStrictEqual(x, y)
+                    check_copy_contiguous(self, y)
 
                 if w is not None:
                     y = xnd(vv, type=ttt)
                     y[indices] = w
                     self.assertNotStrictEqual(x, y)
+                    check_copy_contiguous(self, y)
 
 
 class TestRef(XndTestCase):
@@ -1374,6 +1414,7 @@ class TestRef(XndTestCase):
         v = 2 * [3 * [inner]]
 
         x = xnd(v, type="2 * 3 * ref(4 * 5 * string)")
+        check_copy_contiguous(self, x)
 
         for i in range(2):
             for j in range(3):
@@ -1381,6 +1422,7 @@ class TestRef(XndTestCase):
                     for l in range(5):
                         self.assertEqual(x[i][j][k][l], inner[k][l])
                         self.assertEqual(x[i, j, k, l], inner[k][l])
+                        check_copy_contiguous(self, x[i, j, k, l])
 
     def test_ref_assign(self):
         # If a ref is a dtype but contains an array itself, assigning through
@@ -1435,6 +1477,7 @@ class TestRef(XndTestCase):
                 ttt = ndt(tt)
 
                 x = xnd(vv, type=ttt)
+                check_copy_contiguous(self, x)
 
                 y = xnd(vv, type=ttt)
                 self.assertStrictEqual(x, y)
@@ -1519,6 +1562,7 @@ class TestConstr(XndTestCase):
         v = 2 * [3 * [inner]]
 
         x = xnd(v, type="2 * 3 * InnerArray(4 * 5 * string)")
+        check_copy_contiguous(self, x)
 
         for i in range(2):
             for j in range(3):
@@ -1526,6 +1570,7 @@ class TestConstr(XndTestCase):
                     for l in range(5):
                         self.assertEqual(x[i][j][k][l], inner[k][l])
                         self.assertEqual(x[i, j, k, l], inner[k][l])
+                        check_copy_contiguous(self, x[i, j, k, l])
 
     def test_constr_assign(self):
         # If a constr is a dtype but contains an array itself, assigning through
@@ -1669,6 +1714,7 @@ class TestNominal(XndTestCase):
         v = 2 * [3 * [inner]]
 
         x = xnd(v, type="2 * 3 * inner")
+        check_copy_contiguous(self, x)
 
         for i in range(2):
             for j in range(3):
@@ -1778,6 +1824,7 @@ class TestCategorical(XndTestCase):
     def test_categorical_richcompare(self):
         t = "3 * categorical(NA, 'January', 'August')"
         x = xnd(['August', 'January', 'January'], type=t)
+        check_copy_contiguous(self, x)
 
         y = xnd(['August', 'January', 'January'], type=t)
         self.assertStrictEqual(x, y)
@@ -1820,12 +1867,14 @@ class TestFixedString(XndTestCase):
         v = ["\u1111\u2222\u3333", "\u1112\u2223\u3334"]
         x = xnd(v, type=t)
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
 
         t = "2 * fixed_string(3, 'utf32')"
         v = ["\U00011111\U00022222\U00033333", "\U00011112\U00022223\U00033334"]
         x = xnd(v, type=t)
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
     def test_fixed_string_assign(self):
         t = "2 * fixed_string(3, 'utf32')"
@@ -1873,6 +1922,7 @@ class TestFixedString(XndTestCase):
             self.assertStrictEqual(x, y)
             y[()] = w
             self.assertNotStrictEqual(x, y)
+            check_copy_contiguous(self, x)
 
 
 class TestFixedBytesKind(XndTestCase):
@@ -1908,7 +1958,7 @@ class TestFixedBytes(XndTestCase):
 
         x[0] = b"xyz"
         self.assertEqual(x.value, [b"xyz", b"123"])
-
+        check_copy_contiguous(self, x)
 
         t = "2 * fixed_bytes(size=3, align=1)"
         v = [b"abc", b"123"]
@@ -1988,6 +2038,7 @@ class TestString(XndTestCase):
 
         self.assertEqual(x[0]['b'], "thisguy")
         self.assertEqual(x[1]['b'], "thatguy")
+        check_copy_contiguous(self, x)
 
     def test_string_assign(self):
         t = '2 * {a: complex128, b: string}'
@@ -2034,6 +2085,8 @@ class TestBytes(XndTestCase):
         v = 2 * [inner]
 
         x = xnd(v, type=t)
+        check_copy_contiguous(self, x)
+
         for i in range(2):
             for k in range(3):
                 x[i, k] = inner[k] = bytes(chr(ord('x') + k), "ascii")
@@ -2056,9 +2109,11 @@ class TestBool(XndTestCase):
         # From bool.
         x = xnd(True, type="bool")
         self.assertIs(x.value, True)
+        check_copy_contiguous(self, x)
 
         x = xnd(False, type="bool")
         self.assertIs(x.value, False)
+        check_copy_contiguous(self, x)
 
         # From int.
         x = xnd(1, type="bool")
@@ -2070,6 +2125,7 @@ class TestBool(XndTestCase):
         # From object (for numpy compat: np.bool([1,2,3]))
         x = xnd([1,2,3], type="bool")
         self.assertIs(x.value, True)
+        check_copy_contiguous(self, x)
 
         x = xnd(None, type="?bool")
         self.assertIs(x.value, None)
@@ -2121,6 +2177,7 @@ class TestSigned(XndTestCase):
             t = "int%d" % n
             x = xnd(i, type=t)
             self.assertEqual(x.value, 10)
+            check_copy_contiguous(self, x)
 
         # Test broken input.
         for n in (8, 16, 32, 64):
@@ -2170,6 +2227,7 @@ class TestUnsigned(XndTestCase):
             t = "uint%d" % n
             x = xnd(i, type=t)
             self.assertEqual(x.value, 10)
+            check_copy_contiguous(self, x)
 
         # Test broken input.
         for n in (8, 16, 32, 64):
@@ -2217,12 +2275,15 @@ class TestFloat(XndTestCase):
 
         x = xnd(DENORM_MIN, type="float16")
         self.assertEqual(x.value, DENORM_MIN)
+        check_copy_contiguous(self, x)
 
         x = xnd(LOWEST, type="float16")
         self.assertEqual(x.value, LOWEST)
+        check_copy_contiguous(self, x)
 
         x = xnd(MAX, type="float16")
         self.assertEqual(x.value, MAX)
+        check_copy_contiguous(self, x)
 
         self.assertRaises(OverflowError, xnd, INF, type="float16")
         self.assertRaises(OverflowError, xnd, -INF, type="float16")
@@ -2255,12 +2316,15 @@ class TestFloat(XndTestCase):
 
         x = xnd(DENORM_MIN, type="float32")
         self.assertEqual(x.value, DENORM_MIN)
+        check_copy_contiguous(self, x)
 
         x = xnd(LOWEST, type="float32")
         self.assertEqual(x.value, LOWEST)
+        check_copy_contiguous(self, x)
 
         x = xnd(MAX, type="float32")
         self.assertEqual(x.value, MAX)
+        check_copy_contiguous(self, x)
 
         self.assertRaises(OverflowError, xnd, INF, type="float32")
         self.assertRaises(OverflowError, xnd, -INF, type="float32")
@@ -2292,12 +2356,15 @@ class TestFloat(XndTestCase):
 
         x = xnd(DENORM_MIN, type="float64")
         self.assertEqual(x.value, DENORM_MIN)
+        check_copy_contiguous(self, x)
 
         x = xnd(LOWEST, type="float64")
         self.assertEqual(x.value, LOWEST)
+        check_copy_contiguous(self, x)
 
         x = xnd(MAX, type="float64")
         self.assertEqual(x.value, MAX)
+        check_copy_contiguous(self, x)
 
         # Test special values.
         x = xnd(float("inf"), type="float64")
@@ -2345,14 +2412,17 @@ class TestComplex(XndTestCase):
         v = complex(DENORM_MIN, DENORM_MIN)
         x = xnd(v, type="complex32")
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
         v = complex(LOWEST, LOWEST)
         x = xnd(v, type="complex32")
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
         v = complex(MAX, MAX)
         x = xnd(v, type="complex32")
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
         v = complex(INF, INF)
         self.assertRaises(OverflowError, xnd, v, type="complex32")
@@ -2395,14 +2465,17 @@ class TestComplex(XndTestCase):
         v = complex(DENORM_MIN, DENORM_MIN)
         x = xnd(v, type="complex64")
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
         v = complex(LOWEST, LOWEST)
         x = xnd(v, type="complex64")
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
         v = complex(MAX, MAX)
         x = xnd(v, type="complex64")
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
         v = complex(INF, INF)
         self.assertRaises(OverflowError, xnd, INF, type="complex64")
@@ -2448,10 +2521,12 @@ class TestComplex(XndTestCase):
         v = complex(LOWEST, LOWEST)
         x = xnd(v, type="complex128")
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
         v = complex(MAX, MAX)
         x = xnd(v, type="complex128")
         self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
 
         # Test special values.
         x = xnd(complex("inf"), type="complex128")
@@ -2488,6 +2563,7 @@ class TestPrimitive(XndTestCase):
                 x = xnd.empty(ts)
                 self.assertEqual(x.value, value)
                 self.assertEqual(x.type, ndt(ts))
+                check_copy_contiguous(self, x)
 
 
 class TestTypevar(XndTestCase):
@@ -2913,6 +2989,7 @@ class TestBuffer(XndTestCase):
         x = np.array([(1000, 400.25, 'abc'), (-23, -1e10, 'cba')],
                      dtype=[('x', 'i4'), ('y', 'f4'), ('z', 'S3')])
         y = xnd.from_buffer(x)
+        check_copy_contiguous(self, y)
 
         for i in range(2):
             for k in ['x', 'y', 'z']:
@@ -2955,6 +3032,7 @@ class TestBuffer(XndTestCase):
         x = np.array([(1000, 400.25, 'abc'), (-23, -1e10, 'cba')],
                      dtype=[('x', '<i4'), ('y', '>f4'), ('z', 'S3')])
         y = xnd.from_buffer(x)
+        check_copy_contiguous(self, y)
 
         for i in range(2):
             for k in ['x', 'y', 'z']:
@@ -2969,6 +3047,7 @@ class TestBuffer(XndTestCase):
         y = xnd.from_buffer(x)
         y[:] = [1000, 2000, 3000]
         self.assertEqual(x.tolist(), [1000, 2000, 3000])
+        check_copy_contiguous(self, y)
 
 
 class TestSplit(XndTestCase):
@@ -3072,13 +3151,7 @@ class TestSpec(XndTestCase):
 
         if isinstance(nd_result, xnd):
             nd_value = nd_result.value
-            # test contiguous copy
-            x = nd_result.copy_contiguous()
-            xvalue = x.value
-            if have_none(xvalue) and have_none(nd_value):
-                self.assertEqual(xvalue, nd_value)
-            else:
-                self.assertEqual(x, nd_result)
+            check_copy_contiguous(self, nd_result)
         elif np is not None and isinstance(nd_result, np.ndarray):
             nd_value = nd_result.tolist()
         else:

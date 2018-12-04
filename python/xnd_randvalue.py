@@ -864,8 +864,10 @@ EQUAL_TEST_CASES = [
 # ======================================================================
 
 def have_none(lst):
-    if isinstance(lst, list):
+    if isinstance(lst, (list, tuple)):
         return any(have_none(item) for item in lst)
+    if isinstance(lst, dict):
+        return any(have_none(item) for item in lst.values())
     return lst is None
 
 def maxlevel(lst):
