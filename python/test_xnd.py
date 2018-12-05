@@ -154,6 +154,7 @@ class TestFixedDim(XndTestCase):
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
                 self.assertEqual(len(x), len(vv))
+                self.assertTrue(x.type.is_c_contiguous())
 
         self.assertRaises(ValueError, xnd.empty, "?3 * int64")
         self.assertRaises(ValueError, xnd.empty, "?2 * 3 * int64")
@@ -175,6 +176,7 @@ class TestFixedDim(XndTestCase):
             t = ndt(s)
             x = xnd(v, type=t)
             check_buffer(x)
+            self.assertTrue(x.type.is_c_contiguous())
 
             for i in range(3):
                 self.assertEqual(x[i].value, nd[i])
@@ -411,6 +413,7 @@ class TestFortran(XndTestCase):
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
                 self.assertEqual(len(x), len(vv))
+                self.assertTrue(x.type.is_f_contiguous())
 
     def test_fortran_subscript(self):
         test_cases = [
@@ -427,6 +430,7 @@ class TestFortran(XndTestCase):
             t = ndt(s)
             x = xnd(v, type=t)
             check_buffer(x)
+            self.assertTrue(x.type.is_f_contiguous())
 
             for i in range(3):
                 self.assertEqual(x[i].value, nd[i])
@@ -658,6 +662,7 @@ class TestVarDim(XndTestCase):
                 self.assertEqual(x.type, t)
                 self.assertEqual(x.value, vv)
                 self.assertEqual(len(x), len(vv))
+                self.assertTrue(x.type.is_var_contiguous())
 
         self.assertRaises(NotImplementedError, xnd.empty, "?var(offsets=[0, 3]) * int64")
         self.assertRaises(NotImplementedError, xnd.empty, "?var(offsets=[0, 2]) * var(offsets=[0, 3, 10]) * int64")
@@ -807,13 +812,19 @@ class TestVarDim(XndTestCase):
         x = xnd([[1], [4,5], [6,7,8], [9,10,11,12]])
 
         y = xnd([[1], [6,7,8]])
-        self.assertStrictEqual(x[::2], y)
+        z = x[::2]
+        self.assertStrictEqual(z, y)
+        self.assertFalse(z.type.is_var_contiguous())
 
         y = xnd([[9,10,11,12], [4,5]])
-        self.assertStrictEqual(x[::-2], y)
+        z = x[::-2]
+        self.assertStrictEqual(z, y)
+        self.assertFalse(z.type.is_var_contiguous())
 
         y = xnd([[12,11,10,9], [5,4]])
-        self.assertStrictEqual(x[::-2, ::-1], y)
+        z = x[::-2, ::-1]
+        self.assertStrictEqual(z, y)
+        self.assertFalse(z.type.is_var_contiguous())
 
         # Test corner cases and many dtypes.
         for v, t, u, _, _ in EQUAL_TEST_CASES:
