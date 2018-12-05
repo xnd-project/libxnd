@@ -70,6 +70,38 @@ xnd_err_occurred(const xnd_t *x)
 /*****************************************************************************/
 
 static bool
+is_primary_type(const ndt_t * const t, ndt_context_t *ctx)
+{
+    if (ndt_is_abstract(t)) {
+        ndt_err_format(ctx, NDT_ValueError,
+            "cannot create xnd container from abstract type");
+        return false;
+    }
+
+    switch (t->tag) {
+    case FixedDim: {
+        if (ndt_is_c_contiguous(t) || ndt_is_f_contiguous(t)) {
+            return true;
+        }
+        break;
+    }
+    case VarDim: case VarDimElem: {
+        if (ndt_is_var_contiguous(t)) {
+            return true;
+        }
+        break;
+    }
+    default:
+        return true;
+    }
+
+    ndt_err_format(ctx, NDT_ValueError,
+        "cannot create xnd container from non-contiguous type");
+    return false;
+}
+
+
+static bool
 requires_init(const ndt_t * const t)
 {
     const ndt_t *dtype = ndt_dtype(t);
@@ -95,9 +127,7 @@ xnd_new(const ndt_t * const t, const uint32_t flags, ndt_context_t *ctx)
 {
     xnd_t x;
 
-    if (ndt_is_abstract(t)) {
-        ndt_err_format(ctx, NDT_ValueError,
-            "cannot create xnd container from abstract type");
+    if (!is_primary_type(t, ctx)) {
         return NULL;
     }
 
