@@ -234,8 +234,8 @@ XND_API bool xnd_double_is_big_endian(void);
 /*                                  BFloat16                                 */
 /*****************************************************************************/
 
-void xnd_bfloat_pack(char *p, double x);
-double xnd_bfloat_unpack(char *p);
+XND_API void xnd_bfloat_pack(char *p, double x);
+XND_API double xnd_bfloat_unpack(char *p);
 
 
 /*****************************************************************************/
