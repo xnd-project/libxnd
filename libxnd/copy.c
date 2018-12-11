@@ -164,6 +164,15 @@ copy_int64(xnd_t * const x, const int64_t i64, ndt_context_t *ctx)
         return 0;
     }
 
+    case BFloat16: {
+        if (i64 < -4503599627370496LL || i64 > 4503599627370496LL) {
+            return value_error(ctx);
+        }
+        double real = (double)i64;
+        xnd_bfloat_pack(x->ptr, real);
+        return 0;
+    }
+
     case Float16: {
         if (i64 < -4503599627370496LL || i64 > 4503599627370496LL) {
             return value_error(ctx);
@@ -186,6 +195,19 @@ copy_int64(xnd_t * const x, const int64_t i64, ndt_context_t *ctx)
         }
         double real = (double)i64;
         xnd_float_pack8(real, (unsigned char *)x->ptr, le(t->flags));
+        return 0;
+    }
+
+    case BComplex32: {
+        if (i64 < -4503599627370496LL || i64 > 4503599627370496LL) {
+            return value_error(ctx);
+        }
+
+        double real = (double)i64;
+        double imag = 0.0;
+
+        xnd_bfloat_pack(x->ptr, real);
+        xnd_bfloat_pack(x->ptr+2, imag);
         return 0;
     }
 
@@ -312,6 +334,15 @@ copy_uint64(xnd_t * const x, const uint64_t u64, ndt_context_t *ctx)
         return 0;
     }
 
+    case BFloat16: {
+        if (u64 > 4503599627370496LL) {
+            return value_error(ctx);
+        }
+        double real = (double)u64;
+        xnd_bfloat_pack(x->ptr, real);
+        return 0;
+    }
+
     case Float16: {
         if (u64 > 4503599627370496LL) {
             return value_error(ctx);
@@ -334,6 +365,19 @@ copy_uint64(xnd_t * const x, const uint64_t u64, ndt_context_t *ctx)
         }
         double real = (double)u64;
         xnd_float_pack8(real, (unsigned char *)x->ptr, le(t->flags));
+        return 0;
+    }
+
+    case BComplex32: {
+        if (u64 > 4503599627370496LL) {
+            return value_error(ctx);
+        }
+
+        double real = (double)u64;
+        double imag = 0.0;
+
+        xnd_bfloat_pack(x->ptr, real);
+        xnd_bfloat_pack(x->ptr+2, imag);
         return 0;
     }
 
@@ -477,6 +521,11 @@ copy_float64(xnd_t * const x, const double real, ndt_context_t *ctx)
         return 0;
     }
 
+    case BFloat16: {
+        xnd_bfloat_pack(x->ptr, real);
+        return 0;
+    }
+
     case Float16: {
         return xnd_float_pack2(real, (unsigned char *)x->ptr, le(t->flags), ctx);
     }
@@ -487,6 +536,14 @@ copy_float64(xnd_t * const x, const double real, ndt_context_t *ctx)
 
     case Float64: {
         xnd_float_pack8(real, (unsigned char *)x->ptr, le(t->flags));
+        return 0;
+    }
+
+    case BComplex32: {
+        double imag = 0.0;
+
+        xnd_bfloat_pack(x->ptr, real);
+        xnd_bfloat_pack(x->ptr+2, imag);
         return 0;
     }
 
@@ -533,12 +590,18 @@ copy_complex128(xnd_t * const x, const double real, const double imag,
     switch (t->tag) {
     case Int8: case Int16: case Int32: case Int64:
     case Uint8: case Uint16: case Uint32: case Uint64:
-    case Float16: case Float32: case Float64: {
+    case BFloat16: case Float16: case Float32: case Float64: {
        if (imag == 0.0) {
            return copy_float64(x, real, ctx);
        }
 
        return type_error(ctx);
+    }
+
+    case BComplex32: {
+        xnd_bfloat_pack(x->ptr, real);
+        xnd_bfloat_pack(x->ptr+2, imag);
+        return 0;
     }
 
     case Complex32: {
@@ -812,6 +875,11 @@ xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
         return copy_uint64(y, u64, ctx);
     }
 
+    case BFloat16: {
+        double real = xnd_bfloat_unpack(x->ptr);
+        return copy_float64(y, real, ctx);
+    }
+
     case Float16: {
         double real = xnd_float_unpack2((unsigned char *)x->ptr, le(t->flags));
         return copy_float64(y, real, ctx);
@@ -825,6 +893,15 @@ xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
     case Float64: {
         double real = xnd_float_unpack8((unsigned char *)x->ptr, le(t->flags));
         return copy_float64(y, real, ctx);
+    }
+
+    case BComplex32: {
+        double real, imag;
+
+        real = xnd_bfloat_unpack(x->ptr);
+        imag = xnd_bfloat_unpack(x->ptr+2);
+
+        return copy_complex128(y, real, imag, ctx);
     }
 
     case Complex32: {

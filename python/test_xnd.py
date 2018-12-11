@@ -2267,6 +2267,63 @@ class TestFloatKind(XndTestCase):
 
 class TestFloat(XndTestCase):
 
+    def test_bfloat16(self):
+        fromhex = float.fromhex
+
+        # Test bounds.
+        DENORM_MIN = fromhex("0x1p-133")
+        LOWEST = fromhex("-0x1.fep127")
+        MAX = fromhex("0x1.fep127")
+
+        x = xnd(DENORM_MIN, type="bfloat16")
+        self.assertEqual(x.value, DENORM_MIN)
+        check_copy_contiguous(self, x)
+
+        x = xnd(LOWEST, type="bfloat16")
+        self.assertEqual(x.value, LOWEST)
+        check_copy_contiguous(self, x)
+
+        x = xnd(MAX, type="bfloat16")
+        self.assertEqual(x.value, MAX)
+        check_copy_contiguous(self, x)
+
+        # Test special values.
+        x = xnd(float("inf"), type="bfloat16")
+        self.assertTrue(isinf(x.value))
+
+        x = xnd(float("nan"), type="bfloat16")
+        self.assertTrue(isnan(x.value))
+
+        # Richcompare.
+        self.assertStrictEqual(xnd(1.2e7, type="bfloat16"), xnd(1.2e7, type="bfloat16"))
+        self.assertStrictEqual(xnd(float("inf"), type="bfloat16"), xnd(float("inf"), type="bfloat16"))
+        self.assertStrictEqual(xnd(float("-inf"), type="bfloat16"), xnd(float("-inf"), type="bfloat16"))
+
+        self.assertNotStrictEqual(xnd(1.2e7, type="bfloat16"), xnd(-1.2e7, type="bfloat16"))
+        self.assertNotStrictEqual(xnd(float("inf"), type="bfloat16"), xnd(float("-inf"), type="bfloat16"))
+        self.assertNotStrictEqual(xnd(float("-inf"), type="bfloat16"), xnd(float("inf"), type="bfloat16"))
+        self.assertNotStrictEqual(xnd(float("nan"), type="bfloat16"), xnd(float("nan"), type="bfloat16"))
+
+    def test_bfloat16_compare_tf(self):
+        TEST_CASES = [
+          ("0x1p-133", 9.183549615799121e-41),
+          ("0x1p-134", 0.0),
+          ("0x0.1p-134", 0.0),
+          ("-0x1.fep127", -3.3895313892515355e+38),
+          ("-0x1.fep128", float("-inf")),
+          ("0x1.fep127", 3.3895313892515355e+38),
+          ("0x1.fep128", float("inf")),
+          ("-0x2", -2.0),
+          ("-0x1.1", -1.0625),
+          ("-0x1.12345p22", -4489216.0),
+          ("0x7.2p37", 979252543488.0)]
+
+        for s, ans in TEST_CASES:
+            d = float.fromhex(s)
+            x = xnd(d, type="bfloat16")
+            self.assertEqual(x, ans)
+            self.assertEqual(x.value, ans)
+
     @requires_py36
     def test_float16(self):
         fromhex = float.fromhex

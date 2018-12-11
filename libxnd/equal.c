@@ -310,6 +310,12 @@ xnd_strict_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx)
         return a == b;
     }
 
+    case BFloat16: {
+        double a = xnd_bfloat_unpack(x->ptr);
+        double b = xnd_bfloat_unpack(y->ptr);
+        return a == b;
+    }
+
     case Float16: {
         double a = xnd_float_unpack2((unsigned char *)x->ptr, le(t->flags));
         double b = xnd_float_unpack2((unsigned char *)y->ptr, le(u->flags));
@@ -326,6 +332,19 @@ xnd_strict_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx)
         double a = xnd_float_unpack8((unsigned char *)x->ptr, le(t->flags));
         double b = xnd_float_unpack8((unsigned char *)y->ptr, le(u->flags));
         return a == b;
+    }
+
+    case BComplex32: {
+        double a_real, a_imag;
+        double b_real, b_imag;
+
+        a_real = xnd_bfloat_unpack(x->ptr);
+        a_imag = xnd_bfloat_unpack(x->ptr+2);
+
+        b_real = xnd_bfloat_unpack(y->ptr);
+        b_imag = xnd_bfloat_unpack(y->ptr+2);
+
+        return a_real == b_real && a_imag == b_imag;
     }
 
     case Complex32: {
@@ -509,6 +528,11 @@ equal_int64(const int64_t a, const xnd_t * const x)
         return a >= 0 ? (uint64_t)a == b : 0;
     }
 
+    case BFloat16: {
+        double b = xnd_bfloat_unpack(x->ptr);
+        return llabs(a) <= 4503599627370496LL ? (double)a == b : 0;
+    }
+
     case Float16: {
         double b = xnd_float_unpack2((unsigned char *)x->ptr, le(t->flags));
         return llabs(a) <= 4503599627370496LL ? (double)a == b : 0;
@@ -522,6 +546,17 @@ equal_int64(const int64_t a, const xnd_t * const x)
     case Float64: {
         double b = xnd_float_unpack8((unsigned char *)x->ptr, le(t->flags));
         return llabs(a) <= 4503599627370496LL ? (double)a == b : 0;
+    }
+
+    case BComplex32: {
+        double real = xnd_bfloat_unpack(x->ptr);
+        double imag = xnd_bfloat_unpack(x->ptr+2);
+
+        if (imag == 0.0 && llabs(a) <= 4503599627370496LL) {
+            return (double)a == real;
+        }
+
+        return 0;
     }
 
     case Complex32: {
@@ -615,6 +650,11 @@ equal_uint64(const uint64_t a, const xnd_t * const x)
         return a == b;
     }
 
+    case BFloat16: {
+        double b = xnd_bfloat_unpack(x->ptr);
+        return a <= 4503599627370496ULL ? (double)a == b : 0;
+    }
+
     case Float16: {
         double b = xnd_float_unpack2((unsigned char *)x->ptr, le(t->flags));
         return a <= 4503599627370496ULL ? (double)a == b : 0;
@@ -628,6 +668,17 @@ equal_uint64(const uint64_t a, const xnd_t * const x)
     case Float64: {
         double b = xnd_float_unpack8((unsigned char *)x->ptr, le(t->flags));
         return a <= 4503599627370496ULL ? (double)a == b : 0;
+    }
+
+    case BComplex32: {
+        double real = xnd_bfloat_unpack(x->ptr);
+        double imag = xnd_bfloat_unpack(x->ptr+2);
+
+        if (imag == 0.0 && a <= 4503599627370496ULL) {
+            return (double)a == real;
+        }
+
+        return 0;
     }
 
     case Complex32: {
@@ -721,6 +772,11 @@ equal_float64(const double a, const xnd_t * const x)
         return b <= 4503599627370496ULL ? a == (double)b : 0;
     }
 
+    case BFloat16: {
+        double b = xnd_bfloat_unpack(x->ptr);
+        return a == b;
+    }
+
     case Float16: {
         double b = xnd_float_unpack2((unsigned char *)x->ptr, le(t->flags));
         return a == b;
@@ -734,6 +790,19 @@ equal_float64(const double a, const xnd_t * const x)
     case Float64: {
         double b = xnd_float_unpack8((unsigned char *)x->ptr, le(t->flags));
         return a == b;
+    }
+
+    case BComplex32: {
+        double real, imag;
+
+        real = xnd_bfloat_unpack(x->ptr);
+        imag = xnd_bfloat_unpack(x->ptr+2);
+
+        if (imag == 0.0) {
+            return a == real;
+        }
+
+        return 0;
     }
 
     case Complex32: {
@@ -833,6 +902,11 @@ equal_complex128(const double real, const double imag, const xnd_t * const x)
         return b <= 4503599627370496ULL ? real == (double)b : 0;
     }
 
+    case BFloat16: {
+        double b = xnd_bfloat_unpack(x->ptr);
+        return imag == 0.0 && real == b;
+    }
+
     case Float16: {
         double b = xnd_float_unpack2((unsigned char *)x->ptr, le(t->flags));
         return imag == 0.0 && real == b;
@@ -846,6 +920,12 @@ equal_complex128(const double real, const double imag, const xnd_t * const x)
     case Float64: {
         double b = xnd_float_unpack8((unsigned char *)x->ptr, le(t->flags));
         return imag == 0.0 && real == b;
+    }
+
+    case BComplex32: {
+        double a = xnd_bfloat_unpack(x->ptr);
+        double b = xnd_bfloat_unpack(x->ptr+2);
+        return real == a && imag == b;
     }
 
     case Complex32: {
@@ -1110,6 +1190,11 @@ xnd_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx)
         return equal_uint64(a, y);
     }
 
+    case BFloat16: {
+        double a = xnd_bfloat_unpack(x->ptr);
+        return equal_float64(a, y);
+    }
+
     case Float16: {
         double a = xnd_float_unpack2((unsigned char *)x->ptr, le(t->flags));
         return equal_float64(a, y);
@@ -1123,6 +1208,19 @@ xnd_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx)
     case Float64: {
         double a = xnd_float_unpack8((unsigned char *)x->ptr, le(t->flags));
         return equal_float64(a, y);
+    }
+
+    case BComplex32: {
+        double real, imag;
+
+        real = xnd_bfloat_unpack(x->ptr);
+        imag = xnd_bfloat_unpack(x->ptr+2);
+
+        if (imag == 0.0) {
+            return equal_float64(real, y);
+        }
+
+        return equal_complex128(real, imag, y);
     }
 
     case Complex32: {

@@ -35,6 +35,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <string.h>
+#include <math.h>
 #include <assert.h>
 #include "ndtypes.h"
 #include "xnd.h"
@@ -111,8 +112,8 @@ requires_init(const ndt_t * const t)
     case Bool:
     case Int8: case Int16: case Int32: case Int64:
     case Uint8: case Uint16: case Uint32: case Uint64:
-    case Float16: case Float32: case Float64:
-    case Complex32: case Complex64: case Complex128:
+    case BFloat16: case Float16: case Float32: case Float64:
+    case BComplex32: case Complex32: case Complex64: case Complex128:
     case FixedString: case FixedBytes:
     case String: case Bytes:
         return false;
@@ -294,8 +295,8 @@ xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx)
     case Bool:
     case Int8: case Int16: case Int32: case Int64:
     case Uint8: case Uint16: case Uint32: case Uint64:
-    case Float16: case Float32: case Float64:
-    case Complex32: case Complex64: case Complex128:
+    case BFloat16: case Float16: case Float32: case Float64:
+    case BComplex32: case Complex32: case Complex64: case Complex128:
     case FixedString: case FixedBytes:
     case String: case Bytes:
         return 0;
@@ -466,8 +467,8 @@ requires_clear(const ndt_t * const t)
     case Bool:
     case Int8: case Int16: case Int32: case Int64:
     case Uint8: case Uint16: case Uint32: case Uint64:
-    case Float16: case Float32: case Float64:
-    case Complex32: case Complex64: case Complex128:
+    case BFloat16: case Float16: case Float32: case Float64:
+    case BComplex32: case Complex32: case Complex64: case Complex128:
     case FixedString: case FixedBytes:
         return false;
     default:
@@ -599,8 +600,8 @@ xnd_clear(xnd_t * const x, const uint32_t flags)
     case Bool:
     case Int8: case Int16: case Int32: case Int64:
     case Uint8: case Uint16: case Uint32: case Uint64:
-    case Float16: case Float32: case Float64:
-    case Complex32: case Complex64: case Complex128:
+    case BFloat16: case Float16: case Float32: case Float64:
+    case BComplex32: case Complex32: case Complex64: case Complex128:
     case FixedString: case FixedBytes:
         return;
 
@@ -1561,4 +1562,56 @@ bool
 xnd_double_is_big_endian(void)
 {
     return xnd_double_format==IEEE_BIG_ENDIAN;
+}
+
+static uint16_t
+float_truncate_to_bfloat16(float f)
+{
+    uint16_t *p = (uint16_t *)((char *)&f);
+
+    if (xnd_float_is_big_endian()) {
+        return p[0];
+    }
+    else {
+        return p[1];
+    }
+}
+
+static float
+bfloat16_to_float(uint16_t b)
+{
+    float f = 0;
+    uint16_t *p = (uint16_t *)((char *)&f);
+
+    if (xnd_float_is_big_endian()) {
+        p[0] = b;
+    }
+    else {
+        p[1] = b;
+    }
+
+    return f;
+}
+
+/*
+ * Unlike the corresponding Python conversion functions, Tensorflow does
+ * not raise OverflowError.
+ */
+void
+xnd_bfloat_pack(char *p, double x)
+{
+    float f = (float)x;
+    uint16_t u16;
+
+    u16 = float_truncate_to_bfloat16(f);
+    PACK_SINGLE(p, u16, uint16_t, 0);
+}
+
+double
+xnd_bfloat_unpack(char *p)
+{
+    uint16_t u16;
+
+    UNPACK_SINGLE(u16, p, uint16_t, 0);
+    return bfloat16_to_float(u16);
 }

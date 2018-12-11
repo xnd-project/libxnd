@@ -839,6 +839,15 @@ mblock_init(xnd_t * const x, PyObject *v)
         return 0;
     }
 
+    case BFloat16: {
+        double tmp = PyFloat_AsDouble(v);
+        if (tmp == -1 && PyErr_Occurred()) {
+            return -1;
+        }
+        xnd_bfloat_pack(x->ptr, tmp);
+        return 0;
+    }
+
     case Float16: {
 #if PY_VERSION_HEX >= 0x03060000
         double tmp = PyFloat_AsDouble(v);
@@ -867,6 +876,16 @@ mblock_init(xnd_t * const x, PyObject *v)
             return -1;
         }
         return _PyFloat_Pack8(tmp, (unsigned char *)x->ptr, le(t->flags));
+    }
+
+    case BComplex32: {
+        Py_complex c = PyComplex_AsCComplex(v);
+        if (c.real == -1.0 && PyErr_Occurred()) {
+            return -1;
+        }
+        xnd_bfloat_pack(x->ptr, c.real);
+        xnd_bfloat_pack(x->ptr+2, c.imag);
+        return 0;
     }
 
     case Complex32: {
@@ -1620,6 +1639,11 @@ _pyxnd_value(const xnd_t * const x, const int64_t maxshape)
         return PyLong_FromUnsignedLongLong(tmp);
     }
 
+    case BFloat16: {
+        double tmp = xnd_bfloat_unpack(x->ptr);
+        return PyFloat_FromDouble(tmp);
+    }
+
     case Float16: {
 #if PY_VERSION_HEX >= 0x03060000
         double tmp = _PyFloat_Unpack2((unsigned char *)x->ptr, le(t->flags));
@@ -1648,6 +1672,13 @@ _pyxnd_value(const xnd_t * const x, const int64_t maxshape)
             return NULL;
         }
         return PyFloat_FromDouble(tmp);
+    }
+
+    case BComplex32: {
+        Py_complex c;
+        c.real = xnd_bfloat_unpack(x->ptr);
+        c.imag = xnd_bfloat_unpack(x->ptr+2);
+        return PyComplex_FromCComplex(c);
     }
 
     case Complex32: {
