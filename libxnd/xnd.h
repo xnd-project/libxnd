@@ -35,6 +35,15 @@
 #define XND_H
 
 
+#ifdef __cplusplus
+extern "C" {
+  #ifndef __STDC_LIMIT_MACROS
+    #define __STDC_LIMIT_MACROS
+    #define XND_CLEAR_STDC_LIMIT_MACROS
+  #endif
+#endif
+
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -498,5 +507,15 @@ le(uint32_t flags)
         }                                          \
         x = &_##x##tail;                           \
     }
+
+
+#ifdef __cplusplus
+  #ifdef XND_CLEAR_STDC_LIMIT_MACROS
+    #undef XND_CLEAR_STDC_LIMIT_MACROS
+    #undef __STDC_LIMIT_MACROS
+  #endif
+} /* END extern "C" */
+#endif
+
 
 #endif /* XND_H */
