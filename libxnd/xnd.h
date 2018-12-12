@@ -266,6 +266,7 @@ adjust_index(const int64_t i, const int64_t shape, ndt_context_t *ctx)
     return k;
 }
 
+#ifndef __cplusplus
 /*
  * This looks inefficient, but both gcc and clang clean up unused xnd_t members.
  */
@@ -435,6 +436,7 @@ xnd_nominal_next(const xnd_t *x, ndt_context_t *ctx)
 
     return next;
 }
+#endif
 
 #if NDT_SYS_BIG_ENDIAN == 1
   #define XND_REV_COND NDT_LITTLE_ENDIAN
