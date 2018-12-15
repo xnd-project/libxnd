@@ -2382,7 +2382,7 @@ static PyMethodDef pyxnd_methods [] =
   { "copy_contiguous", (PyCFunction)pyxnd_copy_contiguous, METH_NOARGS, NULL },
 
   /* Class methods */
-  { "empty", (PyCFunction)pyxnd_empty, METH_O|METH_CLASS, doc_empty },
+  { "empty", (PyCFunction)pyxnd_empty, METH_VARARGS|METH_KEYWORDS|METH_CLASS, doc_empty },
   { "from_buffer", (PyCFunction)pyxnd_from_buffer, METH_O|METH_CLASS, doc_from_buffer },
   { "_unsafe_from_data", (PyCFunction)pyxnd_from_buffer_and_type, METH_VARARGS|METH_KEYWORDS|METH_CLASS, NULL },
 

@@ -209,6 +209,24 @@ elif len(sys.argv) == 2:
     else:
         pass
 
+def configure(configure_includes, configure_libs):
+    os.chmod("./configure", 0x1ed) # pip removes execute permissions.
+    os.system("./configure --with-includes='%s' --with-libs='%s' && make" %
+              (configure_includes, configure_libs))
+    f = open("config.h")
+    config_vars = {}
+    for line in f:
+        if line.startswith("#define"):
+            l = line.split()
+            try:
+                config_vars[l[1]] = int(l[2])
+            except ValueError:
+                pass
+        elif line.startswith("/* #undef"):
+            l = line.split()
+            config_vars[l[2]] = 0
+    f.close()
+    return config_vars
 
 def xnd_ext():
     include_dirs = ["libxnd", "ndtypes/python/ndtypes"] + INCLUDES
@@ -235,20 +253,20 @@ def xnd_ext():
             os.chdir("..")
 
     else:
+        if BUILD_ALL:
+            config_vars = configure(CONFIGURE_INCLUDES, CONFIGURE_LIBS)
+
         extra_compile_args = ["-Wextra", "-Wno-missing-field-initializers", "-std=c11"]
         if sys.platform == "darwin":
             libraries = ["ndtypes", "xnd"]
             extra_link_args = ["-Wl,-rpath,@loader_path"]
             runtime_library_dirs = []
         else:
-            libraries = [":%s" % LIBNDTYPES, ":%s" % LIBSHARED, "cudart"]
+            libraries = [":%s" % LIBNDTYPES, ":%s" % LIBSHARED]
+            if config_vars["HAVE_CUDA"]:
+                libraries += ["cudart"]
             extra_link_args = []
             runtime_library_dirs = ["$ORIGIN"]
-
-        if BUILD_ALL:
-            os.system(
-              "./configure --with-includes='%s' --with-libs='%s' && make" %
-              (CONFIGURE_INCLUDES, CONFIGURE_LIBS))
 
     return Extension (
       "xnd._xnd",

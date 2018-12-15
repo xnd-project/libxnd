@@ -153,7 +153,6 @@ static char *
 xnd_cuda_new(const ndt_t * const t, ndt_context_t *ctx)
 {
     (void)t;
-    (void)flags;
 
     ndt_err_format(ctx, NDT_ValueError, "xnd compiled without cuda support");
     return NULL;

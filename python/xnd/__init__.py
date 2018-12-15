@@ -145,7 +145,7 @@ class xnd(Xnd):
             name, no = device.split(":")
             device = (name, int(no))
 
-        return cls.empty(type, device)
+        return super(xnd, cls).empty(type, device)
 
     @classmethod
     def unsafe_from_data(cls, obj=None, type=None):
