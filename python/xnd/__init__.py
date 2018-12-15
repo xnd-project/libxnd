@@ -143,6 +143,7 @@ class xnd(Xnd):
     def empty(cls, type=None, device=None):
         if device is not None:
             name, no = device.split(":")
+            no = -1 if no == "managed" else no
             device = (name, int(no))
 
         return super(xnd, cls).empty(type, device)
