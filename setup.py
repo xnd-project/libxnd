@@ -212,7 +212,7 @@ elif len(sys.argv) == 2:
 
 def xnd_ext():
     include_dirs = ["libxnd", "ndtypes/python/ndtypes"] + INCLUDES
-    library_dirs = ["libxnd", "ndtypes/libndtypes"] + LIBS
+    library_dirs = ["libxnd", "ndtypes/libndtypes", '/usr/local/cuda-9.2/lib64'] + LIBS
     depends = ["libxnd/xnd.h", "python/xnd/util.h", "python/xnd/pyxnd.h"]
     sources = ["python/xnd/_xnd.c"]
 
@@ -241,7 +241,7 @@ def xnd_ext():
             extra_link_args = ["-Wl,-rpath,@loader_path"]
             runtime_library_dirs = []
         else:
-            libraries = [":%s" % LIBNDTYPES, ":%s" % LIBSHARED]
+            libraries = [":%s" % LIBNDTYPES, ":%s" % LIBSHARED, "cudart"]
             extra_link_args = []
             runtime_library_dirs = ["$ORIGIN"]
 

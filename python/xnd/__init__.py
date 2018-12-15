@@ -98,7 +98,7 @@ class xnd(Xnd):
     """
 
     def __new__(cls, value, *, type=None, dtype=None, levels=None,
-                typedef=None, dtypedef=None):
+                typedef=None, dtypedef=None, device=None):
         if (type, dtype, levels, typedef, dtypedef).count(None) < 2:
             raise TypeError(
                 "the 'type', 'dtype', 'levels' and 'typedef' arguments are "
@@ -123,7 +123,13 @@ class xnd(Xnd):
             type = typeof(value, dtype=dtype)
         else:
             type = typeof(value)
-        return super().__new__(cls, type=type, value=value)
+
+        if device is not None:
+            name, no = device.split(":")
+            no = -1 if no == "managed" else int(no)
+            device = (name, no)
+
+        return super().__new__(cls, type=type, value=value, device=device)
 
     def __repr__(self):
         value = self.short_value(maxshape=10)
@@ -132,6 +138,14 @@ class xnd(Xnd):
         fmt = fmt.replace('@"', "")
         fmt = fmt.replace("\n", "\n   ")
         return "xnd%s" % fmt
+
+    @classmethod
+    def empty(cls, type=None, device=None):
+        if device is not None:
+            name, no = device.split(":")
+            device = (name, int(no))
+
+        return cls.empty(type, device)
 
     @classmethod
     def unsafe_from_data(cls, obj=None, type=None):

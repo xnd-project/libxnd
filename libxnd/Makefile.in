@@ -13,12 +13,17 @@ CC = @CC@
 LD = @LD@
 AR = @AR@
 RANLIB = @RANLIB@
+CUDA_CXX = @CUDA_CXX@
 
 XND_INCLUDES = @CONFIGURE_INCLUDES@
 
 CONFIGURE_CFLAGS = @CONFIGURE_CFLAGS@
 XND_CFLAGS = $(strip -I$(XND_INCLUDES) $(CONFIGURE_CFLAGS) $(CFLAGS))
 XND_CFLAGS_SHARED = $(XND_CFLAGS) -fPIC
+
+CONFIGURE_CXXFLAGS = @CONFIGURE_CXXFLAGS@
+XND_CXXFLAGS = $(strip -I$(XND_INCLUDES) $(CONFIGURE_CXXFLAGS) $(CXXFLAGS))
+XND_CXXFLAGS_SHARED = $(XND_CXXFLAGS) -fPIC
 
 CONFIGURE_LDFLAGS = @CONFIGURE_LDFLAGS@
 XND_LDFLAGS = $(strip $(CONFIGURE_LDFLAGS) $(LDFLAGS))
@@ -31,6 +36,11 @@ OBJS = bitmaps.o copy.o equal.o split.o xnd.o
 
 SHARED_OBJS = .objs/bitmaps.o .objs/copy.o .objs/equal.o .objs/split.o .objs/xnd.o
 
+ifdef CUDA_CXX
+OBJS += cuda_memory.o
+SHARED_OBJS += .objs/cuda_memory.o
+endif
+
 
 $(LIBSTATIC): Makefile $(OBJS)
 	$(AR) rc $(LIBSTATIC) $(OBJS)
@@ -40,6 +50,7 @@ $(LIBSHARED): Makefile $(SHARED_OBJS)
 	$(LD) $(XND_LDFLAGS) -o $(LIBSHARED) $(SHARED_OBJS)
 	ln -sf $(LIBSHARED) $(LIBNAME)
 	ln -sf $(LIBSHARED) $(LIBSONAME)
+
 
 bitmaps.o:\
 Makefile bitmaps.c xnd.h
@@ -80,6 +91,16 @@ Makefile xnd.c xnd.h
 .objs/xnd.o:\
 Makefile xnd.c xnd.h
 	$(CC) $(XND_CFLAGS_SHARED) -c xnd.c -o .objs/xnd.o
+
+
+# Cuda
+cuda_memory.o:\
+Makefile cuda/cuda_memory.cu cuda/cuda_memory.h
+	$(CUDA_CXX) --compiler-options "$(XND_CXXFLAGS)" -std=c++11 -c cuda/cuda_memory.cu
+
+.objs/cuda_memory.o:\
+Makefile cuda/cuda_memory.cu cuda/cuda_memory.h
+	$(CUDA_CXX) --compiler-options "$(XND_CXXFLAGS_SHARED)" -std=c++11 -c cuda/cuda_memory.cu -o .objs/cuda_memory.o
 
 
 # Coverage

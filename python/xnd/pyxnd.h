@@ -108,7 +108,7 @@ typedef struct {
 
 #define Xnd_EmptyFromType_INDEX 3
 #define Xnd_EmptyFromType_RETURN PyObject *
-#define Xnd_EmptyFromType_ARGS (PyTypeObject *, const ndt_t *t)
+#define Xnd_EmptyFromType_ARGS (PyTypeObject *, const ndt_t *t, uint32_t flags)
 
 #define Xnd_ViewMoveNdt_INDEX 4
 #define Xnd_ViewMoveNdt_RETURN PyObject *

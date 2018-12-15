@@ -41,6 +41,8 @@
 #include "xnd.h"
 #include "inline.h"
 #include "contrib.h"
+#include "cuda/cuda_memory.h"
+#include "../config.h"
 
 
 static int xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx);
@@ -123,10 +125,49 @@ requires_init(const ndt_t * const t)
 }
 
 /* Create and initialize memory with type 't'. */
+#ifdef HAVE_CUDA
+static char *
+xnd_cuda_new(const ndt_t * const t, ndt_context_t *ctx)
+{
+    void *ptr;
+
+    if (!is_primary_type(t, ctx)) {
+        return NULL;
+    }
+
+    if (requires_init(t)) {
+        ndt_err_format(ctx, NDT_ValueError,
+            "only pointer-free types are supported on cuda");
+        return NULL;
+    }
+
+    ptr = xnd_cuda_calloc_managed(t->align, t->datasize, ctx);
+    if (ptr == NULL) {
+        return NULL;
+    }
+
+    return ptr;
+}
+#else
+static char *
+xnd_cuda_new(const ndt_t * const t, ndt_context_t *ctx)
+{
+    (void)t;
+    (void)flags;
+
+    ndt_err_format(ctx, NDT_ValueError, "xnd compiled without cuda support");
+    return NULL;
+}
+#endif
+
 static char *
 xnd_new(const ndt_t * const t, const uint32_t flags, ndt_context_t *ctx)
 {
     xnd_t x;
+
+    if (flags & XND_CUDA_MANAGED) {
+        return xnd_cuda_new(t, ctx);
+    }
 
     if (!is_primary_type(t, ctx)) {
         return NULL;
@@ -166,6 +207,13 @@ static int
 xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx)
 {
     const ndt_t * const t = x->type;
+
+    if (flags & XND_CUDA_MANAGED) {
+        ndt_err_format(ctx, NDT_RuntimeError,
+            "internal error: cannot initialize cuda memory with a type "
+            "that contains pointers");
+        return -1;
+    }
 
     if (ndt_is_abstract(t)) {
         ndt_err_format(ctx, NDT_ValueError,
@@ -437,6 +485,9 @@ xnd_from_xnd(xnd_t *src, uint32_t flags, ndt_context_t *ctx)
 {
     xnd_master_t *x;
 
+    /* XXX xnd_from_xnd() will probably be replaced. */
+    assert(!(flags & XND_CUDA_MANAGED));
+
     x = ndt_alloc(1, sizeof *x);
     if (x == NULL) {
         xnd_clear(src, XND_OWN_ALL);
@@ -481,6 +532,7 @@ static void
 xnd_clear_ref(xnd_t *x, const uint32_t flags)
 {
     assert(x->type->tag == Ref);
+    assert(!(flags & XND_CUDA_MANAGED));
 
     if (flags & XND_OWN_POINTERS) {
         ndt_aligned_free(XND_POINTER_DATA(x->ptr));
@@ -493,6 +545,7 @@ static void
 xnd_clear_string(xnd_t *x, const uint32_t flags)
 {
     assert(x->type->tag == String);
+    assert(!(flags & XND_CUDA_MANAGED));
 
     if (flags & XND_OWN_STRINGS) {
         ndt_free(XND_POINTER_DATA(x->ptr));
@@ -505,6 +558,7 @@ static void
 xnd_clear_bytes(xnd_t *x, const uint32_t flags)
 {
     assert(x->type->tag == Bytes);
+    assert(!(flags & XND_CUDA_MANAGED));
 
     if (flags & XND_OWN_BYTES) {
         ndt_aligned_free(XND_BYTES_DATA(x->ptr));
@@ -520,6 +574,7 @@ xnd_clear(xnd_t * const x, const uint32_t flags)
     const ndt_t * const t = x->type;
 
     assert(ndt_is_concrete(t));
+    assert(!(flags & XND_CUDA_MANAGED));
 
     switch (t->tag) {
     case FixedDim: {
@@ -648,7 +703,18 @@ xnd_del_buffer(xnd_t *x, uint32_t flags)
             }
 
             if (flags & XND_OWN_DATA) {
-                ndt_aligned_free(x->ptr);
+                if (flags & XND_CUDA_MANAGED) {
+                #ifdef HAVE_CUDA
+                    xnd_cuda_free(x->ptr);
+                #else
+                    fprintf(stderr,
+                        "xnd_del_buffer: internal error: XND_CUDA_MANAGED set "
+                        "without cuda support\n");
+                #endif
+                }
+                else {
+                    ndt_aligned_free(x->ptr);
+                }
             }
         }
 

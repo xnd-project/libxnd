@@ -42,8 +42,10 @@ AC_SUBST(host)
 # Language and compiler:
 AC_LANG_C
 saved_cflags=$CFLAGS
+saved_cxxflags=$CXXFLAGS
 AC_PROG_CC
 CFLAGS=$saved_cflags
+CXXFLAGS=$saved_cxxflags
 
 # ar and ranlib:
 AC_CHECK_TOOL(AR, ar, ar)
@@ -57,6 +59,18 @@ AC_HEADER_STDC
 # Install program:
 AC_PROG_INSTALL
 AC_SUBST(INSTALL)
+
+# Cuda compiler:
+ac_save_cxx="$CXX"
+CXX=
+CUDA_CXX=
+AC_PROG_CXX([nvcc])
+if test "$CXX" = "nvcc"; then
+  CUDA_CXX="nvcc"
+  AC_DEFINE(HAVE_CUDA, 1, [Define if you have the nvcc cuda compiler.])
+fi
+AC_SUBST(CUDA_CXX)
+CXX=$ac_save_cxx
 
 # Add an explicit include directory.
 AC_MSG_CHECKING(for --with-includes)
@@ -116,20 +130,20 @@ AC_SUBST(NDT_INSTALL_DOCS)
 
 # Compiler dependent settings:
 XND_WARN=
-XND_OPT="-O2"
+XND_OPT="-O2 -g"
 case $CC in
     *gcc*)
         XND_WARN="-Wall -Wextra -std=c11 -pedantic"
-        XND_OPT="-O2"
+        XND_OPT="-O2 -g"
         ;;
     *icc*)
         AR=xiar
         XND_WARN="-Wall"
-        XND_OPT="-O2"
+        XND_OPT="-O2 -g"
         ;;
     *clang*)
         XND_WARN="-Wall -Wextra -std=c11 -pedantic"
-        XND_OPT="-O2"
+        XND_OPT="-O2 -g"
         ;;
 esac
 
@@ -151,6 +165,12 @@ else
     CONFIGURE_CFLAGS="$XND_INCLUDE $XND_WARN $XND_CONFIG $XND_OPT $CFLAGS"
 fi
 
+if test -z "$CXXFLAGS"; then
+    CONFIGURE_CXXFLAGS="$XND_INCLUDE -Wall -Wextra -O2 -g"
+else
+    CONFIGURE_CXXFLAGS="$XND_INCLUDE -Wall -Wextra -O2 -g $CXXFLAGS"
+fi
+
 if test -z "$LDFLAGS"; then
     CONFIGURE_LDFLAGS="$XND_LINK $CONFIGURE_LDFLAGS"
 else
@@ -158,6 +178,7 @@ else
 fi
 
 AC_SUBST(CONFIGURE_CFLAGS)
+AC_SUBST(CONFIGURE_CXXFLAGS)
 AC_SUBST(CONFIGURE_LDFLAGS)
 
 AC_OUTPUT

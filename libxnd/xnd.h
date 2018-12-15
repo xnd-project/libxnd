@@ -90,6 +90,7 @@ extern "C" {
 #define XND_OWN_STRINGS  0x00000004U /* embedded string pointers */
 #define XND_OWN_BYTES    0x00000008U /* embedded bytes pointers */
 #define XND_OWN_POINTERS 0x00000010U /* embedded pointers */
+#define XND_CUDA_MANAGED 0x00000020U /* cuda managed memory */
 
 #define XND_OWN_ALL (XND_OWN_TYPE |    \
                      XND_OWN_DATA |    \
@@ -245,6 +246,16 @@ XND_API bool xnd_double_is_big_endian(void);
 
 XND_API void xnd_bfloat_pack(char *p, double x);
 XND_API double xnd_bfloat_unpack(char *p);
+
+
+/*****************************************************************************/
+/*                                   Cuda                                    */
+/*****************************************************************************/
+
+void *xnd_cuda_calloc_managed(uint16_t align, int64_t size, ndt_context_t *ctx);
+void xnd_cuda_free(void *ptr);
+int xnd_cuda_mem_prefetch_async(const void *ptr, int64_t count, int dev, ndt_context_t *ctx);
+int xnd_cuda_device_synchronize(ndt_context_t *ctx);
 
 
 /*****************************************************************************/
