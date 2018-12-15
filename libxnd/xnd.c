@@ -42,7 +42,7 @@
 #include "inline.h"
 #include "contrib.h"
 #include "cuda/cuda_memory.h"
-#include "../config.h"
+#include "config.h"
 
 
 static int xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx);
