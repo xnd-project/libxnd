@@ -213,6 +213,8 @@ def configure(configure_includes, configure_libs):
     os.chmod("./configure", 0x1ed) # pip removes execute permissions.
     os.system("./configure --with-includes='%s' --with-libs='%s' && make" %
               (configure_includes, configure_libs))
+
+def get_config_vars():
     f = open("config.h")
     config_vars = {}
     for line in f:
@@ -254,7 +256,9 @@ def xnd_ext():
 
     else:
         if BUILD_ALL:
-            config_vars = configure(CONFIGURE_INCLUDES, CONFIGURE_LIBS)
+            configure(CONFIGURE_INCLUDES, CONFIGURE_LIBS)
+
+        config_vars = get_config_vars()
 
         extra_compile_args = ["-Wextra", "-Wno-missing-field-initializers", "-std=c11"]
         if sys.platform == "darwin":
