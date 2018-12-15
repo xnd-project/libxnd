@@ -232,7 +232,7 @@ def get_config_vars():
 
 def xnd_ext():
     include_dirs = ["libxnd", "ndtypes/python/ndtypes"] + INCLUDES
-    library_dirs = ["libxnd", "ndtypes/libndtypes", '/usr/local/cuda-9.2/lib64'] + LIBS
+    library_dirs = ["libxnd", "ndtypes/libndtypes"] + LIBS
     depends = ["libxnd/xnd.h", "python/xnd/util.h", "python/xnd/pyxnd.h"]
     sources = ["python/xnd/_xnd.c"]
 
@@ -268,6 +268,10 @@ def xnd_ext():
         else:
             libraries = [":%s" % LIBNDTYPES, ":%s" % LIBSHARED]
             if config_vars["HAVE_CUDA"]:
+                if os.path.isdir("/usr/cuda/lib64"):
+                    library_dirs += ["/usr/cuda/lib64"]
+                if os.path.isdir("/usr/local/cuda/lib64"):
+                    library_dirs += ["/usr/local/cuda/lib64"]
                 libraries += ["cudart"]
             extra_link_args = []
             runtime_library_dirs = ["$ORIGIN"]
