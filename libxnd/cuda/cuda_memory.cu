@@ -93,7 +93,7 @@ xnd_cuda_mem_prefetch_async(const void *ptr, int64_t count, int dev,
         return -1;
     }
 
-    err = cudaMemPrefetchAsync(&ptr, (size_t)count, dev);
+    err = cudaMemPrefetchAsync(ptr, (size_t)count, dev);
     if (err != cudaSuccess) {
         ndt_err_format(ctx, NDT_MemoryError,
             "cudaMemPrefetchAsync: prefetching failed");
