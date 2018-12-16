@@ -41,6 +41,7 @@
 #include "pyndtypes.h"
 #include "xnd.h"
 #include "util.h"
+#include "overflow.h"
 #include "docstrings.h"
 
 #define XND_MODULE
@@ -2906,6 +2907,7 @@ static const ndt_t *
 var_from_shapes(PyObject *lst, const ndt_t *dtype)
 {
     NDT_STATIC_CONTEXT(ctx);
+    bool overflow = false;
     const ndt_t *t;
     ndt_offsets_t *offsets;
     int32_t *ptr;
@@ -2930,13 +2932,14 @@ var_from_shapes(PyObject *lst, const ndt_t *dtype)
             return NULL;
         }
 
-        offsets = ndt_offsets_new(slen+1, &ctx);
+        offsets = ndt_offsets_new((int32_t)(slen+1), &ctx);
         if (offsets == NULL) {
             return seterr_ndt(&ctx);
         }
 
         ptr = (int32_t *)offsets->v;
-        ptr[0] = sum = 0;
+        sum = 0;
+        ptr[0] = 0;
         opt = false;
 
         for (k = 0; k < slen; k++) {
@@ -2953,8 +2956,16 @@ var_from_shapes(PyObject *lst, const ndt_t *dtype)
                     return NULL;
                 }
             }
-            sum += shape;
-            ptr[k+1] = sum;
+
+            sum = ADDi64(sum, shape, &overflow);
+            if (overflow || sum > INT32_MAX) {
+                PyErr_SetString(PyExc_ValueError,
+                    "variable dimension is too large");
+                ndt_decref_offsets(offsets);
+                return NULL;
+            }
+
+            ptr[k+1] = (int32_t)sum;
         }
 
         t = ndt_var_dim(dtype, offsets, 0, NULL, opt, &ctx);
