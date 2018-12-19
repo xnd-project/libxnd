@@ -2795,6 +2795,10 @@ data_shapes(PyObject *m UNUSED, PyObject *v)
         PyList_SET_ITEM(shapes, i, acc[k]);
     }
 
+    for (; i < NDT_MAX_DIM; i++) {
+        Py_DECREF(acc[i]);
+    }
+
     tuple = PyTuple_New(2);
     if (tuple == NULL) {
         Py_DECREF(data);
