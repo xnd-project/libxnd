@@ -2921,8 +2921,9 @@ var_from_shapes(PyObject *lst, const ndt_t *dtype)
     const ndt_t *t;
     ndt_offsets_t *offsets;
     int32_t *ptr;
+    int64_t sum;
     Py_ssize_t len, slen;
-    Py_ssize_t sum, shape;
+    Py_ssize_t shape;
     Py_ssize_t i, k;
     bool opt;
 
