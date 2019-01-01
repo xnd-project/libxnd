@@ -37,20 +37,19 @@
 
 #ifdef __cplusplus
 extern "C" {
-  #ifndef __STDC_LIMIT_MACROS
-    #define __STDC_LIMIT_MACROS
-    #define XND_CLEAR_STDC_LIMIT_MACROS
-  #endif
 #endif
-
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <stdint.h>
-#include <inttypes.h>
 #include <assert.h>
 #include "ndtypes.h"
+
+#ifdef __cplusplus
+  #include <cstdint>
+#else
+  #include <stdint.h>
+#endif
 
 
 #ifdef _MSC_VER
@@ -523,10 +522,6 @@ le(uint32_t flags)
 
 
 #ifdef __cplusplus
-  #ifdef XND_CLEAR_STDC_LIMIT_MACROS
-    #undef XND_CLEAR_STDC_LIMIT_MACROS
-    #undef __STDC_LIMIT_MACROS
-  #endif
 } /* END extern "C" */
 #endif
 
