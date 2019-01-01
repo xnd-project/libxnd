@@ -49,6 +49,7 @@ extern "C" {
   #include <cstdint>
 #else
   #include <stdint.h>
+  #include <inttypes.h>
 #endif
 
 
