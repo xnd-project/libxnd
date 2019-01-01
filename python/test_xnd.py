@@ -738,39 +738,39 @@ class TestVarDim(XndTestCase):
         x = xnd([0, 1, 2, 3, 4], type="var(offsets=[0,5]) * complex128")
         sig = ndt("var... * complex128 -> var... * complex128")
 
-        spec = sig.apply([x.type])
-        self.assertTrue(type_equal(spec.out_types[0], x.type))
+        spec = sig.apply(x.type)
+        self.assertTrue(type_equal(spec.types[1], x.type))
 
         y = x[::-1]
-        spec = sig.apply([y.type])
-        self.assertTrue(type_equal(spec.out_types[0], y.type))
+        spec = sig.apply(y.type)
+        self.assertTrue(type_equal(spec.types[1], y.type))
 
         y = x[1:3:-1]
-        spec = sig.apply([y.type])
-        self.assertTrue(type_equal(spec.out_types[0], y.type))
+        spec = sig.apply(y.type)
+        self.assertTrue(type_equal(spec.types[1], y.type))
 
         sig = ndt("var... * complex128, var... * complex128 -> var... * complex128")
-        spec = sig.apply([x.type, x.type])
-        self.assertTrue(type_equal(spec.out_types[0], x.type))
+        spec = sig.apply(x.type, x.type)
+        self.assertTrue(type_equal(spec.types[1], x.type))
 
         y = x[::-1]
         sig = ndt("var... * complex128, var... * complex128 -> var... * complex128")
-        spec = sig.apply([x.type, y.type])
-        self.assertTrue(type_equal(spec.out_types[0], x.type))
+        spec = sig.apply(x.type, y.type)
+        self.assertTrue(type_equal(spec.types[1], x.type))
 
         x = xnd([[0], [1, 2], [3, 4, 5]], dtype="complex128")
         y = xnd([[3, 4, 5], [1, 2], [0]], dtype="complex128")
         z = y[::-1]
         sig = ndt("var... * complex128, var... * complex128 -> var... * complex128")
-        spec = sig.apply([x.type, z.type])
-        self.assertTrue(type_equal(spec.out_types[0], x.type))
+        spec = sig.apply(x.type, z.type)
+        self.assertTrue(type_equal(spec.types[1], x.type))
 
         x = xnd([[0], [1, 2], [3, 4, 5]], dtype="complex128")
         y = xnd([[5, 4, 3], [2, 1], [0]], dtype="complex128")
         z = y[::-1, ::-1]
         sig = ndt("var... * complex128, var... * complex128 -> var... * complex128")
-        spec = sig.apply([x.type, z.type])
-        self.assertTrue(type_equal(spec.out_types[0], x.type))
+        spec = sig.apply(x.type, z.type)
+        self.assertTrue(type_equal(spec.types[1], x.type))
 
     def test_var_dim_richcompare(self):
 
