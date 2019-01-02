@@ -42,6 +42,7 @@ from glob import glob
 import platform
 import subprocess
 import shutil
+import argparse
 import warnings
 
 try:
@@ -81,6 +82,15 @@ Links
 """
 
 warnings.simplefilter("ignore", UserWarning)
+
+
+# Pre-parse and remove the '-j' argument from sys.argv.
+parser = argparse.ArgumentParser()
+parser.add_argument('-j', default=None)
+values, rest = parser.parse_known_args()
+PARALLEL = values.j
+sys.argv = sys.argv[:1] + rest
+
 
 if sys.platform == "darwin":
     LIBNAME = "libxnd.dylib"
@@ -211,8 +221,9 @@ elif len(sys.argv) == 2:
 
 def configure(configure_includes, configure_libs):
     os.chmod("./configure", 0x1ed) # pip removes execute permissions.
-    os.system("./configure --with-includes='%s' --with-libs='%s' && make" %
-              (configure_includes, configure_libs))
+    make = "make -j%d" % int(PARALLEL) if PARALLEL else "make"
+    os.system("./configure --with-includes='%s' --with-libs='%s' && %s" %
+              (configure_includes, configure_libs, make))
 
 def get_config_vars():
     f = open("config.h")
