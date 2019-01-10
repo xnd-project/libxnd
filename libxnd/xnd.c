@@ -41,6 +41,7 @@
 #include "xnd.h"
 #include "inline.h"
 #include "contrib.h"
+#include "contrib/bfloat16.h"
 #include "cuda/cuda_memory.h"
 #ifndef _MSC_VER
 #include "config.h"
@@ -1631,19 +1632,6 @@ xnd_double_is_big_endian(void)
     return xnd_double_format==IEEE_BIG_ENDIAN;
 }
 
-static uint16_t
-float_truncate_to_bfloat16(float f)
-{
-    uint16_t *p = (uint16_t *)((char *)&f);
-
-    if (xnd_float_is_big_endian()) {
-        return p[0];
-    }
-    else {
-        return p[1];
-    }
-}
-
 static float
 bfloat16_to_float(uint16_t b)
 {
@@ -1670,7 +1658,7 @@ xnd_bfloat_pack(char *p, double x)
     float f = (float)x;
     uint16_t u16;
 
-    u16 = float_truncate_to_bfloat16(f);
+    u16 = xnd_round_to_bfloat16(f);
     PACK_SINGLE(p, u16, uint16_t, 0);
 }
 
