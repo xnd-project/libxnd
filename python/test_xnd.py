@@ -3153,6 +3153,69 @@ class TestSplit(XndTestCase):
                     self.assertEqual(a, b)
 
 
+class TestTranspose(XndTestCase):
+
+    def test_api(self):
+
+        x = xnd([])
+        y = x.transpose()
+        self.assertEqual(y, x)
+        y = x.transpose(permute=[0])
+        self.assertEqual(y, x)
+        self.assertRaises(ValueError, x.transpose, permute=[])
+        self.assertRaises(ValueError, x.transpose, permute=[0, 0])
+        self.assertRaises(ValueError, x.transpose, permute=[0, 1])
+
+        x = xnd([1, 2, 3])
+        y = x.transpose()
+        self.assertEqual(y, x)
+        y = x.transpose(permute=[0])
+        self.assertEqual(y, x)
+        self.assertRaises(ValueError, x.transpose, permute=[-1])
+        self.assertRaises(ValueError, x.transpose, permute=[2])
+        self.assertRaises(ValueError, x.transpose, permute=[0, 1])
+
+        x = xnd([[1], [2, 3]])
+        self.assertRaises(TypeError, x.transpose)
+
+        x = xnd([[1, 2, 3], [4, 5, 6]])
+        y = xnd([[1, 4], [2, 5], [3, 6]])
+
+        z = x.transpose()
+        self.assertEqual(z, y)
+
+        z = x.transpose([0, 1])
+        self.assertEqual(z, x)
+
+        z = x.transpose([1, 0])
+        self.assertEqual(z, y)
+
+        self.assertRaises(ValueError, x.transpose, permute=[1, 1])
+        self.assertRaises(ValueError, x.transpose, permute=[10, 1])
+
+    def test_nd(self):
+
+        lst = [[[0, 1, 3, 3],
+                [4, 5, 6, 7],
+                [8, 9, 10, 11]],
+               [[12, 13, 14, 15],
+                [16, 17, 18, 19],
+                [20, 21, 22, 23]]]
+
+        x = xnd(lst)
+
+        ans = [x[:, 0, :].value,
+               x[:, 1, :].value,
+               x[:, 2, :].value]
+        self.assertEqual(x.transpose(permute=(1, 0, 2)), ans)
+
+        ans = [x[:, :, 0].value,
+               x[:, :, 1].value,
+               x[:, :, 2].value,
+               x[:, :, 3].value]
+        self.assertEqual(x.transpose(permute=(2, 0, 1)), ans)
+
+
 class TestView(XndTestCase):
 
     def test_view_subscript(self):
@@ -3277,7 +3340,7 @@ class TestSpec(XndTestCase):
                     check(next_nd, next_d, value, depth+1)
 
         for value in self.values:
-            nd = self.constr(value, dtype="int64")
+            nd = self.constr(value)
             d = self.ndarray(value, dtype="int64")
             check(nd, d, value, 0)
             check_buffer(nd)
@@ -3286,7 +3349,7 @@ class TestSpec(XndTestCase):
             for min_shape in (0, 1):
                 for max_shape in range(1, 8):
                     for value in self.value_generator(max_ndim, min_shape, max_shape):
-                        nd = self.constr(value, dtype="int64")
+                        nd = self.constr(value)
                         d = self.ndarray(value, dtype="int64")
                         check(nd, d, value, 0)
                         check_buffer(nd)
@@ -3467,6 +3530,7 @@ ALL_TESTS = [
   TestRepr,
   TestBuffer,
   TestSplit,
+  TestTranspose,
   TestView,
   LongIndexSliceTest,
 ]
