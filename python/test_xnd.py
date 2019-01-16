@@ -764,6 +764,7 @@ class TestVarDim(XndTestCase):
         sig = ndt("var... * complex128, var... * complex128 -> var... * complex128")
         spec = sig.apply(x.type, z.type)
         self.assertTrue(type_equal(spec.types[1], x.type))
+        self.assertEqual(x.dtype, ndt("complex128"))
 
         x = xnd([[0], [1, 2], [3, 4, 5]], dtype="complex128")
         y = xnd([[5, 4, 3], [2, 1], [0]], dtype="complex128")
@@ -771,6 +772,7 @@ class TestVarDim(XndTestCase):
         sig = ndt("var... * complex128, var... * complex128 -> var... * complex128")
         spec = sig.apply(x.type, z.type)
         self.assertTrue(type_equal(spec.types[1], x.type))
+        self.assertEqual(x.dtype, ndt("complex128"))
 
     def test_var_dim_richcompare(self):
 
@@ -1037,6 +1039,7 @@ class TestTuple(XndTestCase):
         lst = [(None, 1, 2), (3, None, 4), (5, 6, None)]
         x = xnd(lst, dtype="(?int64, ?int64, ?int64)")
         self.assertEqual(x.value, lst)
+        self.assertEqual(x.dtype, ndt("(?int64, ?int64, ?int64)"))
 
     def test_tuple_richcompare(self):
 
@@ -1243,6 +1246,7 @@ class TestRecord(XndTestCase):
         x = xnd(lst, dtype="{a: ?int64, b: ?int64, c: ?int64}")
         self.assertEqual(x.value, lst)
         check_copy_contiguous(self, x)
+        self.assertEqual(x.dtype, ndt("{a: ?int64, b: ?int64, c: ?int64}"))
 
     def test_record_richcompare(self):
 
@@ -1426,6 +1430,7 @@ class TestRef(XndTestCase):
 
         x = xnd(v, type="2 * 3 * ref(4 * 5 * string)")
         check_copy_contiguous(self, x)
+        self.assertEqual(x.dtype, ndt("ref(4 * 5 * string)"))
 
         for i in range(2):
             for j in range(3):

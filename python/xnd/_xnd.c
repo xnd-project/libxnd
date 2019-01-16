@@ -2311,6 +2311,13 @@ pyxnd_type(PyObject *self, PyObject *args UNUSED)
 }
 
 static PyObject *
+pyxnd_dtype(PyObject *self, PyObject *args UNUSED)
+{
+    const ndt_t *dtype = ndt_dtype(XND_TYPE(self));
+    return Ndt_FromType(dtype);
+}
+
+static PyObject *
 pyxnd_ndim(PyObject *self, PyObject *args UNUSED)
 {
     int ndim = XND_TYPE(self)->ndim;
@@ -2360,6 +2367,7 @@ pyxnd_copy_contiguous(PyObject *self, PyObject *args UNUSED)
 static PyGetSetDef pyxnd_getsets [] =
 {
   { "type", (getter)pyxnd_type, NULL, doc_type, NULL},
+  { "dtype", (getter)pyxnd_dtype, NULL, NULL, NULL},
   { "value", (getter)pyxnd_value, NULL, doc_value, NULL},
   { "align", (getter)pyxnd_align, NULL, doc_align, NULL},
   { "ndim", (getter)pyxnd_ndim, NULL, doc_ndim, NULL},
@@ -3426,13 +3434,14 @@ xnd_typeof(PyObject *m UNUSED, PyObject *args, PyObject *kwds)
             PyErr_Format(PyExc_ValueError, "dtype argument must be ndt");
             return NULL;
         }
-        if (!PyList_Check(value)) {
-            PyErr_Format(PyExc_TypeError,
-                "value must be a list if dtype != None");
-            return NULL;
-        }
 
-        t = typeof_list_top(value, NDT(dtype));
+        if (PyList_Check(value)) {
+            t = typeof_list_top(value, NDT(dtype));
+        }
+        else {
+            t = NDT(dtype);
+            ndt_incref(t);
+        }
     }
     else {
         t = typeof(value, true, (bool)shortcut);
