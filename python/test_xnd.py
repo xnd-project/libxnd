@@ -38,6 +38,7 @@ from xnd._xnd import _test_view_subscript, _test_view_new
 from xnd_support import *
 from xnd_randvalue import *
 from _testbuffer import ndarray, ND_WRITABLE
+import random
 
 
 try:
@@ -3170,11 +3171,12 @@ class TestView(XndTestCase):
 
 class TestSpec(XndTestCase):
 
-    def __init__(self, *, constr,
+    def __init__(self, *, constr, ndarray,
                  values, value_generator,
                  indices_generator, indices_generator_args):
         super().__init__()
         self.constr = constr
+        self.ndarray = ndarray
         self.values = values
         self.value_generator = value_generator
         self.indices_generator = indices_generator
@@ -3195,6 +3197,21 @@ class TestSpec(XndTestCase):
             sys.stderr.write("y%d = y%d[%s]\n" % (i+1, i, itos(self.indices_stack[i])))
 
         sys.stderr.write("\n")
+
+    def run_transpose(self, nd, d):
+        if not isinstance(nd, xnd) or not isinstance(d, np.ndarray):
+            return
+
+        x = nd.transpose()
+        y = d.transpose()
+
+        self.assertEqual(x.value, y.tolist(), "nd: %s d: %s x: %s y: %s" % (nd, d, x, y))
+
+        p = random.shuffle(list(range(y.ndim)))
+        x = nd.transpose(permute=p)
+        y = np.transpose(d, axes=p)
+
+        self.assertEqual(x.value, y.tolist())
 
     def run_single(self, nd, d, indices):
         """Run a single test case."""
@@ -3230,7 +3247,14 @@ class TestSpec(XndTestCase):
         else:
             nd_value = nd_result
 
-        self.assertEqual(nd_value, def_result)
+        if isinstance(def_result, np.ndarray):
+            def_value = def_result.tolist()
+        else:
+            def_value = def_result
+
+        self.assertEqual(nd_value, def_value)
+        self.run_transpose(nd_result, def_result)
+
         return nd_result, def_result
 
     def run(self):
@@ -3253,8 +3277,8 @@ class TestSpec(XndTestCase):
                     check(next_nd, next_d, value, depth+1)
 
         for value in self.values:
-            nd = self.constr(value)
-            d = NDArray(value)
+            nd = self.constr(value, dtype="int64")
+            d = self.ndarray(value, dtype="int64")
             check(nd, d, value, 0)
             check_buffer(nd)
 
@@ -3262,8 +3286,8 @@ class TestSpec(XndTestCase):
             for min_shape in (0, 1):
                 for max_shape in range(1, 8):
                     for value in self.value_generator(max_ndim, min_shape, max_shape):
-                        nd = self.constr(value)
-                        d = NDArray(value)
+                        nd = self.constr(value, dtype="int64")
+                        d = self.ndarray(value, dtype="int64")
                         check(nd, d, value, 0)
                         check_buffer(nd)
 
@@ -3275,6 +3299,7 @@ class LongIndexSliceTest(XndTestCase):
         skip_if(SKIP_LONG, "use --long argument to enable these tests")
 
         t = TestSpec(constr=xnd,
+                     ndarray=NDArray,
                      values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
                      indices_generator=genindices,
@@ -3282,6 +3307,7 @@ class LongIndexSliceTest(XndTestCase):
         t.run()
 
         t = TestSpec(constr=xnd,
+                     ndarray=NDArray,
                      values=SUBSCRIPT_VAR_TEST_CASES,
                      value_generator=gen_var,
                      indices_generator=genindices,
@@ -3293,6 +3319,7 @@ class LongIndexSliceTest(XndTestCase):
         skip_if(SKIP_LONG, "use --long argument to enable these tests")
 
         t = TestSpec(constr=xnd,
+                     ndarray=NDArray,
                      values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
                      indices_generator=randslices,
@@ -3300,6 +3327,7 @@ class LongIndexSliceTest(XndTestCase):
         t.run()
 
         t = TestSpec(constr=xnd,
+                     ndarray=NDArray,
                      values=SUBSCRIPT_VAR_TEST_CASES,
                      value_generator=gen_var,
                      indices_generator=randslices,
@@ -3311,6 +3339,7 @@ class LongIndexSliceTest(XndTestCase):
         skip_if(SKIP_LONG, "use --long argument to enable these tests")
 
         t = TestSpec(constr=xnd,
+                     ndarray=NDArray,
                      values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
                      indices_generator=gen_indices_or_slices,
@@ -3319,6 +3348,7 @@ class LongIndexSliceTest(XndTestCase):
 
 
         t = TestSpec(constr=xnd,
+                     ndarray=NDArray,
                      values=SUBSCRIPT_VAR_TEST_CASES,
                      value_generator=gen_var,
                      indices_generator=gen_indices_or_slices,
@@ -3330,6 +3360,7 @@ class LongIndexSliceTest(XndTestCase):
         skip_if(SKIP_LONG, "use --long argument to enable these tests")
 
         t = TestSpec(constr=xnd,
+                     ndarray=NDArray,
                      values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
                      indices_generator=mixed_indices,
@@ -3341,6 +3372,7 @@ class LongIndexSliceTest(XndTestCase):
         skip_if(SKIP_LONG, "use --long argument to enable these tests")
 
         t = TestSpec(constr=xnd,
+                     ndarray=NDArray,
                      values=SUBSCRIPT_VAR_TEST_CASES,
                      value_generator=gen_var,
                      indices_generator=mixed_indices,
@@ -3352,6 +3384,7 @@ class LongIndexSliceTest(XndTestCase):
         skip_if(SKIP_BRUTE_FORCE, "use --all argument to enable these tests")
 
         t = TestSpec(constr=xnd,
+                     ndarray=NDArray,
                      values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
                      indices_generator=genslices_ndim,
@@ -3359,6 +3392,7 @@ class LongIndexSliceTest(XndTestCase):
         t.run()
 
         t = TestSpec(constr=xnd,
+                     ndarray=NDArray,
                      values=SUBSCRIPT_VAR_TEST_CASES,
                      value_generator=gen_var,
                      indices_generator=genslices_ndim,
@@ -3371,6 +3405,19 @@ class LongIndexSliceTest(XndTestCase):
         skip_if(SKIP_LONG, "use --long argument to enable these tests")
 
         t = TestSpec(constr=np.array,
+                     ndarray=NDArray,
+                     values=SUBSCRIPT_FIXED_TEST_CASES,
+                     value_generator=gen_fixed,
+                     indices_generator=mixed_indices,
+                     indices_generator_args=(3,))
+        t.run()
+
+    @unittest.skipIf(np is None, "numpy not found")
+    def test_transpose(self):
+        skip_if(SKIP_LONG, "use --long argument to enable these tests")
+
+        t = TestSpec(constr=xnd,
+                     ndarray=np.array,
                      values=SUBSCRIPT_FIXED_TEST_CASES,
                      value_generator=gen_fixed,
                      indices_generator=mixed_indices,

@@ -909,7 +909,9 @@ def getitem(lst, indices):
 
 class NDArray(list):
     """A simple wrapper for using generalized slicing/indexing on a list."""
-    def __init__(self, value):
+    def __init__(self, value, dtype=None):
+        if dtype is not None and dtype != "int64":
+            raise ValueError("the only supported dtype is 'int64'")
         list.__init__(self, value)
         self.maxlevel = maxlevel(value)
 

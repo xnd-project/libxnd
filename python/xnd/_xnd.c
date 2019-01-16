@@ -2254,6 +2254,65 @@ pyxnd_item(XndObject *self, Py_ssize_t index)
 }
 
 static PyObject *
+pyxnd_transpose(PyObject *self, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"permute", NULL};
+    NDT_STATIC_CONTEXT(ctx);
+    PyObject *permute = Py_None;
+    int p[NDT_MAX_ARGS];
+    const ndt_t *t;
+    xnd_t x;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &permute)) {
+        return NULL;
+    }
+
+    if (permute != Py_None) {
+        if (!PyList_Check(permute) && !PyTuple_Check(permute)) {
+            PyErr_SetString(PyExc_TypeError,
+                "the 'permute' argument must be a list or a tuple");
+            return NULL;
+        }
+
+        const Py_ssize_t len = PySequence_Fast_GET_SIZE(permute);
+
+        if (len > NDT_MAX_ARGS) {
+            PyErr_SetString(PyExc_ValueError, "permutation list too long");
+            return NULL;
+        }
+
+        for (int i = 0; i < len; i++) {
+            int v = PyLong_AsLong(PySequence_Fast_GET_ITEM(permute, i));
+            if (v == -1 && PyErr_Occurred()) {
+                return NULL;
+            }
+
+            if (v < 0 || v > INT_MAX) {
+                PyErr_SetString(PyExc_ValueError,
+                    "permutation index out of bounds");
+                return NULL;
+            }
+
+            p[i] = (int)v;
+        }
+
+        t = ndt_transpose(XND_TYPE(self), p, len, &ctx);
+    }
+    else {
+        t = ndt_transpose(XND_TYPE(self), NULL, 0, &ctx);
+    }
+
+    if (t == NULL) {
+        return seterr(&ctx);
+    }
+
+    x = *XND(self);
+    x.type = t;
+
+    return pyxnd_view_move_type((XndObject *)self, &x);
+}
+
+static PyObject *
 pyxnd_short_value(PyObject *self, PyObject *args, PyObject *kwds)
 {
     static char *kwlist[] = {"maxshape", NULL};
@@ -2393,8 +2452,9 @@ static PyMethodDef pyxnd_methods [] =
   /* Methods */
   { "short_value", (PyCFunction)pyxnd_short_value, METH_VARARGS|METH_KEYWORDS, doc_short_value },
   { "strict_equal", (PyCFunction)pyxnd_strict_equal, METH_O, NULL },
-  { "split", (PyCFunction)pyxnd_split, METH_VARARGS|METH_KEYWORDS, NULL },
   { "copy_contiguous", (PyCFunction)pyxnd_copy_contiguous, METH_NOARGS, NULL },
+  { "split", (PyCFunction)pyxnd_split, METH_VARARGS|METH_KEYWORDS, NULL },
+  { "transpose", (PyCFunction)pyxnd_transpose, METH_VARARGS|METH_KEYWORDS, NULL },
 
   /* Class methods */
   { "empty", (PyCFunction)pyxnd_empty, METH_VARARGS|METH_KEYWORDS|METH_CLASS, doc_empty },
