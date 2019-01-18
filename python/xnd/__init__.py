@@ -139,6 +139,11 @@ class xnd(Xnd):
         fmt = fmt.replace("\n", "\n   ")
         return "xnd%s" % fmt
 
+    def copy_contiguous(self, dtype=None):
+        if isinstance(dtype, str):
+            dtype = ndt(dtype)
+        return super().copy_contiguous(dtype=dtype)
+
     @classmethod
     def empty(cls, type=None, device=None):
         if device is not None:

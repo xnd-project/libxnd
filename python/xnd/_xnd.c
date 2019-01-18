@@ -2397,14 +2397,33 @@ pyxnd_align(PyObject *self, PyObject *args UNUSED)
 }
 
 static PyObject *
-pyxnd_copy_contiguous(PyObject *self, PyObject *args UNUSED)
+pyxnd_copy_contiguous(PyObject *self, PyObject *args, PyObject *kwargs)
 {
+    static char *kwlist[] = {"dtype", NULL};
     NDT_STATIC_CONTEXT(ctx);
     XndObject *src = (XndObject *)self;
+    PyObject *dtype = Py_None;
     PyObject *dest;
     const ndt_t *t;
 
-    t = ndt_copy_contiguous(XND_TYPE(src), XND_INDEX(src), &ctx);
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", kwlist, &dtype)) {
+        return NULL;
+    }
+
+    if (dtype != Py_None) {
+        if (!Ndt_Check(dtype)) {
+            PyErr_Format(PyExc_TypeError,
+                "dtype argument must be 'ndt', got '%.200s'",
+                Py_TYPE(dtype)->tp_name);
+            return NULL;
+        }
+        t = ndt_copy_contiguous_dtype(XND_TYPE(src), NDT(dtype), XND_INDEX(src),
+                                      &ctx);
+    }
+    else {
+        t = ndt_copy_contiguous(XND_TYPE(src), XND_INDEX(src), &ctx);
+    }
+
     if (t == NULL) {
         return seterr(&ctx);
     }
@@ -2452,7 +2471,7 @@ static PyMethodDef pyxnd_methods [] =
   /* Methods */
   { "short_value", (PyCFunction)pyxnd_short_value, METH_VARARGS|METH_KEYWORDS, doc_short_value },
   { "strict_equal", (PyCFunction)pyxnd_strict_equal, METH_O, NULL },
-  { "copy_contiguous", (PyCFunction)pyxnd_copy_contiguous, METH_NOARGS, NULL },
+  { "copy_contiguous", (PyCFunction)pyxnd_copy_contiguous, METH_VARARGS|METH_KEYWORDS, NULL },
   { "split", (PyCFunction)pyxnd_split, METH_VARARGS|METH_KEYWORDS, NULL },
   { "transpose", (PyCFunction)pyxnd_transpose, METH_VARARGS|METH_KEYWORDS, NULL },
 

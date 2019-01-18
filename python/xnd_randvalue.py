@@ -36,6 +36,7 @@ from itertools import accumulate, count, product
 from random import randrange
 from collections import namedtuple
 from xnd_support import R
+from ndtypes import ndt
 
 
 # ======================================================================
@@ -57,6 +58,32 @@ EMPTY_TEST_CASES = [
     ([0, 0], "var(offsets=[0, 2]) * %s"),
     (3 * [{"a": 0, "b": 0}], "3 * {a: int64, b: %s}")
 ]
+
+
+# ======================================================================
+#                       Max type for exact conversions 
+# ======================================================================
+
+maxtype = {
+  ndt("int8"): ndt("int64"),
+  ndt("int16"): ndt("int64"),
+  ndt("int32"): ndt("int64"),
+  ndt("int64"): ndt("int64"),
+
+  ndt("uint8"): ndt("uint64"),
+  ndt("uint16"): ndt("uint64"),
+  ndt("uint32"): ndt("uint64"),
+  ndt("uint64"): ndt("uint64"),
+
+  ndt("bfloat16"): ndt("float64"),
+  ndt("float16"): ndt("float64"),
+  ndt("float32"): ndt("float64"),
+  ndt("float64"): ndt("float64"),
+
+  ndt("complex32"): ndt("complex128"),
+  ndt("complex64"): ndt("complex128"),
+  ndt("complex128"): ndt("complex128"),
+}
 
 
 # ======================================================================

@@ -69,6 +69,15 @@ def check_copy_contiguous(self, x):
     else:
         self.assertEqual(x, y)
 
+    dtype = maxtype.get(x.dtype)
+    if dtype is not None:
+        y = x.copy_contiguous(dtype=dtype)
+        yv = y.value
+        if have_none(xv) and have_none(yv):
+            self.assertEqual(xv, yv)
+        else:
+            self.assertEqual(x, y)
+
 
 class XndTestCase(unittest.TestCase):
 
@@ -3232,6 +3241,20 @@ class TestView(XndTestCase):
         self.assertEqual(x, xnd([1.1, 2.2, 3.3]))
 
 
+class TestCopy(XndTestCase):
+
+    def test_copy_contiguous(self):
+        x = xnd([[1,2,3], [4,5,6]], dtype="int8")
+        y = x.copy_contiguous()
+        self.assertEqual(x, y)
+
+        y = x.copy_contiguous(dtype="int64")
+        self.assertEqual(x, y)
+
+        x = xnd([1, 2, 2**63-1], dtype="int64")
+        self.assertRaises(ValueError, x.copy_contiguous, dtype="int8")
+
+
 class TestSpec(XndTestCase):
 
     def __init__(self, *, constr, ndarray,
@@ -3532,6 +3555,7 @@ ALL_TESTS = [
   TestSplit,
   TestTranspose,
   TestView,
+  TestCopy,
   LongIndexSliceTest,
 ]
 
