@@ -2397,6 +2397,18 @@ pyxnd_align(PyObject *self, PyObject *args UNUSED)
 }
 
 static PyObject *
+pyxnd_device(XndObject *self, PyObject *args UNUSED)
+{
+    uint32_t flags = self->mblock->xnd->flags;
+
+    if (flags & XND_CUDA_MANAGED) {
+        return PyUnicode_FromString("cuda:managed");
+    }
+
+    Py_RETURN_NONE;
+}
+
+static PyObject *
 pyxnd_copy_contiguous(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     static char *kwlist[] = {"dtype", NULL};
@@ -2449,6 +2461,7 @@ static PyGetSetDef pyxnd_getsets [] =
   { "value", (getter)pyxnd_value, NULL, doc_value, NULL},
   { "align", (getter)pyxnd_align, NULL, doc_align, NULL},
   { "ndim", (getter)pyxnd_ndim, NULL, doc_ndim, NULL},
+  { "device", (getter)pyxnd_device, NULL, NULL, NULL},
   {NULL}
 };
 
