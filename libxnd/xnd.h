@@ -314,6 +314,14 @@ xnd_fixed_shape(const xnd_t *x)
 }
 
 static inline int64_t
+xnd_fixed_step(const xnd_t *x)
+{
+    const ndt_t *t = x->type;
+    assert(t->tag == FixedDim);
+    return t->Concrete.FixedDim.step;
+}
+
+static inline int64_t
 xnd_fixed_shape_at(const xnd_t *x, const int i)
 {
     const ndt_t *t = x->type;
