@@ -45,6 +45,8 @@ xnd_cuda_calloc_managed(uint16_t align, int64_t size, ndt_context_t *ctx)
     char *ptr;
     cudaError_t err;
 
+    size = size == 0 ? 1 : size;
+
     if (size < 0 || (uint64_t)size > SIZE_MAX) {
         ndt_err_format(ctx, NDT_ValueError,
             "cudaMallocManaged: invalid size");
