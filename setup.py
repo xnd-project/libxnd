@@ -282,11 +282,15 @@ def xnd_ext():
             runtime_library_dirs = ["$ORIGIN"]
 
         if config_vars["HAVE_CUDA"]:
-            if os.path.isdir("/usr/cuda/lib64"):
-                library_dirs += ["/usr/cuda/lib64"]
-            if os.path.isdir("/usr/local/cuda/lib64"):
-                library_dirs += ["/usr/local/cuda/lib64"]
             libraries += ["cudart"]
+
+            for d in [
+                "/usr/cuda/lib",
+                "/usr/cuda/lib64",
+                "/usr/local/cuda/lib/",
+                "/usr/local/cuda/lib64"]:
+                if os.path.isdir(d):
+                    library_dirs.append(d)
 
     return Extension (
       "xnd._xnd",
