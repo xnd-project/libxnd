@@ -44,6 +44,7 @@ AC_LANG_C
 saved_cflags=$CFLAGS
 saved_cxxflags=$CXXFLAGS
 AC_PROG_CC
+AC_PROG_CXX
 CFLAGS=$saved_cflags
 CXXFLAGS=$saved_cxxflags
 
@@ -151,7 +152,7 @@ esac
 
 # Substitute variables and generate output:
 if test -z "$LD"; then
-    LD="$CC"
+    LD="$CXX"
 fi
 AC_SUBST(LD)
 AC_SUBST(AR)
