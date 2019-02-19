@@ -1,6 +1,6 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define if you have the nvcc cuda compiler. */
+/* Define to 1 if you have the nvcc cuda compiler. */
 #undef HAVE_CUDA
 
 /* Define to the address where bug reports for this package should be sent. */
