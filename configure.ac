@@ -86,6 +86,7 @@ CUDA_CXX=
 CONFIGURE_CUDA_CXXFLAGS=
 if test "$have_nvcc" = yes; then
     CUDA_CXX="nvcc"
+    CONFIGURE_CUDA_CXXFLAGS="-std=c++11"
     AC_DEFINE(HAVE_CUDA, 1, [Define to 1 if you have the nvcc cuda compiler.])
 fi
 AC_SUBST(CUDA_CXX)

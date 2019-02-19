@@ -28,6 +28,9 @@ XND_CXXFLAGS_SHARED = $(XND_CXXFLAGS) -fPIC
 CONFIGURE_LDFLAGS = @CONFIGURE_LDFLAGS@
 XND_LDFLAGS = $(strip $(CONFIGURE_LDFLAGS) $(LDFLAGS))
 
+CONFIGURE_CUDA_CXXFLAGS = @CONFIGURE_CUDA_CXXFLAGS@
+GM_CUDA_CXXFLAGS = $(strip $(CONFIGURE_CUDA_CXXFLAGS) $(CUDA_CXXFLAGS))
+
 
 default: $(LIBSTATIC) $(LIBSHARED)
 
@@ -96,11 +99,11 @@ Makefile xnd.c xnd.h
 # Cuda
 cuda_memory.o:\
 Makefile cuda/cuda_memory.cu cuda/cuda_memory.h
-	$(CUDA_CXX) --compiler-options "$(XND_CXXFLAGS)" -std=c++11 -c cuda/cuda_memory.cu
+	$(CUDA_CXX) --compiler-options "$(XND_CXXFLAGS)" $(GM_CUDA_CXXFLAGS) -c cuda/cuda_memory.cu
 
 .objs/cuda_memory.o:\
 Makefile cuda/cuda_memory.cu cuda/cuda_memory.h
-	$(CUDA_CXX) --compiler-options "$(XND_CXXFLAGS_SHARED)" -std=c++11 -c cuda/cuda_memory.cu -o .objs/cuda_memory.o
+	$(CUDA_CXX) --compiler-options "$(XND_CXXFLAGS_SHARED)" $(GM_CUDA_CXXFLAGS) -c cuda/cuda_memory.cu -o .objs/cuda_memory.o
 
 
 # Coverage
