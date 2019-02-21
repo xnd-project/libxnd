@@ -3333,13 +3333,14 @@ class TestSpec(XndTestCase):
         else:
             nd_value = nd_result
 
-        if isinstance(def_result, np.ndarray):
+        if np is not None and isinstance(def_result, np.ndarray):
             def_value = def_result.tolist()
         else:
             def_value = def_result
 
         self.assertEqual(nd_value, def_value)
-        self.run_transpose(nd_result, def_result)
+        if np is not None:
+            self.run_transpose(nd_result, def_result)
 
         return nd_result, def_result
 
