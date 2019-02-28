@@ -2296,7 +2296,7 @@ pyxnd_transpose(PyObject *self, PyObject *args, PyObject *kwds)
             p[i] = (int)v;
         }
 
-        t = ndt_transpose(XND_TYPE(self), p, len, &ctx);
+        t = ndt_transpose(XND_TYPE(self), p, (int)len, &ctx);
     }
     else {
         t = ndt_transpose(XND_TYPE(self), NULL, 0, &ctx);
