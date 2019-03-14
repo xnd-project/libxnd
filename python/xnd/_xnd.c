@@ -2118,6 +2118,58 @@ pyxnd_subscript(XndObject *self, PyObject *key)
     return pyxnd_view_move_type(self, &x);
 }
 
+static PyObject *
+pyxnd_reshape(PyObject *self, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"shape", "order", NULL};
+    NDT_STATIC_CONTEXT(ctx);
+    PyObject *tuple = NULL;
+    PyObject *order = Py_None;
+    int64_t shape[NDT_MAX_DIM];
+    Py_ssize_t n;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", kwlist, &tuple,
+                                     &order)) {
+        return NULL;
+    }
+
+    if (order && order != Py_None) {
+        PyErr_SetString(PyExc_NotImplementedError,
+            "'order' argument is not implemented");
+        return NULL;
+    }
+
+    if (!PyTuple_Check(tuple)) {
+        PyErr_SetString(PyExc_TypeError,
+            "'shape' argument must be a tuple");
+        return NULL;
+    }
+
+    n = PyTuple_GET_SIZE(tuple);
+    if (n > NDT_MAX_DIM) {
+        PyErr_SetString(PyExc_ValueError, "too many dimensions");
+        return NULL;
+    }
+
+    for (int i = 0; i < n; i++) {
+        shape[i] = PyLong_AsLongLong(PyTuple_GET_ITEM(tuple, i));
+        if (shape[i] < 0) {
+            if (PyErr_Occurred()) {
+                return NULL;
+            }
+            PyErr_SetString(PyExc_ValueError, "negative dimension size");
+            return NULL;
+        }
+    }
+
+    xnd_t view = xnd_reshape(XND(self), shape, n, &ctx);
+    if (xnd_err_occurred(&view)) {
+        return seterr(&ctx);
+    }
+
+    return pyxnd_view_move_type((XndObject *)self, &view);
+}
+
 static void
 free_slices(xnd_t *lst, int64_t start, int64_t stop)
 {
@@ -2485,6 +2537,7 @@ static PyMethodDef pyxnd_methods [] =
   { "short_value", (PyCFunction)pyxnd_short_value, METH_VARARGS|METH_KEYWORDS, doc_short_value },
   { "strict_equal", (PyCFunction)pyxnd_strict_equal, METH_O, NULL },
   { "copy_contiguous", (PyCFunction)pyxnd_copy_contiguous, METH_VARARGS|METH_KEYWORDS, NULL },
+  { "_reshape", (PyCFunction)pyxnd_reshape, METH_VARARGS|METH_KEYWORDS, NULL },
   { "split", (PyCFunction)pyxnd_split, METH_VARARGS|METH_KEYWORDS, NULL },
   { "transpose", (PyCFunction)pyxnd_transpose, METH_VARARGS|METH_KEYWORDS, NULL },
 

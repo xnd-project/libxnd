@@ -33,7 +33,7 @@
 # Python NDarray and functions for generating test cases.
 
 from itertools import accumulate, count, product
-from random import randrange
+from random import randrange, shuffle
 from collections import namedtuple
 from xnd_support import R
 from ndtypes import ndt
@@ -1158,6 +1158,7 @@ def column(i, r, q, m, ms):
                    schedule(step(i, r, q), ms)) + \
            column(i+1, r, q, m, ms)
 
+
 # ======================================================================
 #                   Split an xnd object into N subtrees
 # ======================================================================
@@ -1178,3 +1179,27 @@ def split_xnd(x, n, max_outer=None):
     return [x[i] for i in indices_list]
 
 
+# ======================================================================
+#                            Random reshape
+# ======================================================================
+
+def prod(lst):
+    p = 1
+    for v in lst:
+        p *= v
+    return p
+
+def randshape(shape):
+    if not shape:
+        return []
+    s = list(shape)
+    shuffle(s)
+    N = len(s)
+    result = []
+    while N > 0:
+        n = randrange(1, N+1)
+        t = s[:n]
+        s = s[n:]
+        result.append(prod(t))
+        N -= n
+    return result

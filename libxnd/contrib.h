@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <math.h>
+#include <ndtypes.h>
 
 
 /* PSF copyright: Written by Jim Hugunin and Chris Chase. */
@@ -307,6 +308,103 @@ xnd_float_unpack8(const unsigned char *p, int le)
     }
 
     return x;
+}
+
+/* NumPy copyright: Original by David Cournapeau. */
+static inline int
+xnd_nocopy_reshape(int64_t *newdims, int64_t *newstrides, int newnd,
+                   const int64_t *srcdims, const int64_t *srcstrides, const int srcnd,
+                   int is_f_order)
+{
+    int oldnd;
+    int64_t olddims[NDT_MAX_DIM];
+    int64_t oldstrides[NDT_MAX_DIM];
+    int64_t last_stride;
+    int oi, oj, ok, ni, nj, nk;
+
+    oldnd = 0;
+    /*
+     * Remove axes with dimension 1 from the old array. They have no effect
+     * but would need special cases since their strides do not matter.
+     */
+    for (oi = 0; oi < srcnd; oi++) {
+        if (srcdims[oi] != 1) {
+            olddims[oldnd] = srcdims[oi];
+            oldstrides[oldnd] = srcstrides[oi];
+            oldnd++;
+        }
+    }
+
+    /* oi to oj and ni to nj give the axis ranges currently worked with */
+    oi = 0;
+    oj = 1;
+    ni = 0;
+    nj = 1;
+    while (ni < newnd && oi < oldnd) {
+        int64_t np = newdims[ni];
+        int64_t op = olddims[oi];
+
+        while (np != op) {
+            if (np < op) {
+                /* Misses trailing 1s, these are handled later */
+                np *= newdims[nj++];
+            } else {
+                op *= olddims[oj++];
+            }
+        }
+
+        /* Check whether the original axes can be combined */
+        for (ok = oi; ok < oj - 1; ok++) {
+            if (is_f_order) {
+                if (oldstrides[ok+1] != olddims[ok]*oldstrides[ok]) {
+                     /* not contiguous enough */
+                    return 0;
+                }
+            }
+            else {
+                /* C order */
+                if (oldstrides[ok] != olddims[ok+1]*oldstrides[ok+1]) {
+                    /* not contiguous enough */
+                    return 0;
+                }
+            }
+        }
+
+        /* Calculate new strides for all axes currently worked with */
+        if (is_f_order) {
+            newstrides[ni] = oldstrides[oi];
+            for (nk = ni + 1; nk < nj; nk++) {
+                newstrides[nk] = newstrides[nk - 1]*newdims[nk - 1];
+            }
+        }
+        else {
+            /* C order */
+            newstrides[nj - 1] = oldstrides[oj - 1];
+            for (nk = nj - 1; nk > ni; nk--) {
+                newstrides[nk - 1] = newstrides[nk]*newdims[nk];
+            }
+        }
+        ni = nj++;
+        oi = oj++;
+    }
+
+    /*
+     * Set strides corresponding to trailing 1s of the new shape.
+     */
+    if (ni >= 1) {
+        last_stride = newstrides[ni - 1];
+    }
+    else {
+        last_stride = 1;
+    }
+    if (is_f_order) {
+        last_stride *= newdims[ni - 1];
+    }
+    for (nk = ni; nk < newnd; nk++) {
+        newstrides[nk] = last_stride;
+    }
+
+    return 1;
 }
 
 

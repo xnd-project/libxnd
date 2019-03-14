@@ -184,6 +184,8 @@ XND_API xnd_t xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len,
 XND_API xnd_t xnd_subscript(const xnd_t *x, const xnd_index_t indices[], int len,
                             ndt_context_t *ctx);
 
+XND_API xnd_t xnd_reshape(const xnd_t *x, int64_t shape[], int ndim, ndt_context_t *ctx);
+
 XND_API xnd_t *xnd_split(const xnd_t *x, int64_t *n, int max_outer, ndt_context_t *ctx);
 
 XND_API int xnd_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx);

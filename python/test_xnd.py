@@ -3273,7 +3273,11 @@ class TestSpec(XndTestCase):
         """Dump an error as a Python script for debugging."""
 
         sys.stderr.write("\n\nfrom xnd import *\n")
-        sys.stderr.write("from test_xnd import NDArray\n")
+        if self.ndarray == NDArray:
+            sys.stderr.write("from test_xnd import NDArray\n")
+        else:
+            sys.stderr.write("import numpy as np\n")
+            sys.stderr.write("NDArray = np.array\n")
         sys.stderr.write("lst = %s\n\n" % value)
         sys.stderr.write("x0 = xnd(lst)\n")
         sys.stderr.write("y0 = NDArray(lst)\n" % value)
@@ -3283,6 +3287,35 @@ class TestSpec(XndTestCase):
             sys.stderr.write("y%d = y%d[%s]\n" % (i+1, i, itos(self.indices_stack[i])))
 
         sys.stderr.write("\n")
+
+    def run_reshape(self, nd, d):
+        if not isinstance(nd, xnd) or not isinstance(d, np.ndarray):
+            return
+
+        s = randshape(d.shape)
+
+        x = nd_exception = None
+        try:
+            x = nd.reshape(*s)
+        except Exception as e:
+            nd_exception =  e
+
+        y = def_exception = None
+        try:
+            y = d.view()
+            y.shape = s
+        except Exception as e:
+            def_exception =  e
+
+        if nd_exception or def_exception:
+            if nd_exception.__class__ is ValueError and \
+               def_exception.__class__ is AttributeError:
+                   return
+            self.assertIs(nd_exception.__class__, def_exception.__class__,
+                          "shape: %s nd: %s d: %s x: %s y: %s" % (s, nd, d, x, y))
+        else:
+            self.assertEqual(x.value, y.tolist(),
+                             "shape: %s nd: %s d: %s x: %s y: %s" % (s, nd, d, x, y))
 
     def run_transpose(self, nd, d):
         if not isinstance(nd, xnd) or not isinstance(d, np.ndarray):
@@ -3308,7 +3341,7 @@ class TestSpec(XndTestCase):
         try:
             nd_result = nd[indices]
         except Exception as e:
-            nd_exception =  e
+            nd_exception = e
 
         def_exception = None
         try:
@@ -3340,6 +3373,7 @@ class TestSpec(XndTestCase):
 
         self.assertEqual(nd_value, def_value)
         if np is not None:
+            self.run_reshape(nd_result, def_result)
             self.run_transpose(nd_result, def_result)
 
         return nd_result, def_result
@@ -3500,7 +3534,7 @@ class LongIndexSliceTest(XndTestCase):
         t.run()
 
     @unittest.skipIf(np is None, "numpy not found")
-    def test_transpose(self):
+    def test_transpose_and_reshape(self):
         skip_if(SKIP_LONG, "use --long argument to enable these tests")
 
         t = TestSpec(constr=xnd,

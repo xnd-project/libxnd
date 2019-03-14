@@ -144,6 +144,9 @@ class xnd(Xnd):
             dtype = ndt(dtype)
         return super().copy_contiguous(dtype=dtype)
 
+    def reshape(self, *args, order=None):
+        return super()._reshape(args, order=order)
+
     @classmethod
     def empty(cls, type=None, device=None):
         if device is not None:
