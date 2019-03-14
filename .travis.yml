@@ -1,5 +1,15 @@
 sudo: required
 
+dist: xenial
+addons:
+  apt:
+    sources:
+      - ppa:ubuntu-toolchain-r/test
+    packages:
+    - gcc-6
+    - gcc-7
+    - gcc-8
+
 language: python
 python:
   - 3.6
@@ -7,11 +17,7 @@ python:
 matrix:
   include:
     - compiler: gcc
-      before_install:
-        - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-        - sudo apt-get update -qq
       install:
-        - sudo apt-get install -qq gcc-6
         - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 90
       before_script:
         - python3 -m pip install numpy sphinx
@@ -27,11 +33,7 @@ matrix:
         - python3 setup.py doctest
 
     - compiler: gcc
-      before_install:
-        - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-        - sudo apt-get update -qq
       install:
-        - sudo apt-get install -qq gcc-7
         - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 90
       before_script:
         - sudo apt-get install -y valgrind
@@ -76,11 +78,7 @@ matrix:
         - python3 setup.py test
 
     - compiler: gcc
-      before_install:
-        - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-        - sudo apt-get update -qq
       install:
-        - sudo apt-get install -qq gcc-8
         - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 90
       before_script:
         - git clone https://github.com/plures/ndtypes.git
