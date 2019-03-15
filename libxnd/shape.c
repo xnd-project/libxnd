@@ -86,7 +86,7 @@ zero_in_shape(const ndt_ndarray_t *x)
 }
 
 static void
-init_contiguous_strides(ndt_ndarray_t *dest, const ndt_ndarray_t *src)
+init_contiguous_c_strides(ndt_ndarray_t *dest, const ndt_ndarray_t *src)
 {
     int64_t q;
     int64_t i;
@@ -102,13 +102,43 @@ init_contiguous_strides(ndt_ndarray_t *dest, const ndt_ndarray_t *src)
     }
 }
 
+static void
+init_contiguous_f_strides(ndt_ndarray_t *dest, const ndt_ndarray_t *src)
+{
+    int64_t q;
+    int64_t i;
+
+    if (src->ndim == 0 && dest->ndim == 0) {
+        return;
+    }
+
+    q = 1;
+    for (i = 0; i < dest->ndim; i++) {
+        dest->steps[i] = q;
+        q *= dest->shape[i];
+    }
+}
+
 xnd_t
-xnd_reshape(const xnd_t *x, int64_t shape[], int ndim, ndt_context_t *ctx)
+xnd_reshape(const xnd_t *x, int64_t shape[], int ndim, char order,
+            ndt_context_t *ctx)
 {
     const ndt_t *t = x->type;
     ndt_ndarray_t src, dest;
     int64_t p, q;
     int ret;
+    int use_fortran = 0;
+
+    if (order == 'F') {
+        use_fortran = 1;
+    }
+    else if (order == 'A') {
+        use_fortran = ndt_is_f_contiguous(t);
+    }
+    else if (order != 'C') {
+        ndt_err_format(ctx, NDT_ValueError, "'order' must be 'C', 'F' or 'A'");
+        return xnd_error;
+    }
 
     if (ndt_as_ndarray(&src, t, ctx) < 0) {
         return xnd_error;
@@ -141,12 +171,15 @@ xnd_reshape(const xnd_t *x, int64_t shape[], int ndim, ndt_context_t *ctx)
     else if (zero_in_shape(&dest)) {
         ;
     }
-    else if (ndt_is_c_contiguous(t) || ndt_is_c_contiguous(t)) {
-        init_contiguous_strides(&dest, &src);
+    else if (!use_fortran && ndt_is_c_contiguous(t)) {
+        init_contiguous_c_strides(&dest, &src);
+    }
+    else if (use_fortran && ndt_is_f_contiguous(t)) {
+        init_contiguous_f_strides(&dest, &src);
     }
     else {
         ret = xnd_nocopy_reshape(dest.shape, dest.steps, dest.ndim,
-                                 src.shape, src.steps, src.ndim, 0);
+                                 src.shape, src.steps, src.ndim, use_fortran);
         if (!ret) {
             ndt_err_format(ctx, NDT_ValueError, "inplace reshape not possible");
             return xnd_error;

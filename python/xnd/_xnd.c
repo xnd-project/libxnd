@@ -2126,6 +2126,7 @@ pyxnd_reshape(PyObject *self, PyObject *args, PyObject *kwds)
     PyObject *tuple = NULL;
     PyObject *order = Py_None;
     int64_t shape[NDT_MAX_DIM];
+    char ord = 'C';
     Py_ssize_t n;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", kwlist, &tuple,
@@ -2133,10 +2134,14 @@ pyxnd_reshape(PyObject *self, PyObject *args, PyObject *kwds)
         return NULL;
     }
 
-    if (order && order != Py_None) {
-        PyErr_SetString(PyExc_NotImplementedError,
-            "'order' argument is not implemented");
-        return NULL;
+    if (order != Py_None) {
+        const char *c = PyUnicode_AsUTF8(order);
+        if (strlen(c) != 1) {
+            PyErr_SetString(PyExc_TypeError,
+                "'order' argument must be a 'C', 'F' or 'A'");
+            return NULL;
+        }
+        ord = c[0];
     }
 
     if (!PyTuple_Check(tuple)) {
@@ -2162,7 +2167,7 @@ pyxnd_reshape(PyObject *self, PyObject *args, PyObject *kwds)
         }
     }
 
-    xnd_t view = xnd_reshape(XND(self), shape, n, &ctx);
+    xnd_t view = xnd_reshape(XND(self), shape, n, ord, &ctx);
     if (xnd_err_occurred(&view)) {
         return seterr(&ctx);
     }

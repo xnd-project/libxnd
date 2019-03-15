@@ -3133,6 +3133,18 @@ class TestBuffer(XndTestCase):
         check_copy_contiguous(self, y)
 
 
+class TestReshape(XndTestCase):
+
+    def test_reshape_api(self):
+        x = xnd([[1,2,3], [4,5,6]], type="!2 * 3 * float32")
+        self.assertRaises(ValueError, x.reshape, 2**32, 2**32)
+
+    def test_reshape_fortran(self):
+        x = xnd([[1,2,3], [4,5,6]], type="!2 * 3 * float32")
+        y = x.reshape(3,2,order='F')
+        self.assertEqual(y, [[1,5], [4,3], [2,6]])
+
+
 class TestSplit(XndTestCase):
 
     def test_split(self):
@@ -3587,6 +3599,7 @@ ALL_TESTS = [
   TestAPI,
   TestRepr,
   TestBuffer,
+  TestReshape,
   TestSplit,
   TestTranspose,
   TestView,
