@@ -3096,10 +3096,11 @@ class TestBuffer(XndTestCase):
             'h', 'i', 'l', 'q',
             'H', 'I', 'L', 'Q',
             'f', 'd',
+            'F', 'D',
         ]
 
         if HAVE_PYTHON_36:
-            standard += 'e'
+            standard += ['e']
 
         modifiers = ['', '<', '>']
 
@@ -3131,6 +3132,24 @@ class TestBuffer(XndTestCase):
         y[:] = [1000, 2000, 3000]
         self.assertEqual(x.tolist(), [1000, 2000, 3000])
         check_copy_contiguous(self, y)
+
+    @unittest.skipIf(np is None, "numpy not found")
+    def test_complex(self):
+        x = xnd([1, 2, 3], dtype="complex64")
+        y = np.array(x)
+        self.assertEqual(memoryview(y).format, "Zf")
+
+        x = xnd([1, 2, 3], dtype="complex128")
+        y = np.array(x)
+        self.assertEqual(memoryview(y).format, "Zd")
+
+        x = np.array([1, 2, 3], dtype="complex64")
+        y = xnd.from_buffer(x)
+        self.assertEqual(memoryview(y).format, "=Zf")
+
+        x = np.array([1, 2, 3], dtype="complex128")
+        y = xnd.from_buffer(x)
+        self.assertEqual(memoryview(y).format, "=Zd")
 
 
 class TestReshape(XndTestCase):
