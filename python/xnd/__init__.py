@@ -202,6 +202,10 @@ class array(object):
     def strides(self):
         return self._xnd.type.strides
 
+    @property
+    def dtype(self):
+        return self._xnd.dtype
+
     def __repr__(self):
         value = self._xnd.short_value(maxshape=10)
         fmt = pretty((value, "@type='%s'@" % self._xnd.type), max_width=120)
