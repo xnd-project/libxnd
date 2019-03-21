@@ -339,6 +339,9 @@ class array(object):
     def __xor__(self, other):
         return self._call_binary("bitwise_xor", other)
 
+    def tolist(self):
+        return self._xnd.value
+
     def copy(self):
         return self._call_unary("copy")
 
