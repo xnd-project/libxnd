@@ -207,7 +207,7 @@ class array(object):
         fmt = pretty((value, "@type='%s'@" % self._xnd.type), max_width=120)
         fmt = fmt.replace('"@', "")
         fmt = fmt.replace('@"', "")
-        fmt = fmt.replace("\n", "\n   ")
+        fmt = fmt.replace("\n", "\n     ")
         return "array%s" % fmt
 
     def __getitem__(self, *args, **kwargs):
