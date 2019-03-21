@@ -49,7 +49,7 @@ from ndtypes import ndt, instantiate, MAX_DIM
 from ._xnd import Xnd, XndEllipsis, data_shapes, _typeof
 from .contrib.pretty import pretty
 
-__all__ = ['xnd', 'XndEllipsis', 'typeof']
+__all__ = ['xnd', 'array', 'XndEllipsis', 'typeof']
 
 
 # ======================================================================
@@ -171,3 +171,260 @@ def typeof(v, dtype=None):
     if isinstance(dtype, str):
         dtype = ndt(dtype)
     return _typeof(v, dtype=dtype, shortcut=True)
+
+
+# ======================================================================
+#                              array object
+# ======================================================================
+
+class array(object):
+    """Extended array type that relies on gumath for the array functions."""
+
+    __slots__ = ('_xnd',)
+
+    _functions = None
+    _cuda = None
+
+    def __init__(self, obj, dtype=None, levels=None, device=None):
+        if isinstance(obj, xnd):
+            if dtype is None and levels is None and device is None:
+                self._xnd = obj
+            else:
+                raise TypeError("type(obj) == xnd, but other arguments are given")
+        else:
+            self._xnd = xnd(obj, dtype=dtype, levels=levels, device=device)
+
+    @property
+    def shape(self):
+        return self._xnd.type.shape
+
+    @property
+    def strides(self):
+        return self._xnd.type.strides
+
+    def __repr__(self):
+        value = self._xnd.short_value(maxshape=10)
+        fmt = pretty((value, "@type='%s'@" % self._xnd.type), max_width=120)
+        fmt = fmt.replace('"@', "")
+        fmt = fmt.replace('@"', "")
+        fmt = fmt.replace("\n", "\n   ")
+        return "array%s" % fmt
+
+    def __getitem__(self, *args, **kwargs):
+        x = self._xnd.__getitem__(*args, **kwargs)
+        return array(x)
+
+    def __setitem__(self, *args, **kwargs):
+        self._xnd.__setitem__(*args, **kwargs)
+
+    def _get_module(self, *devices):
+        if all(d == "cuda:managed" for d in devices):
+            if array._cuda is None:
+                import gumath.cuda
+                array._cuda = gumath.cuda
+            return array._cuda
+        else:
+            if array._functions is None:
+                import gumath.functions
+                array._functions = gumath.functions
+            return array._functions
+
+    def _call_unary(self, name):
+        m = self._get_module(self._xnd.device)
+        x = getattr(m, name)(self._xnd)
+        return array(x)
+
+    def _call_binary(self, name, other):
+        m = self._get_module(self._xnd.device, other._xnd.device)
+        x = getattr(m, name)(self._xnd, other._xnd)
+        return array(x)
+
+    def __neg__(self):
+        return self._call_unary("negate")
+
+    def __pos__(self):
+        raise NotImplementedError("the unary '+' operator is not implemented")
+
+    def __abs__(self):
+        raise NotImplementedError("abs() is not implemented")
+
+    def __invert__(self):
+        return self._call_unary("invert")
+
+    def __complex__(self):
+        raise TypeError("complex() is not supported")
+
+    def __int__(self):
+        raise TypeError("int() is not supported")
+
+    def __float__(self):
+        raise TypeError("float() is not supported")
+
+    def __index__(self):
+        raise TypeError("index() is not supported")
+
+    def __round__(self):
+        return self._call_unary("round")
+
+    def __trunc__(self):
+        return self._call_unary("trunc")
+
+    def __floor__(self):
+        return self._call_unary("floor")
+
+    def __ceil__(self):
+        return self._call_unary("ceil")
+
+    def __eq__(self, other):
+        return self._call_binary("equal", other)
+
+    def __ne__(self, other):
+        return self._call_binary("not_equal", other)
+
+    def __lt__(self, other):
+        return self._call_binary("less", other)
+
+    def __le__(self, other):
+        return self._call_binary("less_equal", other)
+
+    def __ge__(self, other):
+        return self._call_binary("greater_equal", other)
+
+    def __gt__(self, other):
+        return self._call_binary("greater", other)
+
+    def __add__(self, other):
+        return self._call_binary("add", other)
+
+    def __sub__(self, other):
+        return self._call_binary("subtract", other)
+
+    def __mul__(self, other):
+        return self._call_binary("multiply", other)
+
+    def __matmul__(self, other):
+        raise NotImplementedError("matrix multiplication is not implemented")
+
+    def __truediv__(self, other):
+        return self._call_binary("divide", other)
+
+    def __floordiv__(self, other):
+        return self._call_binary("floor_divide", other)
+
+    def __mod__(self, other):
+        return self._call_binary("remainder", other)
+
+    def __divmod__(self, other):
+        return self._call_binary("divmod", other)
+
+    def __pow__(self, other):
+        raise NotImplementedError("power is not implemented")
+
+    def __lshift__(self, other):
+        raise TypeError("the '<<' operator is not supported")
+
+    def __rshift__(self, other):
+        raise TypeError("the '>>' operator is not supported")
+
+    def __and__(self, other):
+        return self._call_binary("bitwise_and", other)
+
+    def __or__(self, other):
+        return self._call_binary("bitwise_or", other)
+
+    def __xor__(self, other):
+        return self._call_binary("bitwise_xor", other)
+
+    def copy(self):
+        return self._call_unary("copy")
+
+    def transpose(self, axes=None):
+        x = self._xnd.transpose(permute=axes)
+        return array(x)
+
+    def acos(self):
+        return self._call_unary("acos")
+
+    def acosh(self):
+        return self._call_unary("acosh")
+
+    def asin(self):
+        return self._call_unary("asin")
+
+    def asinh(self):
+        return self._call_unary("asinh")
+
+    def atan(self):
+        return self._call_unary("atan")
+
+    def atanh(self):
+        return self._call_unary("atanh")
+
+    def cbrt(self):
+        return self._call_unary("cbrt")
+
+    def cos(self):
+        return self._call_unary("cos")
+
+    def cosh(self):
+        return self._call_unary("cosh")
+
+    def erf(self):
+        return self._call_unary("erf")
+
+    def erfc(self):
+        return self._call_unary("erfc")
+
+    def exp(self):
+        return self._call_unary("exp")
+
+    def exp2(self):
+        return self._call_unary("exp2")
+
+    def expm1(self):
+        return self._call_unary("expm1")
+
+    def fabs(self):
+        return self._call_unary("fabs")
+
+    def lgamma(self):
+        return self._call_unary("lgamma")
+
+    def log(self):
+        return self._call_unary("log")
+
+    def log10(self):
+        return self._call_unary("log10")
+
+    def log1p(self):
+        return self._call_unary("log1p")
+
+    def log2(self):
+        return self._call_unary("log2")
+
+    def logb(self):
+        return self._call_unary("logb")
+
+    def nearbyint(self):
+        return self._call_unary("nearbyint")
+
+    def sin(self):
+        return self._call_unary("sin")
+
+    def sinh(self):
+        return self._call_unary("sinh")
+
+    def sqrt(self):
+        return self._call_unary("sqrt")
+
+    def tan(self):
+        return self._call_unary("tan")
+
+    def tanh(self):
+        return self._call_unary("tanh")
+
+    def tanh(self):
+        return self._call_unary("tgamma")
+
+    def equaln(self, other):
+        return self._call_binary("equaln", other)
