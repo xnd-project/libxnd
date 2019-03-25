@@ -177,49 +177,31 @@ def typeof(v, dtype=None):
 #                              array object
 # ======================================================================
 
-class array(object):
+class array(xnd):
     """Extended array type that relies on gumath for the array functions."""
-
-    __slots__ = ('_xnd',)
 
     _functions = None
     _cuda = None
-
-    def __init__(self, obj, dtype=None, levels=None, device=None):
-        if isinstance(obj, xnd):
-            if dtype is None and levels is None and device is None:
-                self._xnd = obj
-            else:
-                raise TypeError("type(obj) == xnd, but other arguments are given")
-        else:
-            self._xnd = xnd(obj, dtype=dtype, levels=levels, device=device)
+    _np = None
 
     @property
     def shape(self):
-        return self._xnd.type.shape
+        return self.type.shape
 
     @property
     def strides(self):
-        return self._xnd.type.strides
-
-    @property
-    def dtype(self):
-        return self._xnd.dtype
+        return self.type.strides
 
     def __repr__(self):
-        value = self._xnd.short_value(maxshape=10)
-        fmt = pretty((value, "@type='%s'@" % self._xnd.type), max_width=120)
+        value = self.short_value(maxshape=10)
+        fmt = pretty((value, "@type='%s'@" % self.type), max_width=120)
         fmt = fmt.replace('"@', "")
         fmt = fmt.replace('@"', "")
         fmt = fmt.replace("\n", "\n     ")
         return "array%s" % fmt
 
-    def __getitem__(self, *args, **kwargs):
-        x = self._xnd.__getitem__(*args, **kwargs)
-        return array(x)
-
-    def __setitem__(self, *args, **kwargs):
-        self._xnd.__setitem__(*args, **kwargs)
+    def tolist(self):
+        return self.value
 
     def _get_module(self, *devices):
         if all(d == "cuda:managed" for d in devices):
@@ -233,21 +215,56 @@ class array(object):
                 array._functions = gumath.functions
             return array._functions
 
-    def _call_unary(self, name):
-        m = self._get_module(self._xnd.device)
-        x = getattr(m, name)(self._xnd)
-        return array(x)
+    def _call_unary(self, name, out=None):
+        m = self._get_module(self.device)
+        return getattr(m, name)(self, out=out, cls=array)
 
-    def _call_binary(self, name, other):
-        m = self._get_module(self._xnd.device, other._xnd.device)
-        x = getattr(m, name)(self._xnd, other._xnd)
-        return array(x)
+    def _call_binary(self, name, other, out=None):
+        m = self._get_module(self.device, other.device)
+        return getattr(m, name)(self, other, out=out, cls=array)
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if array._np is None:
+            import numpy
+            array._np = numpy
+        np = array._np
+
+        np_inputs = []
+        for v in inputs:
+            if not isinstance(v, array):
+                raise TypeError(
+                    "all inputs must be 'xnd.array', got '%s'" % type(v))
+            np_inputs.append(np.array(v, copy=False))
+
+        out = kwargs.pop('out', None)
+        if out is not None:
+            np_outputs = []
+            for v in out:
+                if not isinstance(v, array):
+                    raise TypeError(
+                        "all outputs must be 'xnd.array', got '%s'" % type(v))
+                np_outputs.append(np.array(v, copy=False))
+            kwargs["out"] = np_outputs
+
+        np_self = np_inputs[0]
+        np_res = np_self.__array_ufunc__(ufunc, method, *np_inputs, **kwargs)
+
+        if out is None:
+            if isinstance(np_res, tuple):
+                return tuple(xnd.from_buffer(v) for v in np_res)
+            else:
+                return array.from_buffer(np_res)
+        else:
+            return out
+
+    def __bool__(self):
+        raise ValueError("the truth value is ambiguous")
 
     def __neg__(self):
-        return self._call_unary("negate")
+        return self._call_unary("negative")
 
     def __pos__(self):
-        raise NotImplementedError("the unary '+' operator is not implemented")
+        return self.copy()
 
     def __abs__(self):
         raise NotImplementedError("abs() is not implemented")
@@ -339,99 +356,134 @@ class array(object):
     def __xor__(self, other):
         return self._call_binary("bitwise_xor", other)
 
-    def tolist(self):
-        return self._xnd.value
+    def __iadd__(self, other):
+        return self._call_binary("add", other, out=self)
 
-    def copy(self):
-        return self._call_unary("copy")
+    def __isub__(self, other):
+        return self._call_binary("subtract", other, out=self)
 
-    def transpose(self, axes=None):
-        x = self._xnd.transpose(permute=axes)
-        return array(x)
+    def __imul__(self, other):
+        return self._call_binary("multiply", other, out=self)
 
-    def acos(self):
-        return self._call_unary("acos")
+    def __imatmul__(self, other):
+        raise NotImplementedError("inplace matrix multiplication is not implemented")
 
-    def acosh(self):
-        return self._call_unary("acosh")
+    def __itruediv__(self, other):
+        return self._call_binary("divide", other, out=self)
 
-    def asin(self):
-        return self._call_unary("asin")
+    def __ifloordiv__(self, other):
+        return self._call_binary("floor_divide", other, out=self)
 
-    def asinh(self):
-        return self._call_unary("asinh")
+    def __imod__(self, other):
+        return self._call_binary("remainder", other, out=self)
 
-    def atan(self):
-        return self._call_unary("atan")
+    def __idivmod__(self, other):
+        return self._call_binary("divmod", other, out=self)
 
-    def atanh(self):
-        return self._call_unary("atanh")
+    def __ipow__(self, other):
+        raise NotImplementedError("inplace power is not implemented")
 
-    def cbrt(self):
-        return self._call_unary("cbrt")
+    def __ilshift__(self, other):
+        raise TypeError("the inplace '<<' operator is not supported")
 
-    def cos(self):
-        return self._call_unary("cos")
+    def __irshift__(self, other):
+        raise TypeError("the inplace '>>' operator is not supported")
 
-    def cosh(self):
-        return self._call_unary("cosh")
+    def __iand__(self, other):
+        return self._call_binary("bitwise_and", other, out=self)
 
-    def erf(self):
-        return self._call_unary("erf")
+    def __ior__(self, other):
+        return self._call_binary("bitwise_or", other, out=self)
 
-    def erfc(self):
-        return self._call_unary("erfc")
+    def __ixor__(self, other):
+        return self._call_binary("bitwise_xor", other, out=self)
 
-    def exp(self):
-        return self._call_unary("exp")
+    def copy(self, out=None):
+        return self._call_unary("copy", out=out)
 
-    def exp2(self):
-        return self._call_unary("exp2")
+    def acos(self, out=None):
+        return self._call_unary("acos", out=out)
 
-    def expm1(self):
-        return self._call_unary("expm1")
+    def acosh(self, out=None):
+        return self._call_unary("acosh", out=out)
 
-    def fabs(self):
-        return self._call_unary("fabs")
+    def asin(self, out=None):
+        return self._call_unary("asin", out=out)
 
-    def lgamma(self):
-        return self._call_unary("lgamma")
+    def asinh(self, out=None):
+        return self._call_unary("asinh", out=out)
 
-    def log(self):
-        return self._call_unary("log")
+    def atan(self, out=None):
+        return self._call_unary("atan", out=out)
 
-    def log10(self):
-        return self._call_unary("log10")
+    def atanh(self, out=None):
+        return self._call_unary("atanh", out=out)
 
-    def log1p(self):
-        return self._call_unary("log1p")
+    def cbrt(self, out=None):
+        return self._call_unary("cbrt", out=out)
 
-    def log2(self):
-        return self._call_unary("log2")
+    def cos(self, out=None):
+        return self._call_unary("cos", out=out)
 
-    def logb(self):
-        return self._call_unary("logb")
+    def cosh(self, out=None):
+        return self._call_unary("cosh", out=out)
 
-    def nearbyint(self):
-        return self._call_unary("nearbyint")
+    def erf(self, out=None):
+        return self._call_unary("erf", out=out)
 
-    def sin(self):
-        return self._call_unary("sin")
+    def erfc(self, out=None):
+        return self._call_unary("erfc", out=out)
 
-    def sinh(self):
-        return self._call_unary("sinh")
+    def exp(self, out=None):
+        return self._call_unary("exp", out=out)
 
-    def sqrt(self):
-        return self._call_unary("sqrt")
+    def exp2(self, out=None):
+        return self._call_unary("exp2", out=out)
 
-    def tan(self):
-        return self._call_unary("tan")
+    def expm1(self, out=None):
+        return self._call_unary("expm1", out=out)
 
-    def tanh(self):
-        return self._call_unary("tanh")
+    def fabs(self, out=None):
+        return self._call_unary("fabs", out=out)
 
-    def tanh(self):
-        return self._call_unary("tgamma")
+    def lgamma(self, out=None):
+        return self._call_unary("lgamma", out=out)
 
-    def equaln(self, other):
-        return self._call_binary("equaln", other)
+    def log(self, out=None):
+        return self._call_unary("log", out=out)
+
+    def log10(self, out=None):
+        return self._call_unary("log10", out=out)
+
+    def log1p(self, out=None):
+        return self._call_unary("log1p", out=out)
+
+    def log2(self, out=None):
+        return self._call_unary("log2", out=out)
+
+    def logb(self, out=None):
+        return self._call_unary("logb", out=out)
+
+    def nearbyint(self, out=None):
+        return self._call_unary("nearbyint", out=out)
+
+    def sin(self, out=None):
+        return self._call_unary("sin", out=out)
+
+    def sinh(self, out=None):
+        return self._call_unary("sinh", out=out)
+
+    def sqrt(self, out=None):
+        return self._call_unary("sqrt", out=out)
+
+    def tan(self, out=None):
+        return self._call_unary("tan", out=out)
+
+    def tanh(self, out=None):
+        return self._call_unary("tanh", out=out)
+
+    def tanh(self, out=None):
+        return self._call_unary("tgamma", out=out)
+
+    def equaln(self, other, out=None):
+        return self._call_binary("equaln", other, out=out)
