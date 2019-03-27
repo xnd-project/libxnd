@@ -192,6 +192,10 @@ class array(xnd):
     def strides(self):
         return self.type.strides
 
+    @property
+    def dtype(self):
+        return ndt.to_format(super().dtype)
+
     def __repr__(self):
         value = self.short_value(maxshape=10)
         fmt = pretty((value, "@type='%s'@" % self.type), max_width=120)
@@ -232,6 +236,8 @@ class array(xnd):
             import numpy
             array._np = numpy
         return array._np
+
+    __array_priority__ = 1000
 
     def __array__(self, dtype=None):
         if dtype is not None:
