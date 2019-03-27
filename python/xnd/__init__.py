@@ -200,6 +200,10 @@ class array(xnd):
         fmt = fmt.replace("\n", "\n     ")
         return "array%s" % fmt
 
+    @property
+    def T(self):
+        return self.transpose()
+
     def tolist(self):
         return self.value
 
@@ -266,9 +270,48 @@ class array(xnd):
         np_self = np_inputs[0]
         np_res = np_self.__array_ufunc__(ufunc, method, *np_inputs, **kwargs)
 
+        if np_res is NotImplemented:
+            return NotImplemented
+
         if out is None:
             if isinstance(np_res, tuple):
-                return tuple(xnd.from_buffer(v) for v in np_res)
+                return tuple(array.from_buffer(v) for v in np_res)
+            else:
+                return array.from_buffer(np_res)
+        else:
+            return out
+
+    def __array_function__(self, func, types, args, kwargs):
+        np = self._get_numpy()
+
+        inputs = args
+        np_inputs = []
+        for v in inputs:
+            if not isinstance(v, array):
+                raise TypeError(
+                    "all inputs must be 'xnd.array', got '%s'" % type(v))
+            np_inputs.append(np.array(v, copy=False))
+
+        out = kwargs.pop('out', None)
+        if out is not None:
+            np_outputs = []
+            for v in out:
+                if not isinstance(v, array):
+                    raise TypeError(
+                        "all outputs must be 'xnd.array', got '%s'" % type(v))
+                np_outputs.append(np.array(v, copy=False))
+            kwargs["out"] = np_outputs
+
+        np_self = np_inputs[0]
+        np_types = (np.ndarray,)
+        np_res = np_self.__array_function__(func, np_types, tuple(np_inputs), kwargs)
+
+        if np_res is NotImplemented:
+            return NotImplemented
+
+        if out is None:
+            if isinstance(np_res, tuple):
+                return tuple(array.from_buffer(v) for v in np_res)
             else:
                 return array.from_buffer(np_res)
         else:
