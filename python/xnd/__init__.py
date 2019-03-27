@@ -223,11 +223,28 @@ class array(xnd):
         m = self._get_module(self.device, other.device)
         return getattr(m, name)(self, other, out=out, cls=array)
 
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+    def _get_numpy(self):
         if array._np is None:
             import numpy
             array._np = numpy
-        np = array._np
+        return array._np
+
+    def __array__(self, dtype=None):
+        if dtype is not None:
+            np = self._get_numpy()
+            x = np.array([], dtype=dtype)
+            t = ndt.from_format(memoryview(x).format)
+            return self.copy(dtype=t)
+        return self
+
+    @property
+    def __array_interface__(self):
+        shape = self.shape
+        typestr = ndt.to_format(self.dtype)
+        return dict(shape=shape, typestr=typestr, version=3)
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        np = self._get_numpy()
 
         np_inputs = []
         for v in inputs:
