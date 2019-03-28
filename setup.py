@@ -309,7 +309,7 @@ exec(open(os.path.join(setup_file_loc, "python/xnd/_version.py").read())
 
 setup (
     name = "xnd",
-    version = __version__,
+    version = __version__, # change in <python/xnd/_version.py>
     description = DESCRIPTION,
     long_description = LONG_DESCRIPTION,
     url = "https://github.com/plures/xnd",
