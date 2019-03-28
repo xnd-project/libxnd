@@ -177,6 +177,22 @@ def typeof(v, dtype=None):
 #                              array object
 # ======================================================================
 
+def _convert_smallest(v, device=None):
+    """Inefficient hack to make dask work (this needs to be in _typeof)."""
+    x = array(v, device=device)
+    if x.type.hidden_dtype == ndt("int64"):
+        for dtype in ("int8", "int16", "int32"):
+            try:
+                return array(v, dtype=dtype, device=device)
+            except:
+                continue
+    if x.type.hidden_dtype == ndt("float64"):
+        try:
+            return array(v, dtype="float32", device=device)
+        except:
+            pass
+    return x
+
 class array(xnd):
     """Extended array type that relies on gumath for the array functions."""
 
@@ -196,14 +212,6 @@ class array(xnd):
     def dtype(self):
         return ndt.to_format(super().dtype)
 
-    def __repr__(self):
-        value = self.short_value(maxshape=10)
-        fmt = pretty((value, "@type='%s'@" % self.type), max_width=120)
-        fmt = fmt.replace('"@', "")
-        fmt = fmt.replace('@"', "")
-        fmt = fmt.replace("\n", "\n     ")
-        return "array%s" % fmt
-
     @property
     def T(self):
         return self.transpose()
@@ -211,8 +219,8 @@ class array(xnd):
     def tolist(self):
         return self.value
 
-    def _get_module(self, *devices):
-        if all(d == "cuda:managed" for d in devices):
+    def _get_module(self):
+        if self.device == "cuda:managed":
             if array._cuda is None:
                 import gumath.cuda
                 array._cuda = gumath.cuda
@@ -223,21 +231,57 @@ class array(xnd):
                 array._functions = gumath.functions
             return array._functions
 
-    def _call_unary(self, name, out=None):
-        m = self._get_module(self.device)
-        return getattr(m, name)(self, out=out, cls=array)
-
-    def _call_binary(self, name, other, out=None):
-        m = self._get_module(self.device, other.device)
-        return getattr(m, name)(self, other, out=out, cls=array)
-
     def _get_numpy(self):
         if array._np is None:
             import numpy
             array._np = numpy
         return array._np
 
+    def _convert(self, other, raiseit=False):
+        if isinstance(other, array):
+            if other.device != self.device:
+                raise NotImplementedError("arrays must be on the same device")
+            return other
+        try:
+            return _convert_smallest(other, device=self.device)
+        except TypeError:
+            if raiseit:
+                raise TypeError("unable to convert %s to array" % other)
+            return NotImplemented
+
+    def _call_unary(self, name, out=None):
+        m = self._get_module()
+        return getattr(m, name)(self, out=out, cls=array)
+
+    def _call_binary(self, name, other, out=None, raiseit=False):
+        other = self._convert(other, raiseit)
+        m = self._get_module()
+        return getattr(m, name)(self, other, out=out, cls=array)
+
+    def _call_unary_np(self, name, out=None):
+        """redirect unimplemented unary methods"""
+        np = self._get_numpy()
+        x = getattr(np, name)(self, out=out, cls=array)
+        if out is not None:
+            return out
+        return array.from_buffer(x)
+
+    def _call_binary_np(self, name, other, out=None, raiseit=False):
+        """redirect unimplemented binary methods"""
+        np = self._get_numpy()
+        other = self._convert(other, raiseit)
+        x = getattr(np, name)(self, other, out=out)
+        if out is not None:
+            return out
+        return array.from_buffer(x)
+
     __array_priority__ = 1000
+
+    @property
+    def __array_interface__(self):
+        shape = self.shape
+        typestr = ndt.to_format(self.dtype)
+        return dict(shape=shape, typestr=typestr, version=3)
 
     def __array__(self, dtype=None):
         if dtype is not None:
@@ -247,84 +291,131 @@ class array(xnd):
             return self.copy(dtype=t)
         return self
 
-    @property
-    def __array_interface__(self):
-        shape = self.shape
-        typestr = ndt.to_format(self.dtype)
-        return dict(shape=shape, typestr=typestr, version=3)
-
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         np = self._get_numpy()
 
-        np_inputs = []
-        for v in inputs:
-            if not isinstance(v, array):
-                raise TypeError(
-                    "all inputs must be 'xnd.array', got '%s'" % type(v))
-            np_inputs.append(np.array(v, copy=False))
+        def conv_args(t):
+            if isinstance(t, tuple):
+                return tuple(conv_args(v) for v in t)
+            if isinstance(t, list):
+                return list(conv_args(v) for v in t)
+            elif isinstance(t, array):
+                return np.array(t, copy=False)
+            else:
+                raise NotImplementedError
 
-        out = kwargs.pop('out', None)
+        np_self = np.array(self, copy=False)
+        try:
+            np_inputs = conv_args(inputs)
+        except NotImplementedError:
+            return NotImplemented
+
+        np_kwargs = kwargs.copy()
+        out = np_kwargs.pop("out", None)
         if out is not None:
-            np_outputs = []
-            for v in out:
-                if not isinstance(v, array):
-                    raise TypeError(
-                        "all outputs must be 'xnd.array', got '%s'" % type(v))
-                np_outputs.append(np.array(v, copy=False))
-            kwargs["out"] = np_outputs
+            try:
+                np_out = conv_args(out)
+            except NotImplementedError:
+                return NotImplemented
+            np_kwargs["out"] = np_out
 
-        np_self = np_inputs[0]
-        np_res = np_self.__array_ufunc__(ufunc, method, *np_inputs, **kwargs)
-
+        np_res = np_self.__array_ufunc__(ufunc, method, *np_inputs, **np_kwargs)
         if np_res is NotImplemented:
             return NotImplemented
 
         if out is None:
             if isinstance(np_res, tuple):
-                return tuple(array.from_buffer(v) for v in np_res)
+                out = tuple(array.from_buffer(v) for v in np_res)
+            elif isinstance(np_res, list):
+                out = list(array.from_buffer(v) for v in np_res)
             else:
-                return array.from_buffer(np_res)
-        else:
-            return out
+                out = array.from_buffer(np_res)
+
+        return out
 
     def __array_function__(self, func, types, args, kwargs):
         np = self._get_numpy()
 
-        inputs = args
-        np_inputs = []
-        for v in inputs:
-            if not isinstance(v, array):
-                raise TypeError(
-                    "all inputs must be 'xnd.array', got '%s'" % type(v))
-            np_inputs.append(np.array(v, copy=False))
+        def conv_types(t):
+            if isinstance(t, tuple):
+                return tuple(conv_types(v) for v in t)
+            if isinstance(t, list):
+                return list(conv_types(v) for v in t)
+            elif issubclass(t, (array, np.ndarray)):
+                return np.ndarray
+            else:
+                raise NotImplementedError
 
-        out = kwargs.pop('out', None)
+        def conv_args(t, allow_ndarray=True):
+            if isinstance(t, tuple):
+                return tuple(conv_args(v) for v in t)
+            if isinstance(t, list):
+                return list(conv_args(v) for v in t)
+            elif isinstance(t, array):
+                return np.array(t, copy=False)
+            elif allow_ndarray and isinstance(t, np.ndarray):
+                return t
+            else:
+                raise NotImplementedError
+
+        np_self = np.array(self, copy=False)
+        try:
+            np_types = conv_types(types)
+        except NotImplementedError:
+            return NotImplemented
+
+        try:
+            np_args = conv_args(args)
+        except NotImplementedError:
+            return NotImplemented
+
+        np_kwargs = kwargs.copy()
+        out = np_kwargs.pop("out", None)
         if out is not None:
-            np_outputs = []
-            for v in out:
-                if not isinstance(v, array):
-                    raise TypeError(
-                        "all outputs must be 'xnd.array', got '%s'" % type(v))
-                np_outputs.append(np.array(v, copy=False))
-            kwargs["out"] = np_outputs
+            try:
+                np_out = conv_args(out, allow_ndarray=False)
+            except NotImplementedError:
+                return NotImplemented
+            np_kwargs["out"] = np_out
 
-        np_self = np_inputs[0]
-        np_types = (np.ndarray,)
-        np_res = np_self.__array_function__(func, np_types, tuple(np_inputs), kwargs)
-
+        np_res = np_self.__array_function__(func, np_types, np_args, np_kwargs)
         if np_res is NotImplemented:
             return NotImplemented
 
         if out is None:
             if isinstance(np_res, tuple):
-                return tuple(array.from_buffer(v) for v in np_res)
+                out = tuple(array.from_buffer(v) for v in np_res)
+            elif isinstance(np_res, list):
+                out = list(array.from_buffer(v) for v in np_res)
+            elif isinstance(np_res, np.ndarray):
+                out = array.from_buffer(np_res)
+            elif np.isscalar(np_res):
+                out = array.from_buffer(np_res)
             else:
-                return array.from_buffer(np_res)
-        else:
-            return out
+                out = np_res
+
+        return out
+
+    def __repr__(self):
+        value = self.short_value(maxshape=10)
+        fmt = pretty((value, "@type='%s'@" % self.type), max_width=120)
+        fmt = fmt.replace('"@', "")
+        fmt = fmt.replace('@"', "")
+        fmt = fmt.replace("\n", "\n     ")
+        return "array%s" % fmt
+
+    def __copy__(self):
+        return self.copy()
+
+    def __deepcopy__(self, memo):
+        return self.copy()
+
+    def __reduce__(self):
+        raise RuntimeError("reduce")
 
     def __bool__(self):
-        raise ValueError("the truth value is ambiguous")
+        np = self._get_numpy()
+        return bool(np.array(self, copy=False))
 
     def __neg__(self):
         return self._call_unary("negative")
@@ -333,94 +424,224 @@ class array(xnd):
         return self.copy()
 
     def __abs__(self):
-        raise NotImplementedError("abs() is not implemented")
+        return self._call_unary_np("abs")
 
     def __invert__(self):
         return self._call_unary("invert")
 
     def __complex__(self):
-        raise TypeError("complex() is not supported")
+        np = self._get_numpy()
+        return complex(np.array(self, copy=False))
 
     def __int__(self):
-        raise TypeError("int() is not supported")
+        np = self._get_numpy()
+        return int(np.array(self, copy=False))
+
+    def __oct__(self):
+        np = self._get_numpy()
+        return oct(np.array(self, copy=False))
+
+    def __hex__(self):
+        np = self._get_numpy()
+        return hex(np.array(self, copy=False))
 
     def __float__(self):
-        raise TypeError("float() is not supported")
+        np = self._get_numpy()
+        return float(np.array(self, copy=False))
 
     def __index__(self):
-        raise TypeError("index() is not supported")
-
-    def __round__(self):
-        return self._call_unary("round")
-
-    def __trunc__(self):
-        return self._call_unary("trunc")
+        np = self._get_numpy()
+        return np.array(self, copy=False).__index__()
 
     def __floor__(self):
-        return self._call_unary("floor")
+        np = self._get_numpy()
+        return np.array(self, copy=False).__floor__()
 
     def __ceil__(self):
-        return self._call_unary("ceil")
+        np = self._get_numpy()
+        return np.array(self, copy=False).__ceil__()
 
     def __eq__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
         return self._call_binary("equal", other)
 
     def __ne__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
         return self._call_binary("not_equal", other)
 
     def __lt__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
         return self._call_binary("less", other)
 
     def __le__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
         return self._call_binary("less_equal", other)
 
     def __ge__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
         return self._call_binary("greater_equal", other)
 
     def __gt__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
         return self._call_binary("greater", other)
 
     def __add__(self, other):
         return self._call_binary("add", other)
 
+    def __radd__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
+        return other._call_binary("add", self)
+
     def __sub__(self, other):
         return self._call_binary("subtract", other)
+
+    def __rsub__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
+        return other._call_binary("subtract", self)
 
     def __mul__(self, other):
         return self._call_binary("multiply", other)
 
+    def __rmul__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
+        return other._call_binary("multiply", self)
+
     def __matmul__(self, other):
-        raise NotImplementedError("matrix multiplication is not implemented")
+        return self._call_binary_np("matmul", other)
+
+    def __rmatmul__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
+        return other._call_binary_np("matmul", self)
 
     def __truediv__(self, other):
         return self._call_binary("divide", other)
 
+    def __rtruediv__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
+        return other._call_binary("divide", self)
+
     def __floordiv__(self, other):
         return self._call_binary("floor_divide", other)
+
+    def __rfloordiv__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
+        return other._call_binary("floor_divide", self)
 
     def __mod__(self, other):
         return self._call_binary("remainder", other)
 
+    def __rmod__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
+        return other._call_binary("remainder", self)
+
     def __divmod__(self, other):
         return self._call_binary("divmod", other)
 
+    def __rdivmod__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
+        return other._call_binary("divmod", self)
+
     def __pow__(self, other):
-        raise NotImplementedError("power is not implemented")
+        return self._call_binary_np("power", other)
+
+    def __rpow__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
+        return other._call_binary("power", self)
 
     def __lshift__(self, other):
-        raise TypeError("the '<<' operator is not supported")
+        return self._call_binary_np("left_shift", other)
+
+    def __rlshift__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
+        return other._call_binary_np("left_shift", self)
 
     def __rshift__(self, other):
-        raise TypeError("the '>>' operator is not supported")
+        return self._call_binary_np("right_shift", other)
+
+    def __rrshift__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
+        return other._call_binary_np("right_shift", self)
 
     def __and__(self, other):
         return self._call_binary("bitwise_and", other)
 
+    def __rand__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
+        return other._call_binary("bitwise_and", self)
+
     def __or__(self, other):
         return self._call_binary("bitwise_or", other)
 
+    def __ror__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
+        return other._call_binary("bitwise_or", self)
+
     def __xor__(self, other):
         return self._call_binary("bitwise_xor", other)
+
+    def __rxor__(self, other):
+        other = self._convert(other)
+        if other is NotImplemented:
+            return other
+
+        return other._call_binary("bitwise_xor", self)
 
     def __iadd__(self, other):
         return self._call_binary("add", other, out=self)
@@ -432,7 +653,7 @@ class array(xnd):
         return self._call_binary("multiply", other, out=self)
 
     def __imatmul__(self, other):
-        raise NotImplementedError("inplace matrix multiplication is not implemented")
+        return self._call_binary_np("matmul", other, out=self)
 
     def __itruediv__(self, other):
         return self._call_binary("divide", other, out=self)
@@ -443,17 +664,14 @@ class array(xnd):
     def __imod__(self, other):
         return self._call_binary("remainder", other, out=self)
 
-    def __idivmod__(self, other):
-        return self._call_binary("divmod", other, out=self)
-
     def __ipow__(self, other):
-        raise NotImplementedError("inplace power is not implemented")
+        return self._call_binary_np("power", other, out=self)
 
     def __ilshift__(self, other):
-        raise TypeError("the inplace '<<' operator is not supported")
+        return self._call_binary_np("left_shift", other, out=self)
 
     def __irshift__(self, other):
-        raise TypeError("the inplace '>>' operator is not supported")
+        return self._call_binary_np("right_shift", other, out=self)
 
     def __iand__(self, other):
         return self._call_binary("bitwise_and", other, out=self)
@@ -552,4 +770,4 @@ class array(xnd):
         return self._call_unary("tgamma", out=out)
 
     def equaln(self, other, out=None):
-        return self._call_binary("equaln", other, out=out)
+        return self._call_binary("equaln", other, out=out, raiseit=True)
