@@ -43,7 +43,7 @@ data.
 Importing PEP-3118 buffers is supported.
 """
 
-from _version import __version__
+from ._version import __version__
 
 # Ensure that libndtypes is loaded and initialized.
 from ndtypes import ndt, instantiate, MAX_DIM

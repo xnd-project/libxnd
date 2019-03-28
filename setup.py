@@ -304,8 +304,8 @@ def xnd_ext():
       runtime_library_dirs = runtime_library_dirs
     )
 
-setup_file_loc = os.path.abspath(os.path.dirname(__file__)
-exec(open(os.path.join(setup_file_loc, "python/xnd/_version.py").read())
+setup_file_loc = os.path.abspath(os.path.dirname(__file__))
+exec(open(os.path.join(setup_file_loc, "python/xnd/_version.py")).read())
 
 setup (
     name = "xnd",
