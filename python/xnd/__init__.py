@@ -209,10 +209,6 @@ class array(xnd):
         return self.type.strides
 
     @property
-    def dtype(self):
-        return ndt.to_format(super().dtype)
-
-    @property
     def T(self):
         return self.transpose()
 

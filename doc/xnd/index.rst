@@ -21,10 +21,12 @@ Operations like indexing and slicing return zero-copy typed views on the data.
 Importing PEP-3118 buffers is supported.
 
 
+
 .. toctree::
    :maxdepth: 1
 
-   types.rst
+   xnd.rst
+   array.rst
    align-pack.rst
    buffer-protocol.rst
    quickstart.rst
