@@ -2167,7 +2167,7 @@ pyxnd_reshape(PyObject *self, PyObject *args, PyObject *kwds)
         }
     }
 
-    xnd_t view = xnd_reshape(XND(self), shape, n, ord, &ctx);
+    xnd_t view = xnd_reshape(XND(self), shape, (int)n, ord, &ctx);
     if (xnd_err_occurred(&view)) {
         return seterr(&ctx);
     }
