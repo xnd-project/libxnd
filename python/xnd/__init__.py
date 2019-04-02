@@ -581,7 +581,7 @@ class array(xnd):
         return other._call_binary("divmod", self)
 
     def __pow__(self, other):
-        return self._call_binary_np("power", other)
+        return self._call_binary("power", other)
 
     def __rpow__(self, other):
         other = self._convert(other)
