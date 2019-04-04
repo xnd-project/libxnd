@@ -3363,6 +3363,16 @@ class TestSpec(XndTestCase):
 
         self.assertEqual(x.value, y.tolist())
 
+    def run_from_buffer(self, nd, d):
+        if not isinstance(nd, xnd) or not isinstance(d, np.ndarray):
+            return
+
+        x = xnd.from_buffer(d)
+        y = np.array(x, copy=False)
+
+        self.assertEqual(x.value, d.tolist())
+        self.assertEqual(x.value, y.tolist())
+
     def run_single(self, nd, d, indices):
         """Run a single test case."""
 
@@ -3406,6 +3416,7 @@ class TestSpec(XndTestCase):
         if np is not None:
             self.run_reshape(nd_result, def_result)
             self.run_transpose(nd_result, def_result)
+            self.run_from_buffer(nd_result, def_result)
 
         return nd_result, def_result
 
@@ -3566,6 +3577,18 @@ class LongIndexSliceTest(XndTestCase):
 
     @unittest.skipIf(np is None, "numpy not found")
     def test_transpose_and_reshape(self):
+        skip_if(SKIP_LONG, "use --long argument to enable these tests")
+
+        t = TestSpec(constr=xnd,
+                     ndarray=np.array,
+                     values=SUBSCRIPT_FIXED_TEST_CASES,
+                     value_generator=gen_fixed,
+                     indices_generator=mixed_indices,
+                     indices_generator_args=(3,))
+        t.run()
+
+    @unittest.skipIf(np is None, "numpy not found")
+    def test_from_buffer(self):
         skip_if(SKIP_LONG, "use --long argument to enable these tests")
 
         t = TestSpec(constr=xnd,

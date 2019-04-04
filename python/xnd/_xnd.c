@@ -285,7 +285,15 @@ type_from_buffer(const Py_buffer *view)
 
     for (i=view->ndim-1, t=type; i>=0; i--, type=t) {
         shape = view->shape[i];
+
         step = view->strides[i] / view->itemsize;
+        if (step * view->itemsize != view->strides[i]) {
+            PyErr_SetString(PyExc_NotImplementedError,
+                "strides supplied by exporter are not a multiple of itemsize");
+            ndt_decref(type);
+            return NULL;
+        }
+
         t = ndt_fixed_dim(type, shape, step, &ctx);
         ndt_decref(type);
         if (t == NULL) {
@@ -315,15 +323,6 @@ mblock_from_buffer(PyObject *obj)
     }
 
     if (PyObject_GetBuffer(obj, self->view, PyBUF_FULL_RO) < 0) {
-        Py_DECREF(self);
-        return NULL;
-    }
-
-    if (!PyBuffer_IsContiguous(self->view, 'A')) {
-        /* Conversion from buf+strides to steps+linear_index is not possible
-           if the start of the original data is missing. */
-        PyErr_SetString(PyExc_NotImplementedError,
-            "conversion from non-contiguous buffers is not implemented");
         Py_DECREF(self);
         return NULL;
     }
