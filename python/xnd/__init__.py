@@ -254,14 +254,6 @@ class array(xnd):
         m = self._get_module()
         return getattr(m, name)(self, other, out=out, cls=array)
 
-    def _call_unary_np(self, name, out=None):
-        """redirect unimplemented unary methods"""
-        np = self._get_numpy()
-        x = getattr(np, name)(self, out=out, cls=array)
-        if out is not None:
-            return out
-        return array.from_buffer(x)
-
     def _call_binary_np(self, name, other, out=None, raiseit=False):
         """redirect unimplemented binary methods"""
         np = self._get_numpy()
@@ -421,7 +413,7 @@ class array(xnd):
         return self.copy()
 
     def __abs__(self):
-        return self._call_unary_np("abs")
+        return self._call_unary("abs")
 
     def __invert__(self):
         return self._call_unary("invert")
@@ -662,7 +654,7 @@ class array(xnd):
         return self._call_binary("remainder", other, out=self)
 
     def __ipow__(self, other):
-        return self._call_binary_np("power", other, out=self)
+        return self._call_binary("power", other, out=self)
 
     def __ilshift__(self, other):
         return self._call_binary_np("left_shift", other, out=self)
