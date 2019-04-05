@@ -180,6 +180,10 @@ def typeof(v, dtype=None):
 
 def _convert_smallest(v, device=None):
     """Inefficient hack to make dask work (this needs to be in _typeof)."""
+    try:
+        return array.from_buffer(v)
+    except (TypeError, BufferError):
+        pass
     x = array(v, device=device)
     if x.type.hidden_dtype == ndt("int64"):
         for dtype in ("int8", "int16", "int32"):
@@ -187,11 +191,6 @@ def _convert_smallest(v, device=None):
                 return array(v, dtype=dtype, device=device)
             except:
                 continue
-    if x.type.hidden_dtype == ndt("float64"):
-        try:
-            return array(v, dtype="float32", device=device)
-        except:
-            pass
     return x
 
 class array(xnd):
@@ -350,10 +349,10 @@ class array(xnd):
                 return list(conv_args(v) for v in t)
             elif isinstance(t, array):
                 return np.array(t, copy=False)
-            elif allow_ndarray and isinstance(t, np.ndarray):
-                return t
+            elif isinstance(t, np.ndarray):
+                return t if allow_ndarray else NotImplemented
             else:
-                raise NotImplementedError
+                return t
 
         np_self = np.array(self, copy=False)
         try:
@@ -386,10 +385,11 @@ class array(xnd):
                 out = list(array.from_buffer(v) for v in np_res)
             elif isinstance(np_res, np.ndarray):
                 out = array.from_buffer(np_res)
-            elif np.isscalar(np_res):
-                out = array.from_buffer(np_res)
             else:
-                out = np_res
+                try:
+                    out = array.from_buffer(memoryview(np_res))
+                except TypeError:
+                    out = np_res
 
         return out
 
