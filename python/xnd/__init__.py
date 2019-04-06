@@ -289,6 +289,8 @@ class array(xnd):
                 return list(conv_args(v) for v in t)
             elif isinstance(t, array):
                 return np.array(t, copy=False)
+            elif isinstance(t, np.ndarray):
+                return t
             else:
                 raise NotImplementedError
 
@@ -346,6 +348,19 @@ class array(xnd):
             else:
                 return t
 
+        def conv_res(t):
+            if isinstance(t, tuple):
+                return tuple(conv_res(v) for v in t)
+            if isinstance(t, list):
+                return list(conv_res(v) for v in t)
+            elif isinstance(t, np.ndarray):
+                return array.from_buffer(t)
+            else:
+                try:
+                    return array.from_buffer(memoryview(t))
+                except TypeError:
+                    return t
+
         np_self = np.array(self, copy=False)
         try:
             np_types = conv_types(types)
@@ -371,19 +386,9 @@ class array(xnd):
             return NotImplemented
 
         if out is None:
-            if isinstance(np_res, tuple):
-                out = tuple(array.from_buffer(v) for v in np_res)
-            elif isinstance(np_res, list):
-                out = list(array.from_buffer(v) for v in np_res)
-            elif isinstance(np_res, np.ndarray):
-                out = array.from_buffer(np_res)
-            else:
-                try:
-                    out = array.from_buffer(memoryview(np_res))
-                except TypeError:
-                    out = np_res
-
-        return out
+            return conv_res(np_res)
+        else:
+            return out
 
     def __repr__(self):
         value = self.short_value(maxshape=10)
