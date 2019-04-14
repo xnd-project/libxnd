@@ -351,9 +351,12 @@ mblock_from_buffer(PyObject *obj)
 }
 
 static MemoryBlockObject *
-mblock_from_buffer_and_type(PyObject *obj, PyObject *type)
+mblock_from_buffer_and_type(PyObject *obj, PyObject *type, int64_t linear_index,
+                            int64_t bufsize)
 {
+    NDT_STATIC_CONTEXT(ctx);
     MemoryBlockObject *self;
+    const ndt_t *t;
 
     if (!Ndt_Check(type)) {
         PyErr_SetString(PyExc_TypeError, "expected ndt object");
@@ -371,18 +374,25 @@ mblock_from_buffer_and_type(PyObject *obj, PyObject *type)
         return NULL;
     }
 
-    if (PyObject_GetBuffer(obj, self->view, PyBUF_FULL_RO) < 0) {
+    if (PyObject_GetBuffer(obj, self->view, PyBUF_SIMPLE) < 0) {
         Py_DECREF(self);
         return NULL;
     }
 
-    if (!PyBuffer_IsContiguous(self->view, 'A')) {
-        /* Conversion from buf+strides to steps+linear_index is not possible
-           if the start of the original data is missing. */
-        PyErr_SetString(PyExc_NotImplementedError,
-            "conversion from non-contiguous buffers is not implemented");
+    if (self->view->readonly) {
+        PyErr_SetString(PyExc_ValueError, "buffer is readonly");
         Py_DECREF(self);
         return NULL;
+    }
+
+    if (bufsize < 0) {
+        bufsize = self->view->len;
+    }
+
+    t = NDT(type);
+    if (xnd_bounds_check(t, linear_index, bufsize, &ctx) < 0) {
+        Py_DECREF(self);
+        return (MemoryBlockObject *)seterr(&ctx);
     }
 
     Py_INCREF(type);
@@ -398,8 +408,8 @@ mblock_from_buffer_and_type(PyObject *obj, PyObject *type)
     self->xnd->master.bitmap.data = NULL;
     self->xnd->master.bitmap.size = 0;
     self->xnd->master.bitmap.next = NULL;
-    self->xnd->master.index = 0;
-    self->xnd->master.type = NDT(self->type);
+    self->xnd->master.index = linear_index;
+    self->xnd->master.type = t;
     self->xnd->master.ptr = self->view->buf;
 
     return self;
@@ -1397,7 +1407,7 @@ pyxnd_from_buffer_and_type(PyTypeObject *tp, PyObject *args, PyObject *kwds)
         return NULL;
     }
 
-    mblock = mblock_from_buffer_and_type(obj, type);
+    mblock = mblock_from_buffer_and_type(obj, type, 0, -1);
     if (mblock == NULL) {
         return NULL;
     }
@@ -2548,7 +2558,7 @@ static PyMethodDef pyxnd_methods [] =
   /* Class methods */
   { "empty", (PyCFunction)pyxnd_empty, METH_VARARGS|METH_KEYWORDS|METH_CLASS, doc_empty },
   { "from_buffer", (PyCFunction)pyxnd_from_buffer, METH_O|METH_CLASS, doc_from_buffer },
-  { "_unsafe_from_data", (PyCFunction)pyxnd_from_buffer_and_type, METH_VARARGS|METH_KEYWORDS|METH_CLASS, NULL },
+  { "from_buffer_and_type", (PyCFunction)pyxnd_from_buffer_and_type, METH_VARARGS|METH_KEYWORDS|METH_CLASS, NULL },
 
   { NULL, NULL, 1 }
 };

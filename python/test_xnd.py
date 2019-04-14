@@ -3079,16 +3079,6 @@ class TestBuffer(XndTestCase):
                 self.assertEqual(y[i][k], x[i][k])
 
     @unittest.skipIf(np is None, "numpy not found")
-    def test_unsafe_from_buffer(self):
-        x = np.array([[[0,1,2],
-                       [3,4,5]],
-                     [[6,7,8],
-                      [9,10,11]]], dtype="int64")
-
-        y = xnd.unsafe_from_data(obj=x, type="12 * int64")
-        np.testing.assert_equal(y, x.reshape(12))
-
-    @unittest.skipIf(np is None, "numpy not found")
     def test_endian(self):
         standard = [
             '?',
@@ -3150,6 +3140,30 @@ class TestBuffer(XndTestCase):
         x = np.array([1, 2, 3], dtype="complex128")
         y = xnd.from_buffer(x)
         self.assertEqual(memoryview(y).format, "=Zd")
+
+    @unittest.skipIf(np is None, "numpy not found")
+    def test_from_buffer_and_type(self):
+        x = np.array([[[0,1,2],
+                       [3,4,5]],
+                     [[6,7,8],
+                      [9,10,11]]], dtype="float32")
+
+        b = memoryview(x).cast("B")
+        t = ndt("2 * 2 * 3 * float32")
+        ans = xnd.from_buffer_and_type(b, t)
+        np.testing.assert_equal(ans, x)
+
+        t = ndt("2 * 2 * 4 * float32")
+        self.assertRaises(ValueError, xnd.from_buffer_and_type, b, t)
+
+        b = b"12345678"
+
+        t = ndt("3 * 3 * int8")
+        self.assertRaises(ValueError, xnd.from_buffer_and_type, b, t)
+
+        x = xnd.empty("2 * 2 * 2 * int8")
+        y = x[::-1]
+        self.assertRaises(ValueError, xnd.from_buffer_and_type, b, y.type)
 
 
 class TestReshape(XndTestCase):
