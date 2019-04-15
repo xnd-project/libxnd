@@ -87,7 +87,6 @@ class XndTestCase(unittest.TestCase):
 
     def assertNotStrictEqual(self, x, y):
         self.assertFalse(x.strict_equal(y))
-        self.assertNotEqual(x, y)
 
 
 class TestModule(XndTestCase):
@@ -394,6 +393,13 @@ class TestFixedDim(XndTestCase):
                     y = xnd(vv, type=uuu)
                     y[indices] = w
                     self.assertNotStrictEqual(x, y)
+
+    def test_fixed_dim_equal(self):
+        x = xnd([1,2,3], dtype='int64')
+        y = xnd([1,2,3], dtype='float32')
+
+        self.assertEqual(x, y)
+        self.assertNotStrictEqual(x, y)
 
 
 class TestFortran(XndTestCase):

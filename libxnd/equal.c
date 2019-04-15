@@ -55,9 +55,7 @@ xnd_strict_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx)
     assert(ndt_is_concrete(t) && ndt_is_concrete(u));
 
     if (t->tag != u->tag) {
-        ndt_err_format(ctx, NDT_TypeError,
-            "mixed type comparisons are not implemented");
-        return -1;
+        return 0;
     }
 
     if (xnd_is_na(x) || xnd_is_na(y)) {
