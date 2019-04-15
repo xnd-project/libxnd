@@ -60,7 +60,6 @@ def check_buffer(x):
         del x
         y.tobytes()
 
-
 def check_copy_contiguous(self, x):
     y = x.copy_contiguous()
     xv = x.value
@@ -88,17 +87,6 @@ class XndTestCase(unittest.TestCase):
 
     def assertNotStrictEqual(self, x, y):
         self.assertFalse(x.strict_equal(y))
-
-    def check_serialize(self, x):
-        try:
-            b = x.xserialize(readonly=False)
-        except NotImplementedError:
-            return
-        try:
-            y = x.deserialize(b)
-        except NotImplementedError:
-            return
-        self.assertEqual(x, y)
 
 
 class TestModule(XndTestCase):
@@ -197,7 +185,6 @@ class TestFixedDim(XndTestCase):
             t = ndt(s)
             x = xnd(v, type=t)
             check_buffer(x)
-            self.check_serialize(x)
             self.assertTrue(x.type.is_c_contiguous())
 
             for i in range(3):
@@ -216,7 +203,6 @@ class TestFixedDim(XndTestCase):
                         sl = slice(start, stop, step)
                         self.assertEqual(x[sl].value, nd[sl])
                         check_buffer(x[sl])
-                        self.check_serialize(x[sl])
                         check_copy_contiguous(self, x[sl])
 
             self.assertEqual(x[:, 0].value, nd[:, 0])
@@ -460,7 +446,6 @@ class TestFortran(XndTestCase):
             t = ndt(s)
             x = xnd(v, type=t)
             check_buffer(x)
-            self.check_serialize(x)
             self.assertTrue(x.type.is_f_contiguous())
 
             for i in range(3):
@@ -479,7 +464,6 @@ class TestFortran(XndTestCase):
                         sl = slice(start, stop, step)
                         self.assertEqual(x[sl].value, nd[sl])
                         check_buffer(x[sl])
-                        self.check_serialize(x[sl])
                         check_copy_contiguous(self, x[sl])
 
             self.assertEqual(x[:, 0].value, nd[:, 0])
@@ -695,7 +679,6 @@ class TestVarDim(XndTestCase):
                 self.assertEqual(x.value, vv)
                 self.assertEqual(len(x), len(vv))
                 self.assertTrue(x.type.is_var_contiguous())
-                self.check_serialize(x)
 
         self.assertRaises(NotImplementedError, xnd.empty, "?var(offsets=[0, 3]) * int64")
         self.assertRaises(NotImplementedError, xnd.empty, "?var(offsets=[0, 2]) * var(offsets=[0, 3, 10]) * int64")
@@ -875,14 +858,12 @@ class TestVarDim(XndTestCase):
                 y = xnd(vv, type=ttt)
                 self.assertStrictEqual(x, y)
                 check_copy_contiguous(self, x)
-                self.check_serialize(x)
 
                 if u is not None:
                     uuu = ndt(uu)
                     y = xnd(vv, type=uuu)
                     self.assertStrictEqual(x, y)
                     check_copy_contiguous(self, y)
-                    self.check_serialize(y)
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
@@ -3412,23 +3393,6 @@ class TestSpec(XndTestCase):
         self.assertEqual(x.value, d.tolist())
         self.assertEqual(x.value, y.tolist())
 
-    def run_serialize(self, x, value, depth):
-        if not isinstance(x, xnd):
-            return
-
-        self.log_err(value, depth)
-
-        try:
-            b = x.xserialize(readonly=False)
-        except NotImplementedError:
-            return
-        try:
-            y = x.deserialize(b)
-        except NotImplementedError:
-            return
-
-        self.assertEqual(x, y)
-
     def run_single(self, nd, d, indices):
         """Run a single test case."""
 
@@ -3491,8 +3455,6 @@ class TestSpec(XndTestCase):
                 except Exception as e:
                     self.log_err(value, depth)
                     raise e
-
-                self.run_serialize(next_nd, value, depth)
 
                 if isinstance(next_d, list): # possibly None or scalar
                     check(next_nd, next_d, value, depth+1)

@@ -294,19 +294,14 @@ _xnd_bounds_check(const xnd_bounds_t * const x, const int64_t bufsize, ndt_conte
         return -1;
     }
 
-    case String: case Bytes: {
-        ndt_err_format(ctx, NDT_NotImplementedError,
-            "serialization for string and bytes not implemented");
-        return -1;
-    }
-
     case Categorical:
     case Bool:
     case Int8: case Int16: case Int32: case Int64:
     case Uint8: case Uint16: case Uint32: case Uint64:
     case BFloat16: case Float16: case Float32: case Float64:
     case BComplex32: case Complex32: case Complex64: case Complex128:
-    case FixedString: case FixedBytes: {
+    case FixedString: case FixedBytes:
+    case String: case Bytes: {
         const int64_t min = x->ptr;
         const int64_t max = ADDi64(min, t->datasize, &overflow);
 

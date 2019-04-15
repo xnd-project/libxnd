@@ -2520,146 +2520,6 @@ pyxnd_copy_contiguous(PyObject *self, PyObject *args, PyObject *kwargs)
     return dest;
 }
 
-static PyObject *
-_serialize(XndObject *self, bool readonly)
-{
-    NDT_STATIC_CONTEXT(ctx);
-    bool overflow = false;
-    const xnd_t *x = XND(self);
-    const ndt_t *t = XND_TYPE(self);
-    PyObject *result;
-    char *cp, *s;
-    int64_t tlen;
-    int64_t size;
-
-    if (ndt_is_optional(t) || ndt_subtree_is_optional(t)) {
-        PyErr_SetString(PyExc_NotImplementedError,
-            "serializing bitmaps is not implemented");
-        return NULL;
-    }
-
-    if (!ndt_is_c_contiguous(t) && !ndt_is_f_contiguous(t)) {
-        PyErr_SetString(PyExc_NotImplementedError,
-            "serializing non-contiguous memory blocks is not implemented");
-        return NULL;
-    }
-
-    tlen = ndt_serialize(&s, t, &ctx);
-    if (tlen < 0) {
-        return seterr(&ctx);
-    }
-
-    size = ADDi64(t->datasize, tlen, &overflow);
-    size = ADDi64(size, 8, &overflow);
-    if (overflow) {
-        PyErr_SetString(PyExc_OverflowError, "too large to serialize");
-        ndt_free(s);
-        return NULL;
-    }
-
-    if (readonly) {
-        result = PyBytes_FromStringAndSize(NULL, size);
-        cp = PyBytes_AS_STRING(result);
-    }
-    else {
-        result = PyByteArray_FromStringAndSize(NULL, size);
-        cp = PyByteArray_AS_STRING(result);
-    }
-
-    char *ptr = x->ptr;
-    if (t->ndim != 0) {
-         ptr = x->ptr + x->index * t->Concrete.FixedDim.itemsize;
-    }
-
-    memcpy(cp, ptr, t->datasize); cp += t->datasize;
-    memcpy(cp, s, tlen); cp += tlen;
-    memcpy(cp, &t->datasize, 8); cp += 8;
-    ndt_free(s);
-
-    return result;
-}
-
-static PyObject *
-pyxnd_serialize(PyObject *self, PyObject *args, PyObject *kwargs)
-{
-    static char *kwlist[] = {"readonly", NULL};
-    int readonly = 1;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|$p", kwlist, &readonly)) {
-        return NULL;
-    }
-
-    return _serialize((XndObject *)self, !!readonly);
-}
-
-static PyObject *
-pyxnd_deserialize(PyTypeObject *tp, PyObject *v)
-{
-    NDT_STATIC_CONTEXT(ctx);
-    MemoryBlockObject *mblock;
-    bool overflow = false;
-    int64_t mblock_size;
-    int64_t size;
-    int64_t tlen;
-    int64_t tmp;
-    char *s;
-
-    if (PyBytes_Check(v)) {
-        size = PyBytes_GET_SIZE(v);
-        s = PyBytes_AS_STRING(v);
-    }
-    else if (PyByteArray_Check(v)) {
-        size = PyByteArray_GET_SIZE(v);
-        s = PyByteArray_AS_STRING(v);
-    }
-    else {
-        PyErr_Format(PyExc_TypeError,
-            "expected bytes or bytearray, not '%.200s'", Py_TYPE(v)->tp_name);
-        return NULL;
-    }
-
-    if (size < 24) {
-        goto invalid_format;
-    }
-
-    memcpy(&mblock_size, s+size-8, 8);
-    if (mblock_size < 0) {
-        goto invalid_format;
-    }
-
-    tmp = ADDi64(mblock_size, 8, &overflow);
-    tlen = size-tmp;
-    if (overflow || tlen < 0) {
-        goto invalid_format;
-    }
-
-    const ndt_t *t = ndt_deserialize(s+mblock_size, tlen, &ctx);
-    if (t == NULL) {
-        return seterr(&ctx);
-    }
-
-    PyObject *type = Ndt_FromType(t);
-    ndt_decref(t);
-    if (type == NULL) {
-        return NULL;
-    }
-
-    mblock = mblock_from_buffer_and_type(v, type, 0, mblock_size);
-    Py_DECREF(type);
-    if (mblock == NULL) {
-        return NULL;
-    }
-
-    return pyxnd_from_mblock(tp, mblock);
-
-
-invalid_format:
-    PyErr_SetString(PyExc_ValueError,
-        "invalid format for xnd deserialization");
-    return NULL;
-}
-
-
 static PyGetSetDef pyxnd_getsets [] =
 {
   { "type", (getter)pyxnd_type, NULL, doc_type, NULL},
@@ -2691,16 +2551,14 @@ static PyMethodDef pyxnd_methods [] =
   { "short_value", (PyCFunction)pyxnd_short_value, METH_VARARGS|METH_KEYWORDS, doc_short_value },
   { "strict_equal", (PyCFunction)pyxnd_strict_equal, METH_O, NULL },
   { "copy_contiguous", (PyCFunction)pyxnd_copy_contiguous, METH_VARARGS|METH_KEYWORDS, NULL },
+  { "_reshape", (PyCFunction)pyxnd_reshape, METH_VARARGS|METH_KEYWORDS, NULL },
   { "split", (PyCFunction)pyxnd_split, METH_VARARGS|METH_KEYWORDS, NULL },
   { "transpose", (PyCFunction)pyxnd_transpose, METH_VARARGS|METH_KEYWORDS, NULL },
-  { "_reshape", (PyCFunction)pyxnd_reshape, METH_VARARGS|METH_KEYWORDS, NULL },
-  { "_serialize", (PyCFunction)pyxnd_serialize, METH_VARARGS|METH_KEYWORDS, NULL },
 
   /* Class methods */
   { "empty", (PyCFunction)pyxnd_empty, METH_VARARGS|METH_KEYWORDS|METH_CLASS, doc_empty },
   { "from_buffer", (PyCFunction)pyxnd_from_buffer, METH_O|METH_CLASS, doc_from_buffer },
   { "from_buffer_and_type", (PyCFunction)pyxnd_from_buffer_and_type, METH_VARARGS|METH_KEYWORDS|METH_CLASS, NULL },
-  { "deserialize", (PyCFunction)pyxnd_deserialize, METH_O|METH_CLASS, NULL },
 
   { NULL, NULL, 1 }
 };
