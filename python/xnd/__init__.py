@@ -140,6 +140,10 @@ class xnd(Xnd):
         fmt = fmt.replace("\n", "\n   ")
         return "xnd%s" % fmt
 
+    def __reduce__(self):
+        b =  self.serialize()
+        return (xnd.deserialize, (b,))
+
     def copy_contiguous(self, dtype=None):
         if isinstance(dtype, str):
             dtype = ndt(dtype)
@@ -147,6 +151,12 @@ class xnd(Xnd):
 
     def reshape(self, *args, order=None):
         return super()._reshape(args, order=order)
+
+    def serialize(self):
+        if not self.type.is_c_contiguous() and \
+           not self.type.is_f_contiguous():
+            self = self.copy_contiguous()
+        return self._serialize()
 
     @classmethod
     def empty(cls, type=None, device=None):
@@ -403,9 +413,6 @@ class array(xnd):
 
     def __deepcopy__(self, memo):
         return self.copy()
-
-    def __reduce__(self):
-        raise RuntimeError("reduce")
 
     def __bool__(self):
         np = self._get_numpy()
