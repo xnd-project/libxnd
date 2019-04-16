@@ -3412,6 +3412,15 @@ class TestSpec(XndTestCase):
         self.assertEqual(x.value, d.tolist())
         self.assertEqual(x.value, y.tolist())
 
+    def run_tobytes(self, nd, d):
+        if not isinstance(nd, xnd) or not isinstance(d, np.ndarray):
+            return
+
+        x = nd.tobytes()
+        y = d.tobytes()
+
+        self.assertEqual(x, y)
+
     def run_serialize(self, x):
         if not isinstance(x, xnd):
             return
@@ -3471,6 +3480,7 @@ class TestSpec(XndTestCase):
             self.run_reshape(nd_result, def_result)
             self.run_transpose(nd_result, def_result)
             self.run_from_buffer(nd_result, def_result)
+            self.run_tobytes(nd_result, def_result)
 
         return nd_result, def_result
 

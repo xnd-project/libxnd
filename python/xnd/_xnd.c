@@ -2521,6 +2521,77 @@ pyxnd_copy_contiguous(PyObject *self, PyObject *args, PyObject *kwargs)
 }
 
 static PyObject *
+pyxnd_tobytes(PyObject *self, PyObject *args UNUSED)
+{
+    NDT_STATIC_CONTEXT(ctx);
+    XndObject *src = (XndObject *)self;
+    const ndt_t *t = XND_TYPE(self);
+    PyObject *b;
+
+    if (!ndt_is_pointer_free(t)) {
+        PyErr_SetString(PyExc_NotImplementedError,
+            "tobytes() is not implemented for memory blocks with pointers");
+        return NULL;
+    }
+
+    if (ndt_is_optional(t) || ndt_subtree_is_optional(t)) {
+        PyErr_SetString(PyExc_NotImplementedError,
+            "serializing bitmaps is not implemented");
+        return NULL;
+    }
+
+    if (!ndt_is_ndarray(t)) {
+        PyErr_SetString(PyExc_NotImplementedError,
+            "tobytes() is only implemented for ndarrays");
+        return NULL;
+    }
+
+    const bool contiguous = ndt_is_c_contiguous(t) || ndt_is_f_contiguous(t) ||
+                            ndt_is_var_contiguous(t);
+
+    if (contiguous) {
+        ndt_incref(t);
+    }
+    else {
+        t = ndt_copy_contiguous(XND_TYPE(src), XND_INDEX(src), &ctx);
+        if (t == NULL) {
+            return seterr(&ctx);
+        }
+    }
+
+    b = PyBytes_FromStringAndSize(NULL, t->datasize);
+    if (b == NULL) {
+        ndt_decref(t);
+        return NULL;
+    }
+    char *cp = PyBytes_AS_STRING(b);
+
+
+    if (contiguous) {
+         char *ptr = XND(src)->ptr;
+         if (t->ndim != 0) {
+             ptr += XND_INDEX(src) * t->Concrete.FixedDim.itemsize;
+         }
+
+        memcpy(cp, ptr, t->datasize);
+    }
+    else {
+        xnd_t x = xnd_error;
+        x.type = t;
+        x.ptr = cp;
+
+        if (xnd_copy(&x, XND(src), src->mblock->xnd->flags, &ctx) < 0) {
+            Py_DECREF(b);
+            ndt_decref(t);
+            return seterr(&ctx);
+        }
+    }
+
+    ndt_decref(t);
+    return b;
+}
+
+static PyObject *
 _serialize(XndObject *self)
 {
     NDT_STATIC_CONTEXT(ctx);
@@ -2534,13 +2605,19 @@ _serialize(XndObject *self)
 
     if (!ndt_is_pointer_free(t)) {
         PyErr_SetString(PyExc_NotImplementedError,
-            "serializing memory blocks with pointers is not implememnted");
+            "serializing memory blocks with pointers is not implemented");
         return NULL;
     }
 
     if (ndt_is_optional(t) || ndt_subtree_is_optional(t)) {
         PyErr_SetString(PyExc_NotImplementedError,
             "serializing bitmaps is not implemented");
+        return NULL;
+    }
+
+    if (!ndt_is_ndarray(t)) {
+        PyErr_SetString(PyExc_NotImplementedError,
+            "tobytes() is only implemented for ndarrays");
         return NULL;
     }
 
@@ -2682,6 +2759,7 @@ static PyMethodDef pyxnd_methods [] =
   { "copy_contiguous", (PyCFunction)pyxnd_copy_contiguous, METH_VARARGS|METH_KEYWORDS, NULL },
   { "split", (PyCFunction)pyxnd_split, METH_VARARGS|METH_KEYWORDS, NULL },
   { "transpose", (PyCFunction)pyxnd_transpose, METH_VARARGS|METH_KEYWORDS, NULL },
+  { "tobytes", (PyCFunction)pyxnd_tobytes, METH_NOARGS, NULL },
   { "_reshape", (PyCFunction)pyxnd_reshape, METH_VARARGS|METH_KEYWORDS, NULL },
   { "_serialize", (PyCFunction)pyxnd_serialize, METH_NOARGS, NULL },
 
