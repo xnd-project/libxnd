@@ -154,7 +154,8 @@ class xnd(Xnd):
 
     def serialize(self):
         if not self.type.is_c_contiguous() and \
-           not self.type.is_f_contiguous():
+           not self.type.is_f_contiguous() and \
+           not self.type.is_var_contiguous():
             self = self.copy_contiguous()
         return self._serialize()
 

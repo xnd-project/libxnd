@@ -2615,13 +2615,8 @@ _serialize(XndObject *self)
         return NULL;
     }
 
-    if (!ndt_is_ndarray(t)) {
-        PyErr_SetString(PyExc_NotImplementedError,
-            "tobytes() is only implemented for ndarrays");
-        return NULL;
-    }
-
-    if (!ndt_is_c_contiguous(t) && !ndt_is_f_contiguous(t)) {
+    if (!ndt_is_c_contiguous(t) && !ndt_is_f_contiguous(t) &&
+        !ndt_is_var_contiguous(t)) {
         PyErr_SetString(PyExc_NotImplementedError,
             "serializing non-contiguous memory blocks is not implemented");
         return NULL;
