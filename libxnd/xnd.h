@@ -190,6 +190,7 @@ XND_API xnd_t *xnd_split(const xnd_t *x, int64_t *n, int max_outer, ndt_context_
 
 XND_API int xnd_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx);
 XND_API int xnd_strict_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx);
+XND_API int xnd_identical(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx);
 
 XND_API int xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx);
 
@@ -213,6 +214,8 @@ XND_API void xnd_set_valid(xnd_t *x);
 XND_API void xnd_set_na(xnd_t *x);
 XND_API int xnd_is_valid(const xnd_t *x);
 XND_API int xnd_is_na(const xnd_t *x);
+XND_API int xnd_bitmap_identical(const xnd_bitmap_t *xb, const xnd_bitmap_t *yb,
+                                 const ndt_t *t, ndt_context_t *ctx);
 
 
 /*****************************************************************************/
