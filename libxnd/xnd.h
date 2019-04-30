@@ -106,6 +106,7 @@ extern "C" {
 
 /* Convenience macros to extract embedded values. */
 #define XND_POINTER_DATA(ptr) (*((char **)ptr))
+#define XND_STRING_DATA(ptr) ((*((const char **)ptr)) == NULL ? "" : (*((const char **)ptr)))
 #define XND_BYTES_SIZE(ptr) (((ndt_bytes_t *)ptr)->size)
 #define XND_BYTES_DATA(ptr) (((ndt_bytes_t *)ptr)->data)
 

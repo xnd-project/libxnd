@@ -402,8 +402,8 @@ xnd_strict_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx)
     }
 
     case String: {
-        const char *a = XND_POINTER_DATA(x->ptr);
-        const char *b = XND_POINTER_DATA(y->ptr);
+        const char *a = XND_STRING_DATA(x->ptr);
+        const char *b = XND_STRING_DATA(y->ptr);
         return strcmp(a, b) == 0;
     }
 
@@ -1284,8 +1284,8 @@ xnd_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx)
             return 0;
         }
 
-        const char *a = XND_POINTER_DATA(x->ptr);
-        const char *b = XND_POINTER_DATA(y->ptr);
+        const char *a = XND_STRING_DATA(x->ptr);
+        const char *b = XND_STRING_DATA(y->ptr);
         return strcmp(a, b) == 0;
     }
 

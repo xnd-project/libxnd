@@ -959,7 +959,7 @@ xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
             return type_error(ctx);
         }
 
-        s = ndt_strdup(XND_POINTER_DATA(x->ptr), ctx);
+        s = ndt_strdup(XND_STRING_DATA(x->ptr), ctx);
         if (s == NULL) {
             return -1;
         }

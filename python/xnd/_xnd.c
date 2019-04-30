@@ -1827,8 +1827,8 @@ _pyxnd_value(const xnd_t * const x, const int64_t maxshape)
     }
 
     case String: {
-        const char *s = XND_POINTER_DATA(x->ptr);
-        Py_ssize_t size = s ? strlen(s) : 0;
+        const char *s = XND_STRING_DATA(x->ptr);
+        Py_ssize_t size = strlen(s);
 
         return PyUnicode_FromStringAndSize(s, size);
     }
