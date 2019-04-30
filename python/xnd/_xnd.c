@@ -2429,32 +2429,23 @@ pyxnd_strict_equal(PyObject *self, PyObject *other)
 }
 
 static PyObject *
-pyxnd_identical(PyObject *self, PyObject *args, PyObject *kwargs)
+pyxnd_identical(PyObject *self, PyObject *other)
 {
     NDT_STATIC_CONTEXT(ctx);
     PyObject *res;
     int r;
-    static char *kwlist[] = {"other", "elementwise", NULL};
-    PyObject *other = NULL;
-    int elementwise = 0;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|p", kwlist,
-                                     &other, &elementwise)) {
-        return NULL;
-    }
+
     if (!Xnd_Check(other)) {
         PyErr_SetString(PyExc_TypeError,
             "identical requires an xnd argument");
         return NULL;
     }
-    if (elementwise) {
-      PyErr_SetString(PyExc_NotImplementedError,
-                      "identical(..., elementwise=True)");
-      return NULL;
-    }
+
     r = xnd_identical(XND(self), XND(other), &ctx);
     if (r < 0) {
         return seterr(&ctx);
     }
+
     res = r ? Py_True : Py_False;
     Py_INCREF(res);
     return res;
@@ -2783,7 +2774,7 @@ static PyMethodDef pyxnd_methods [] =
   /* Methods */
   { "short_value", (PyCFunction)pyxnd_short_value, METH_VARARGS|METH_KEYWORDS, doc_short_value },
   { "strict_equal", (PyCFunction)pyxnd_strict_equal, METH_O, NULL },
-  { "identical", (PyCFunction)pyxnd_identical, METH_VARARGS|METH_KEYWORDS, NULL },
+  { "identical", (PyCFunction)pyxnd_identical, METH_O, NULL },
   { "copy_contiguous", (PyCFunction)pyxnd_copy_contiguous, METH_VARARGS|METH_KEYWORDS, NULL },
   { "split", (PyCFunction)pyxnd_split, METH_VARARGS|METH_KEYWORDS, NULL },
   { "transpose", (PyCFunction)pyxnd_transpose, METH_VARARGS|METH_KEYWORDS, NULL },

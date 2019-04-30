@@ -41,8 +41,11 @@
 /*                      Structural identity                                  */
 /*****************************************************************************/
 
-static int
-identical_with_pointers(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx) {
+static int identical_same_type_and_bitmap(const xnd_t *x, const xnd_t *y,
+                                          ndt_context_t *ctx);
+
+static int identical_with_pointers(const xnd_t *x, const xnd_t *y,
+                                   ndt_context_t *ctx) {
   const ndt_t *const t = x->type;
   int n;
   int64_t i;
@@ -58,7 +61,7 @@ identical_with_pointers(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx) {
     if (ynext.ptr == NULL) {
       return -1;
     }
-    return xnd_identical(&xnext, &ynext, ctx);
+    return identical_same_type_and_bitmap(&xnext, &ynext, ctx);
   }
 
   case Bytes:
@@ -75,7 +78,7 @@ identical_with_pointers(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx) {
     for (i = 0; i < t->FixedDim.shape; i++) {
       const xnd_t xnext = xnd_fixed_dim_next(x, i);
       const xnd_t ynext = xnd_fixed_dim_next(y, i);
-      n = xnd_identical(&xnext, &ynext, ctx);
+      n = identical_same_type_and_bitmap(&xnext, &ynext, ctx);
       if (n <= 0)
         return n;
     }
@@ -100,7 +103,7 @@ identical_with_pointers(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx) {
     for (i = 0; i < xshape; i++) {
       const xnd_t xnext = xnd_var_dim_next(x, xstart, xstep, i);
       const xnd_t ynext = xnd_var_dim_next(y, ystart, ystep, i);
-      n = xnd_identical(&xnext, &ynext, ctx);
+      n = identical_same_type_and_bitmap(&xnext, &ynext, ctx);
       if (n <= 0)
         return n;
     }
@@ -117,7 +120,7 @@ identical_with_pointers(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx) {
       if (ynext.ptr == NULL) {
         return -1;
       }
-      n = xnd_identical(&xnext, &ynext, ctx);
+      n = identical_same_type_and_bitmap(&xnext, &ynext, ctx);
       if (n <= 0)
         return n;
     }
@@ -134,7 +137,7 @@ identical_with_pointers(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx) {
       if (ynext.ptr == NULL) {
         return -1;
       }
-      n = xnd_identical(&xnext, &ynext, ctx);
+      n = identical_same_type_and_bitmap(&xnext, &ynext, ctx);
       if (n <= 0)
         return n;
     }
@@ -150,7 +153,7 @@ identical_with_pointers(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx) {
     if (ynext.ptr == NULL) {
       return -1;
     }
-    return xnd_identical(&xnext, &ynext, ctx);
+    return identical_same_type_and_bitmap(&xnext, &ynext, ctx);
   }
 
   default:
@@ -164,13 +167,28 @@ identical_with_pointers(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx) {
   return -1;
 }
 
+static int identical_same_type_and_bitmap(const xnd_t *x, const xnd_t *y,
+                                          ndt_context_t *ctx) {
+  const ndt_t *const t = x->type;
+  // check for identical index state
+  if (x->index != y->index) {
+    return 0;
+  }
+  // check pointer free instances
+  if (ndt_is_pointer_free(t)) {
+    return memcmp(x->ptr, y->ptr, t->datasize) == 0;
+  }
+  // xnd instance contains Ref, Bytes, or String items that hold
+  // pointers
+  return identical_with_pointers(x, y, ctx);
+}
 
 int xnd_identical(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx) {
   const ndt_t *const t = x->type;
   const ndt_t *const u = y->type;
   int n;
   assert(ndt_is_concrete(t) && ndt_is_concrete(u));
-  // some quick tests
+  // some quick checks
   if (x == y) {
     return 1;
   }
@@ -182,23 +200,14 @@ int xnd_identical(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx) {
   if (n <= 0) {
     return n;
   }
+  // check for empty objects
+  if (t->datasize == 0) {
+    return 1;
+  }
   // check for identical bitmaps
   n = xnd_bitmap_identical(&x->bitmap, &y->bitmap, t, ctx);
   if (n <= 0) {
     return n;
   }
-  // check for empty objects
-  if (t->datasize == 0) {
-    return 1;
-  }
-  // check for identical index state
-  if (x->index != y->index) {
-    return 0;
-  }
-  // check pointer free instances
-  if (ndt_is_pointer_free(t)) {
-    return memcmp(x->ptr, y->ptr, t->datasize) == 0;
-  }
-  // xnd instance contains Ref, Bytes, or String items
-  return identical_with_pointers(x, y, ctx);
+  return identical_same_type_and_bitmap(x, y, ctx);
 }
