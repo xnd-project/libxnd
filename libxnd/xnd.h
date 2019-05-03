@@ -109,6 +109,7 @@ extern "C" {
 #define XND_STRING_DATA(ptr) ((*((const char **)ptr)) == NULL ? "" : (*((const char **)ptr)))
 #define XND_BYTES_SIZE(ptr) (((ndt_bytes_t *)ptr)->size)
 #define XND_BYTES_DATA(ptr) (((ndt_bytes_t *)ptr)->data)
+#define XND_UNION_TAG(ptr) (*((uint8_t *)ptr))
 
 
 /* Bitmap tree. */
@@ -160,6 +161,7 @@ typedef struct xnd_view {
 
 XND_API xnd_master_t *xnd_empty_from_string(const char *s, uint32_t flags, ndt_context_t *ctx);
 XND_API xnd_master_t *xnd_empty_from_type(const ndt_t *t, uint32_t flags, ndt_context_t *ctx);
+XND_API void xnd_clear(xnd_t * const x, const uint32_t flags);
 XND_API void xnd_del(xnd_master_t *x);
 
 /* Create and delete pristine xnd_t buffers. */
@@ -408,6 +410,25 @@ xnd_record_next(const xnd_t *x, const int64_t i, ndt_context_t *ctx)
     next.index = 0;
     next.type = t->Record.types[i];
     next.ptr = x->ptr + t->Concrete.Record.offset[i];
+
+    return next;
+}
+
+static inline xnd_t
+xnd_union_next(const xnd_t *x, ndt_context_t *ctx)
+{
+    uint8_t i = XND_UNION_TAG(x->ptr);
+    const ndt_t *t = x->type;
+    xnd_t next;
+
+    next.bitmap = xnd_bitmap_next(x, i, ctx);
+    if (ndt_err_occurred(ctx)) {
+        return xnd_error;
+    }
+
+    next.index = 0;
+    next.type = t->Union.types[i];
+    next.ptr = x->ptr+1;
 
     return next;
 }

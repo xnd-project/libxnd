@@ -531,6 +531,47 @@ get_uint(PyObject *v, uint64_t max)
 }
 
 static int
+union_tag_and_value_from_tuple(uint8_t *tag, PyObject **value, const ndt_t *t, PyObject *tuple)
+{
+    PyObject *name;
+    int64_t i;
+
+    assert(t->tag == Union);
+    assert(PyTuple_Check(tuple));
+
+    if (PyTuple_GET_SIZE(tuple) != 2) {
+        PyErr_SetString(PyExc_ValueError,
+            "unions are represented by a tuple (tag, value), "
+            "where 'tag' is a string");
+        return -1;
+    }
+
+    name = PyTuple_GET_ITEM(tuple, 0);
+    if (!PyUnicode_Check(name)) {
+        PyErr_SetString(PyExc_TypeError,
+            "unions are represented by a tuple (tag, value), "
+            "where 'tag' is a string");
+        return -1;
+    }
+
+    for (i = 0; i < t->Union.ntags; i++) {
+        if (PyUnicode_CompareWithASCIIString(name, t->Union.tags[i]) == 0) {
+            break;
+        }
+    }
+
+    if (i == t->Union.ntags) {
+        PyErr_Format(PyExc_ValueError, "'%s' s not a valid tag", name);
+        return -1;
+    }
+
+    *tag = (uint8_t)i;
+    *value = PyTuple_GET_ITEM(tuple, 1);
+
+    return 0;
+}
+
+static int
 mblock_init(xnd_t * const x, PyObject *v)
 {
     NDT_STATIC_CONTEXT(ctx);
@@ -711,6 +752,32 @@ mblock_init(xnd_t * const x, PyObject *v)
         }
 
         return 0;
+    }
+
+    case Union: {
+        PyObject *tmp;
+        uint8_t tag;
+
+        if (!PyTuple_Check(v)) {
+            PyErr_Format(PyExc_TypeError,
+                "xnd: expected tuple, not '%.200s'", Py_TYPE(v)->tp_name);
+            return -1;
+        }
+
+        if (union_tag_and_value_from_tuple(&tag, &tmp, t, v) < 0) {
+            return -1;
+        }
+
+        xnd_clear(x, XND_OWN_EMBEDDED);
+        XND_UNION_TAG(x->ptr) = tag;
+
+        xnd_t next = xnd_union_next(x, &ctx);
+        if (next.ptr == NULL) {
+            Py_DECREF(tmp);
+            return seterr_int(&ctx);
+        }
+
+        return mblock_init(&next, tmp);
     }
 
     case Ref: {
@@ -1619,6 +1686,37 @@ _pyxnd_value(const xnd_t * const x, const int64_t maxshape)
         return dict;
     }
 
+    case Union: {
+        PyObject *tuple, *tag, *v;
+
+        tuple = PyTuple_New(2);
+        if (tuple == NULL) {
+            return NULL;
+        }
+
+        const uint8_t i = XND_UNION_TAG(x->ptr);
+        tag = PyUnicode_FromString(t->Union.tags[i]);
+        if (tag == NULL) {
+            Py_DECREF(tuple);
+            return NULL;
+        }
+        PyTuple_SET_ITEM(tuple, 0, tag);
+
+        const xnd_t next = xnd_union_next(x, &ctx);
+        if (next.ptr == NULL) {
+            return seterr(&ctx);
+        }
+
+        v = _pyxnd_value(&next, maxshape);
+        if (v == NULL) {
+            Py_DECREF(tuple);
+            return NULL;
+        }
+        PyTuple_SET_ITEM(tuple, 1, v);
+
+        return tuple;
+    }
+
     case Ref: {
         const xnd_t next = xnd_ref_next(x, &ctx);
         if (next.ptr == NULL) {
@@ -1984,6 +2082,15 @@ pyxnd_len(const xnd_t *x)
 
     case Record: {
         return safe_downcast(t->Record.shape);
+    }
+
+    case Union: {
+        const xnd_t next = xnd_union_next(x, &ctx);
+        if (next.ptr == NULL) {
+            return seterr_int(&ctx);
+        }
+
+        return pyxnd_len(&next);
     }
 
     case Ref: {

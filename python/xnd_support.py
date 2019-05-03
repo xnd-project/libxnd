@@ -90,6 +90,10 @@ def assertEqualWithEx(self, func, x, y):
 
     if xerr is None is yerr:
         self.assertEqual(xres, yres, msg="x: %s y: %s" % (x.type, y))
+    elif xerr is TypeError and yerr is None and isinstance(y, tuple) and len(y) == 2:
+        # Tagged unions like ('Int', 0) have len() in the Python representation
+        # but are scalars in xnd.
+        pass
     else:
         self.assertEqual(xerr, yerr, msg="x: %s y: %s" % (x.type, y))
 

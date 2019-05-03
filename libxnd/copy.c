@@ -758,6 +758,25 @@ xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
         return 0;
     }
 
+    case Union: {
+        if (!ndt_equal(u, t)) {
+            return type_error(ctx);
+        }
+
+        const xnd_t xnext = xnd_union_next(x, ctx);
+        if (xnext.ptr == NULL) {
+            return -1;
+        }
+
+        XND_UNION_TAG(y->ptr) = XND_UNION_TAG(x->ptr);
+        xnd_t ynext = xnd_union_next(y, ctx);
+        if (ynext.ptr == NULL) {
+            return -1;
+        }
+
+        return xnd_copy(&ynext, &xnext, flags, ctx);
+    }
+
     case Constr: {
         if (u->tag != Constr || strcmp(u->Constr.name, t->Constr.name) != 0) {
             return type_error(ctx);

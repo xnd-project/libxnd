@@ -49,7 +49,6 @@
 
 
 static int xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx);
-static void xnd_clear(xnd_t * const x, const uint32_t flags);
 
 
 /*****************************************************************************/
@@ -275,6 +274,16 @@ xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx)
                 xnd_clear(&next, flags);
                 return -1;
             }
+        }
+
+        return 0;
+    }
+
+    case Union: {
+        xnd_t next = _union_next(x);
+        if (xnd_init(&next, flags, ctx) < 0) {
+            xnd_clear(&next, flags);
+            return -1;
         }
 
         return 0;
@@ -564,12 +573,13 @@ xnd_clear_bytes(xnd_t *x, const uint32_t flags)
 
     if (flags & XND_OWN_BYTES) {
         ndt_aligned_free(XND_BYTES_DATA(x->ptr));
+        XND_BYTES_SIZE(x->ptr) = 0;
         XND_BYTES_DATA(x->ptr) = NULL;
     }
 }
 
 /* Clear embedded pointers in the data according to flags. */
-static void
+void
 xnd_clear(xnd_t * const x, const uint32_t flags)
 {
     NDT_STATIC_CONTEXT(ctx);
@@ -629,6 +639,12 @@ xnd_clear(xnd_t * const x, const uint32_t flags)
             xnd_clear(&next, flags);
         }
 
+        return;
+    }
+
+    case Union: {
+        xnd_t next = _union_next(x);
+        xnd_clear(&next, flags);
         return;
     }
 
@@ -980,6 +996,15 @@ _xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_
         return _xnd_subtree_index(&next, indices+1, len-1, ctx);
     }
 
+    case Union: {
+        const xnd_t next = xnd_union_next(x, ctx);
+        if (next.ptr == NULL) {
+            return xnd_error;
+        }
+
+        return _xnd_subtree_index(&next, indices, len, ctx);
+    }
+
     case Ref: {
         const xnd_t next = xnd_ref_next(x, ctx);
         if (next.ptr == NULL) {
@@ -998,7 +1023,7 @@ _xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_
         return _xnd_subtree_index(&next, indices, len, ctx);
     }
 
-   case Nominal: {
+    case Nominal: {
         const xnd_t next = xnd_nominal_next(x, ctx);
         if (next.ptr == NULL) {
             return xnd_error;
@@ -1104,6 +1129,15 @@ _xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexabl
         }
 
         return _xnd_subtree(&next, indices+1, len-1, true, ctx);
+    }
+
+    case Union: {
+        const xnd_t next = xnd_union_next(x, ctx);
+        if (next.ptr == NULL) {
+            return xnd_error;
+        }
+
+        return _xnd_subtree(&next, indices, len, false, ctx);
     }
 
     case Ref: {
@@ -1389,6 +1423,12 @@ xnd_slice(const xnd_t *x, const xnd_index_t indices[], int len, ndt_context_t *c
     case Record: {
         ndt_err_format(ctx, NDT_NotImplementedError,
             "slicing records is not supported");
+        return xnd_error;
+    }
+
+    case Union: {
+        ndt_err_format(ctx, NDT_NotImplementedError,
+            "slicing unions is not supported");
         return xnd_error;
     }
 

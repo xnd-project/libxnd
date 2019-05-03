@@ -109,6 +109,21 @@ _record_next(const xnd_t *x, const int64_t i)
 }
 
 static inline xnd_t
+_union_next(const xnd_t *x)
+{
+    uint8_t i = XND_UNION_TAG(x->ptr);
+    const ndt_t *t = x->type;
+    xnd_t next;
+
+    next.bitmap = xnd_bitmap_empty;
+    next.index = 0;
+    next.type = t->Union.types[i];
+    next.ptr = x->ptr+1;
+
+    return next;
+}
+
+static inline xnd_t
 _ref_next(const xnd_t *x)
 {
     const ndt_t *t = x->type;

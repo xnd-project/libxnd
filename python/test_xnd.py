@@ -1414,6 +1414,183 @@ class TestRecord(XndTestCase):
                     check_copy_contiguous(self, y)
 
 
+class TestUnion(XndTestCase):
+
+    def test_union_empty(self):
+        for v, s in DTYPE_EMPTY_TEST_CASES:
+            for vv, ss in [
+               (('X', v), "[X of %s]" % s),
+               (('X', {'y': v}), "[X of {y: %s}]" % s),
+
+               (('X', 0 * [v]), "[X of 0 * %s]" % s),
+               (('X', {'y': 0 * [v]}), "[X of {y: 0 * %s}]" % s),
+               (('X', 1 * [v]), "[X of 1 * %s]" % s),
+               (('X', 3 * [v]), "[X of 3 * %s]" % s),
+               (('X', 3 * [v]), "[X of 3 * %s | Y of complex128]" % s)]:
+
+                if "ref" in ss or "&" in ss or "?" in ss:
+                    # unsupported types for union members
+                    continue
+
+                t = ndt(ss)
+                x = xnd.empty(ss)
+                self.assertEqual(x.type, t)
+                self.assertEqual(x.value, vv)
+
+    def test_union_assign(self):
+        ### Regular data ###
+        x = xnd.empty("[X of complex64 | Y of bytes | Z of string]")
+
+        v = ('X', 1+20j)
+        x[()] = v
+        self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
+
+        v = ('Y', b"abc")
+        x[()] = v
+        self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
+
+        v = ('Z', "abc")
+        x[()] = v
+        self.assertEqual(x.value, v)
+        check_copy_contiguous(self, x)
+
+    def test_union_overflow(self):
+        # Type cannot be created.
+        s = "[a: 4611686018427387904 * uint8, b: 4611686018427387904 * uint8}"
+        self.assertRaises(ValueError, xnd.empty, s)
+
+        if HAVE_64_BIT:
+            # Allocation fails.
+            s = "[A of 2 * uint8 | B of 9223372036854775808 * uint8]"
+            self.assertRaises(ValueError, xnd.empty, s)
+        else:
+            # Allocation fails.
+            s = "[A of 2 * uint8 | B of 2147483648 * uint8}"
+            self.assertRaises(ValueError, xnd.empty, s)
+
+    @unittest.skipIf(True, "optional union members are not implemented")
+    def test_union_optional_values(self):
+        pass
+
+    def test_record_richcompare(self):
+
+        # Simple tests.
+        x = xnd(('Record', R['a': 1, 'b': 2.0, 'c': "3", 'd': b"123"]),
+                type="[Int of int64 | Record of {a: uint8, b: float32, c: string, d: bytes}]")
+
+        self.assertIs(x.__lt__(x), NotImplemented)
+        self.assertIs(x.__le__(x), NotImplemented)
+        self.assertIs(x.__gt__(x), NotImplemented)
+        self.assertIs(x.__ge__(x), NotImplemented)
+
+        y = x.copy_contiguous()
+        self.assertStrictEqual(x, y)
+
+        self.assertNotStrictEqual(x, xnd(R['z': 1, 'b': 2.0, 'c': "3", 'd': b"123"]))
+        self.assertNotStrictEqual(x, xnd(R['a': 2, 'b': 2.0, 'c': "3", 'd': b"123"]))
+        self.assertNotStrictEqual(x, xnd(R['a': 1, 'b': 2.1, 'c': "3", 'd': b"123"]))
+        self.assertNotStrictEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "", 'd': b"123"]))
+        self.assertNotStrictEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "345", 'd': "123"]))
+        self.assertNotStrictEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "3", 'd': b""]))
+        self.assertNotStrictEqual(x, xnd(R['a': 1, 'b': 2.0, 'c': "3", 'd': b"12345"]))
+
+        # Nested structures.
+        t = """
+            {a: uint8,
+             b: fixed_string(100, 'utf32'),
+             c: {x: complex128,
+                 y: 2 * 3 * {v: [Int of int64 | Tuple of (bytes, string)],
+                             u: bytes}},
+             d: ref(string)}
+            """
+
+        v = R['a': 10,
+              'b': "\U00001234\U00001001abc",
+              'c': R['x': 12.1e244+3j,
+                     'y': [[R['v': ('Tuple', (b"123", "456")), 'u': 10 * b"22"],
+                            R['v': ('Int', 10), 'u': 10 * b"23"],
+                            R['v': ('Int', 20), 'u': 10 * b"24"]],
+                           [R['v': ('Int', 30), 'u': b"a"],
+                            R['v': ('Tuple', (b"01234", "56789")), 'u': b"ab"],
+                            R['v': ('Tuple', (b"", "")), 'u': b"abc"]]]],
+              'd': "xyz"]
+
+        x = xnd(v, type=t)
+        y = xnd(v, type=t)
+        self.assertStrictEqual(x, y)
+        check_copy_contiguous(self, x)
+
+        w = y['c', 'y', 0, 0, 'v'].value
+        y['c', 'y', 0, 0, 'v'] = ('Int', 12345)
+        self.assertNotStrictEqual(x, y)
+        y['c', 'y', 0, 0, 'v'] = w
+        self.assertStrictEqual(x, y)
+        check_copy_contiguous(self, x)
+
+        # Test corner cases and many dtypes.
+        for v, t, u, _, _ in EQUAL_TEST_CASES:
+            for vv, tt, uu in [
+               (('Some', 0 * [v]), "[Int of int64 | Some of 0 * %s]" % t, "[Int of int64 | Some of 0 * %s]" % u),
+               (('Some', {'y': 0 * [v]}), "[Float of float16 | Some of {y: 0 * %s}]" % t, "[Float of float16 | Some of {y: 0 * %s}]" % u)]:
+
+                if "ref" in tt or "&" in tt or "?" in tt:
+                    # unsupported types for union members
+                    continue
+
+                if "ref" in uu or "&" in uu or "?" in uu:
+                    # unsupported types for union members
+                    continue
+
+                ttt = ndt(tt)
+
+                x = xnd(vv, type=ttt)
+                check_copy_contiguous(self, x)
+
+                y = xnd(vv, type=ttt)
+                self.assertStrictEqual(x, y)
+
+                if u is not None:
+                    uuu = ndt(uu)
+                    y = xnd(vv, type=uuu)
+                    self.assertStrictEqual(x, y)
+                    check_copy_contiguous(self, y)
+
+        for v, t, u, w, eq in EQUAL_TEST_CASES:
+            for vv, tt, uu, indices in [
+               (('Some', v), "[Some of %s]" % t, "[Some of %s]" % u, (0,)),
+               (('Some', 3 * [v]), "[Some of 3 * %s]" % t, "[Some of 3 * %s]" % u, (0, 2))]:
+
+                if "ref" in tt or "&" in tt or "?" in tt:
+                    # unsupported types for union members
+                    continue
+
+                if "ref" in uu or "&" in uu or "?" in uu:
+                    # unsupported types for union members
+                    continue
+
+                ttt = ndt(tt)
+                uuu = ndt(uu)
+
+                x = xnd(vv, type=ttt)
+                check_copy_contiguous(self, x)
+
+                y = xnd(vv, type=ttt)
+                if eq:
+                    self.assertStrictEqual(x, y)
+                else:
+                    self.assertNotStrictEqual(x, y)
+
+                if u is not None:
+                    y = xnd(vv, type=uuu)
+                    if eq:
+                        self.assertStrictEqual(x, y)
+                    else:
+                        self.assertNotStrictEqual(x, y)
+                    check_copy_contiguous(self, y)
+
+
 class TestRef(XndTestCase):
 
     def test_ref_empty(self):
@@ -3678,6 +3855,7 @@ ALL_TESTS = [
   TestEllipsisDim,
   TestTuple,
   TestRecord,
+  TestUnion,
   TestRef,
   TestConstr,
   TestNominal,

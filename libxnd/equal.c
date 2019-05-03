@@ -173,6 +173,20 @@ xnd_strict_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx)
         return 1;
     }
 
+    case Union: {
+        const xnd_t xnext = xnd_union_next(x, ctx);
+        if (xnext.ptr == NULL) {
+            return -1;
+        }
+
+        const xnd_t ynext = xnd_union_next(y, ctx);
+        if (ynext.ptr == NULL) {
+            return -1;
+        }
+
+        return xnd_strict_equal(&xnext, &ynext, ctx);
+    }
+
     case Ref: {
         const xnd_t xnext = xnd_ref_next(x, ctx);
         if (xnext.ptr == NULL) {
@@ -1064,6 +1078,20 @@ xnd_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx)
         }
 
         return 1;
+    }
+
+    case Union: {
+        const xnd_t xnext = xnd_union_next(x, ctx);
+        if (xnext.ptr == NULL) {
+            return -1;
+        }
+
+        const xnd_t ynext = xnd_union_next(y, ctx);
+        if (ynext.ptr == NULL) {
+            return -1;
+        }
+
+        return xnd_equal(&xnext, &ynext, ctx);
     }
 
     case Constr: {

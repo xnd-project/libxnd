@@ -234,6 +234,22 @@ DTYPE_EMPTY_TEST_CASES = [
    (R['x': 0, 'y': 2 * [3 * [4 * [5 * [None]]]]], "{x: int64, y: 2 * 3 * Some(4 * 5 * ?float64)}"),
    (R['x': 0, 'y': 2 * [3 * [4 * [5 * [None]]]]], "{x: int64, y: 2 * 3 * ref(4 * 5 * ?float64)}"),
 
+   # Unions
+   (('X', 0), "[X of int64]"),
+   (('X', 0), "[X of int8 | Y of int64]"),
+   (('X', 0), "[X of int8 | Y of {a: complex128, b: string}]"),
+
+   # Optional unions
+   (None, "?[X of complex64]"),
+   (None, "?[X of int8]"),
+   (None, "?[X of int8 | Y of int64]"),
+   (None, "?[X of uint16 | Y of {z: complex64}]"),
+   (None, "?[X of uint16 | Y of {z: complex64, pack=1}]"),
+   (None, "?[X of 0 * bytes]"),
+   (None, "?[X of 0 * bytes | Y of 0 * string]"),
+   (None, "?[X of 1 * bytes | Y of {y: 2 * complex128, z: 3 * string}]"),
+   (None, "?[X of 1 * bytes | Y of 2 * {a: complex128, b: 10 * 2 * string, z: 3 * string}]"),
+
    # Primitive types
    (False, "bool"),
    (0, "bool"),

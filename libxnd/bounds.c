@@ -258,9 +258,15 @@ _xnd_bounds_check(const xnd_bounds_t * const x, const int64_t bufsize, ndt_conte
         return 0;
     }
 
+    case Union: {
+        ndt_err_format(ctx, NDT_NotImplementedError,
+            "bounds checking union types is not implemented");
+        return -1;
+    }
+
     case Ref: {
         ndt_err_format(ctx, NDT_NotImplementedError,
-            "bounds checking 'ref' types is not implemented");
+            "bounds checking ref types is not implemented");
         return -1;
     }
 
