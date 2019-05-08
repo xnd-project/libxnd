@@ -1428,7 +1428,7 @@ class TestUnion(XndTestCase):
                (('X', 3 * [v]), "[X of 3 * %s]" % s),
                (('X', 3 * [v]), "[X of 3 * %s | Y of complex128]" % s)]:
 
-                if "ref" in ss or "&" in ss or "?" in ss:
+                if "ref" in ss or "&" in ss:
                     # unsupported types for union members
                     continue
 
@@ -1470,8 +1470,8 @@ class TestUnion(XndTestCase):
             s = "[A of 2 * uint8 | B of 2147483648 * uint8}"
             self.assertRaises(ValueError, xnd.empty, s)
 
-    @unittest.skipIf(True, "optional union members are not implemented")
     def test_union_optional_values(self):
+        # XXX
         pass
 
     def test_record_richcompare(self):
@@ -1535,11 +1535,11 @@ class TestUnion(XndTestCase):
                (('Some', 0 * [v]), "[Int of int64 | Some of 0 * %s]" % t, "[Int of int64 | Some of 0 * %s]" % u),
                (('Some', {'y': 0 * [v]}), "[Float of float16 | Some of {y: 0 * %s}]" % t, "[Float of float16 | Some of {y: 0 * %s}]" % u)]:
 
-                if "ref" in tt or "&" in tt or "?" in tt:
+                if "ref" in tt or "&" in tt:
                     # unsupported types for union members
                     continue
 
-                if "ref" in uu or "&" in uu or "?" in uu:
+                if "ref" in uu or "&" in uu:
                     # unsupported types for union members
                     continue
 
@@ -1562,11 +1562,11 @@ class TestUnion(XndTestCase):
                (('Some', v), "[Some of %s]" % t, "[Some of %s]" % u, (0,)),
                (('Some', 3 * [v]), "[Some of 3 * %s]" % t, "[Some of 3 * %s]" % u, (0, 2))]:
 
-                if "ref" in tt or "&" in tt or "?" in tt:
+                if "ref" in tt or "&" in tt:
                     # unsupported types for union members
                     continue
 
-                if "ref" in uu or "&" in uu or "?" in uu:
+                if "ref" in uu or "&" in uu:
                     # unsupported types for union members
                     continue
 

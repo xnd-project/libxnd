@@ -170,9 +170,27 @@ bitmap_init(xnd_bitmap_t *b, const ndt_t *t, int64_t nitems, ndt_context_t *ctx)
     }
 
     case Union: {
-        ndt_err_format(ctx, NDT_NotImplementedError,
-            "bitmaps are not implemented for union types");
-        return -1;
+        shape = t->Union.ntags;
+
+        n = nitems * shape;
+        b->next = bitmap_array_new(n, ctx);
+        if (b->next == NULL) {
+            xnd_bitmap_clear(b);
+            return -1;
+        }
+        b->size = n;
+
+        for (i = 0; i < nitems; i++) {
+            for (k = 0; k < shape; k++) {
+                next = b->next + i*shape + k;
+                if (bitmap_init(next, t->Union.types[k], 1, ctx) < 0) {
+                    xnd_bitmap_clear(b);
+                    return -1;
+                }
+            }
+        }
+
+        return 0;
     }
 
     case Ref: {
@@ -285,9 +303,8 @@ xnd_bitmap_next(const xnd_t *x, int64_t i, ndt_context_t *ctx)
         shape = t->Record.shape;
         break;
     case Union:
-        ndt_err_format(ctx, NDT_NotImplementedError,
-            "bitmaps are not implemented for union types");
-        return next;
+        shape = t->Union.ntags;
+        break;
     case Ref: case Constr: case Nominal:
         shape = 1;
         break;
