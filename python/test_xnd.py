@@ -1456,6 +1456,22 @@ class TestUnion(XndTestCase):
         self.assertEqual(x.value, v)
         check_copy_contiguous(self, x)
 
+    def test_union_indexing(self):
+        ### Regular data ###
+        x = xnd.empty("[X of complex64 | Y of bytes | Z of string]")
+
+        v = ('X', 1+20j)
+        x[()] = v
+        self.assertEqual(x[0], v[1])
+        self.assertEqual(x['X'], v[1])
+        self.assertRaises(ValueError, x.__getitem__, 1)
+        self.assertRaises(ValueError, x.__getitem__, 'Y')
+        self.assertRaises(ValueError, x.__getitem__, 2)
+        self.assertRaises(ValueError, x.__getitem__, 'Z')
+        self.assertRaises(ValueError, x.__getitem__, -1)
+        self.assertRaises(IndexError, x.__getitem__, 3)
+        self.assertRaises(ValueError, x.__getitem__, 'A')
+
     def test_union_overflow(self):
         # Type cannot be created.
         s = "[a: 4611686018427387904 * uint8, b: 4611686018427387904 * uint8}"

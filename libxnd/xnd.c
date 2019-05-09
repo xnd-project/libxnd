@@ -848,6 +848,34 @@ get_index_record(const ndt_t *t, const xnd_index_t *key, ndt_context_t *ctx)
     return -1;
 }
 
+static int64_t
+get_index_union(const ndt_t *t, const xnd_index_t *key, ndt_context_t *ctx)
+{
+    assert(t->tag == Union);
+
+    switch (key->tag) {
+    case FieldName: {
+        int64_t i;
+
+        for (i = 0; i < t->Union.ntags; i++) {
+            if (strcmp(key->FieldName, t->Union.tags[i]) == 0) {
+                return i;
+            }
+        }
+
+        ndt_err_format(ctx, NDT_ValueError,
+            "invalid field name '%s'", key->FieldName);
+        return -1;
+    }
+    case Index: case Slice:
+        return get_index(key, t->Union.ntags, ctx);
+    }
+
+    /* NOT REACHED: tags should be exhaustive */
+    ndt_err_format(ctx, NDT_RuntimeError, "invalid index tag");
+    return -1;
+}
+
 static void
 set_index_exception(bool indexable, ndt_context_t *ctx)
 {
@@ -997,12 +1025,25 @@ _xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_
     }
 
     case Union: {
+        const int64_t k = adjust_index(i, t->Union.ntags, ctx);
+        if (k < 0) {
+            return xnd_error;
+        }
+
+        const uint8_t l = XND_UNION_TAG(x->ptr);
+        if (k != l) {
+            ndt_err_format(ctx, NDT_ValueError,
+                "tag mismatch in union addressing: expected '%s', got '%s'",
+                t->Union.tags[l], t->Union.tags[k]);
+            return xnd_error;
+        }
+
         const xnd_t next = xnd_union_next(x, ctx);
         if (next.ptr == NULL) {
             return xnd_error;
         }
 
-        return _xnd_subtree_index(&next, indices, len, ctx);
+        return _xnd_subtree_index(&next, indices+1, len-1, ctx);
     }
 
     case Ref: {
@@ -1132,12 +1173,25 @@ _xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexabl
     }
 
     case Union: {
+        const int64_t i = get_index_union(t, key, ctx);
+        if (i < 0) {
+            return xnd_error;
+        }
+
+        const uint8_t k = XND_UNION_TAG(x->ptr);
+        if (i != k) {
+            ndt_err_format(ctx, NDT_ValueError,
+                "tag mismatch in union addressing: expected '%s', got '%s'",
+                t->Union.tags[k], t->Union.tags[i]);
+            return xnd_error;
+        }
+
         const xnd_t next = xnd_union_next(x, ctx);
         if (next.ptr == NULL) {
             return xnd_error;
         }
 
-        return _xnd_subtree(&next, indices, len, false, ctx);
+        return _xnd_subtree(&next, indices+1, len-1, true, ctx);
     }
 
     case Ref: {
