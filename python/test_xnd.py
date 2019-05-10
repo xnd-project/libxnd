@@ -1487,10 +1487,13 @@ class TestUnion(XndTestCase):
             self.assertRaises(ValueError, xnd.empty, s)
 
     def test_union_optional_values(self):
-        # XXX
-        pass
+        lst = [('A', None), ('B', 10), ('C', (None, "abc"))]
+        x = xnd(lst, dtype="[A of ?int64 | B of int64 | C of (?int64, string)]")
+        self.assertEqual(x.value, lst)
+        check_copy_contiguous(self, x)
+        self.assertEqual(x.dtype, ndt("[A of ?int64 | B of int64 | C of (?int64, string)]"))
 
-    def test_record_richcompare(self):
+    def test_union_richcompare(self):
 
         # Simple tests.
         x = xnd(('Record', R['a': 1, 'b': 2.0, 'c': "3", 'd': b"123"]),
