@@ -1610,6 +1610,143 @@ class TestUnion(XndTestCase):
                     check_copy_contiguous(self, y)
 
 
+class TestArray(XndTestCase):
+
+    def test_array_empty(self):
+        for v, s in DTYPE_EMPTY_TEST_CASES:
+            vv, ss = 0 * [v], "array of %s" % s
+
+            if "?" in ss or "ref" in ss or "&" in ss:
+                continue
+            if "array" in ss or "string" in ss or "bytes" in ss:
+                continue
+
+            t = ndt(ss)
+            x = xnd.empty(ss)
+            self.assertEqual(x.type, t)
+            self.assertEqual(x.value, vv)
+            self.assertEqual(len(x), len(vv))
+            self.assertTrue(x.type.is_c_contiguous())
+
+    def test_array_subscript(self):
+        test_cases = [
+          [11.12-2.3j, -1222+20e8j],
+          [complex("inf"), -0.00002j],
+          [0.201+1j, -1+1e301j]]
+
+        s = "array of complex128"
+
+        for v in test_cases:
+            nd = NDArray(v)
+            t = ndt(s)
+            x = xnd(v, type=t)
+
+            for i in range(2):
+                self.assertEqual(x[i].value, nd[i])
+
+    def test_array_assign(self):
+        ### Regular data ###
+        x = xnd([1, 2, 3], type="array of float64")
+        v = [4.0, 5.0, 6.0]
+
+        # Full slice
+        x[()] = v
+        self.assertEqual(x.value, v)
+
+        x[1] = v[1] = -11.25
+        self.assertEqual(x.value, v)
+
+        # Single values
+        for i in range(3):
+            x[i] = v[i] = 3.22 * i
+        self.assertEqual(x.value, v)
+
+    def test_array_richcompare(self):
+
+        x = xnd([1,2,3,4], type="array of int64")
+
+        self.assertIs(x.__lt__(x), NotImplemented)
+        self.assertIs(x.__le__(x), NotImplemented)
+        self.assertIs(x.__gt__(x), NotImplemented)
+        self.assertIs(x.__ge__(x), NotImplemented)
+
+        self.assertStrictEqual(x, xnd([1,2,3,4], type="array of int64"))
+
+        # Different type, shape and/or data.
+        self.assertNotStrictEqual(x, xnd([1,2,3,100]))
+        self.assertNotStrictEqual(x, xnd([1,2,3,100], type="array of int64"))
+        self.assertNotStrictEqual(x, xnd([1,2,3], type="array of int64"))
+        self.assertNotStrictEqual(x, xnd([1,2,3,4,5], type="array of int64"))
+
+        self.assertStrictEqual(x[()], x)
+
+        # Test corner cases and many dtypes.
+        for v, t, u, _, _ in EQUAL_TEST_CASES:
+            for vv, tt, uu in [
+               (0 * [v], "array of %s" % t, "array of %s" % u)]:
+
+                if "?" in tt or "ref" in tt or "&" in tt:
+                    continue
+                if "array" in tt or "string" in tt or "bytes" in tt:
+                    continue
+
+                ttt = ndt(tt)
+
+                x = xnd(vv, type=ttt)
+                y = xnd(vv, type=ttt)
+                self.assertStrictEqual(x, y)
+
+                if u is not None:
+                    uuu = ndt(uu)
+                    y = xnd(vv, type=uuu)
+                    self.assertStrictEqual(x, y)
+
+        for v, t, u, w, eq in EQUAL_TEST_CASES:
+            for vv, tt, uu, indices in [
+               (1 * [v], "array of %s" % t, "array of %s" % u, (0,)),
+               (2 * [v], "array of %s" % t, "array of %s" % u, (1,)),
+               (1000 * [v], "array of %s" % t, "array of %s" % u, (961,))]:
+
+                if "?" in tt or "ref" in tt or "&" in tt:
+                    continue
+                if "array" in tt or "string" in tt or "bytes" in tt:
+                    continue
+
+                ttt = ndt(tt)
+                uuu = ndt(uu)
+
+                x = xnd(vv, type=ttt)
+
+                y = xnd(vv, type=ttt)
+                if eq:
+                    self.assertStrictEqual(x, y)
+                else:
+                    self.assertNotStrictEqual(x, y)
+
+                if u is not None:
+                    y = xnd(vv, type=uuu)
+                    if eq:
+                        self.assertStrictEqual(x, y)
+                    else:
+                        self.assertNotStrictEqual(x, y)
+
+                if w is not None:
+                    y = xnd(vv, type=ttt)
+                    y[indices] = w
+                    self.assertNotStrictEqual(x, y)
+
+                    y = xnd(vv, type=uuu)
+                    y[indices] = w
+                    self.assertNotStrictEqual(x, y)
+
+    def test_array_equal(self):
+        x = xnd([1,2,3], type='array of int64')
+        y = xnd([1,2,3], type='array of float32')
+
+        self.assertEqual(x, y)
+        self.assertNotStrictEqual(x, y)
+
+
 class TestRef(XndTestCase):
 
     def test_ref_empty(self):
@@ -3874,6 +4011,7 @@ ALL_TESTS = [
   TestEllipsisDim,
   TestTuple,
   TestRecord,
+  TestArray,
   TestUnion,
   TestRef,
   TestConstr,
