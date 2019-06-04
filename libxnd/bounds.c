@@ -302,7 +302,13 @@ _xnd_bounds_check(const xnd_bounds_t * const x, const int64_t bufsize, ndt_conte
 
     case String: case Bytes: {
         ndt_err_format(ctx, NDT_NotImplementedError,
-            "serialization for string and bytes not implemented");
+            "serialization for string and bytes is not implemented");
+        return -1;
+    }
+
+    case Array: {
+        ndt_err_format(ctx, NDT_NotImplementedError,
+            "serialization for flexible arrays is not implemented");
         return -1;
     }
 

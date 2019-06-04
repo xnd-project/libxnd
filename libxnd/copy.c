@@ -38,6 +38,7 @@
 #include <assert.h>
 #include "ndtypes.h"
 #include "xnd.h"
+#include "overflow.h"
 #include "contrib.h"
 
 
@@ -1015,7 +1016,7 @@ xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
         memcpy(s, XND_BYTES_DATA(x->ptr), (size_t)size);
 
         if (XND_BYTES_DATA(y->ptr) != NULL) {
-            if (!(flags & XND_OWN_EMBEDDED)) {
+            if (!(flags & XND_OWN_BYTES)) {
                 ndt_err_format(ctx, NDT_RuntimeError,
                     "cannot free string pointer, xnd does not own it");
                 ndt_aligned_free(s);
@@ -1026,6 +1027,49 @@ xnd_copy(xnd_t *y, const xnd_t *x, uint32_t flags, ndt_context_t *ctx)
 
         XND_BYTES_SIZE(y->ptr) = size;
         XND_BYTES_DATA(y->ptr) = s;
+        return 0;
+    }
+
+    case Array: {
+        bool overflow = false;
+
+        if (u->tag != Array) {
+            return type_error(ctx);
+        }
+
+        const int64_t shape = XND_ARRAY_SHAPE(x->ptr);
+        const int64_t size = MULi64(shape, t->Array.itemsize, &overflow);
+        if (overflow) {
+            ndt_err_format(ctx, NDT_ValueError, "flexible array too large");
+            return -1;
+        }
+
+        char *data = ndt_aligned_calloc(u->align, size);
+        if (data == NULL) {
+            (void)ndt_memory_error(ctx);
+            return -1;
+        }
+
+        if (XND_ARRAY_DATA(y->ptr) != NULL) {
+            if (!(flags & XND_OWN_ARRAYS)) {
+                ndt_err_format(ctx, NDT_RuntimeError,
+                    "cannot free array data pointer, xnd does not own it");
+                ndt_aligned_free(data);
+                return -1;
+            }
+            ndt_aligned_free(XND_ARRAY_DATA(y->ptr));
+        }
+
+        XND_ARRAY_SHAPE(y->ptr) = shape;
+        XND_ARRAY_DATA(y->ptr) = data;
+
+        for (int64_t i = 0; i < shape; i++) {
+            const xnd_t xnext = xnd_array_next(x, i);
+            xnd_t ynext = xnd_array_next(y, i);
+            n = xnd_copy(&ynext, &xnext, flags, ctx);
+            if (n < 0) return n;
+        }
+
         return 0;
     }
 

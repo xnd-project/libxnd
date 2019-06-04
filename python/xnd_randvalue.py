@@ -234,6 +234,10 @@ DTYPE_EMPTY_TEST_CASES = [
    (R['x': 0, 'y': 2 * [3 * [4 * [5 * [None]]]]], "{x: int64, y: 2 * 3 * Some(4 * 5 * ?float64)}"),
    (R['x': 0, 'y': 2 * [3 * [4 * [5 * [None]]]]], "{x: int64, y: 2 * 3 * ref(4 * 5 * ?float64)}"),
 
+   # 1D flexible arrays
+   ([], "array of int64"),
+   ([], "array of (float64, int16)"),
+
    # Unions
    (('X', 0), "[X of int64]"),
    (('X', 0), "[X of int8 | Y of int64]"),

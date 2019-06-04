@@ -250,6 +250,12 @@ bitmap_init(xnd_bitmap_t *b, const ndt_t *t, int64_t nitems, ndt_context_t *ctx)
         return 0;
     }
 
+    case Array: {
+        ndt_err_format(ctx, NDT_NotImplementedError,
+            "the element type of 1D arrays cannot be optional");
+        return -1;
+    }
+
     default:
         return 0;
     }

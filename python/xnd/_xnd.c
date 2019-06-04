@@ -1183,6 +1183,40 @@ mblock_init(xnd_t * const x, PyObject *v)
         return 0;
     }
 
+    case Array: {
+        bool overflow = false;
+
+        if (!PyList_Check(v)) {
+            PyErr_Format(PyExc_TypeError,
+                "xnd: expected list, not '%.200s'", Py_TYPE(v)->tp_name);
+            return -1;
+        }
+
+        const Py_ssize_t shape = PyList_GET_SIZE(v);
+        const int64_t size = MULi64(shape, t->Array.itemsize, &overflow);
+        if (overflow) {
+            ndt_err_format(&ctx, NDT_ValueError, "1D array datasize is too large");
+            return seterr_int(&ctx);
+        }
+
+        char *data = ndt_aligned_calloc(t->align, size);
+        if (data == NULL) {
+            PyErr_NoMemory();
+            return -1;
+        }
+        XND_ARRAY_SHAPE(x->ptr) = shape;
+        XND_ARRAY_DATA(x->ptr) = data;
+
+        for (int64_t i = 0; i < shape; i++) {
+            xnd_t next = xnd_array_next(x, i);
+            if (mblock_init(&next, PyList_GET_ITEM(v, i)) < 0) {
+                return -1;
+            }
+        }
+
+        return 0;
+    }
+
     case Categorical: {
         int64_t k;
 
@@ -1938,6 +1972,38 @@ _pyxnd_value(const xnd_t * const x, const int64_t maxshape)
         return bytes_from_string_and_size(s, size);
     }
 
+    case Array: {
+        PyObject *lst, *v;
+        int64_t shape;
+
+        shape = XND_ARRAY_SHAPE(x->ptr);
+        if (shape > maxshape) {
+            shape = maxshape;
+        }
+
+        lst = list_new(shape);
+        if (lst == NULL) {
+            return NULL;
+        }
+
+        for (int64_t i = 0; i < shape; i++) {
+            if (i == maxshape-1) {
+                PyList_SET_ITEM(lst, i, xnd_ellipsis());
+                break;
+            }
+
+            const xnd_t next = xnd_array_next(x, i);
+            v = _pyxnd_value(&next, maxshape);
+            if (v == NULL) {
+                Py_DECREF(lst);
+                return NULL;
+            }
+            PyList_SET_ITEM(lst, i, v);
+        }
+
+        return lst;
+    }
+
     case Categorical: {
         int64_t k;
 
@@ -2082,6 +2148,11 @@ pyxnd_len(const xnd_t *x)
 
     case Record: {
         return safe_downcast(t->Record.shape);
+    }
+
+    case Array: {
+        const int64_t shape = XND_ARRAY_SHAPE(x->ptr);
+        return safe_downcast(shape);
     }
 
     case Union: {

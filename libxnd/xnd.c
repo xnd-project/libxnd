@@ -120,6 +120,7 @@ requires_init(const ndt_t * const t)
     case BComplex32: case Complex32: case Complex64: case Complex128:
     case FixedString: case FixedBytes:
     case String: case Bytes:
+    case Array:
         return false;
     default:
         return true;
@@ -358,6 +359,7 @@ xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx)
     case BComplex32: case Complex32: case Complex64: case Complex128:
     case FixedString: case FixedBytes:
     case String: case Bytes:
+    case Array:
         return 0;
 
     /* NOT REACHED: intercepted by ndt_is_abstract(). */
@@ -578,6 +580,20 @@ xnd_clear_bytes(xnd_t *x, const uint32_t flags)
     }
 }
 
+/* Flexible 1D array data must always be allocated by aligned allocators. */
+static void
+xnd_clear_array(xnd_t *x, const uint32_t flags)
+{
+    assert(x->type->tag == Array);
+    assert(!(flags & XND_CUDA_MANAGED));
+
+    if (flags & XND_OWN_ARRAYS) {
+        ndt_aligned_free(XND_ARRAY_DATA(x->ptr));
+        XND_ARRAY_SHAPE(x->ptr) = 0;
+        XND_ARRAY_DATA(x->ptr) = NULL;
+    }
+}
+
 /* Clear embedded pointers in the data according to flags. */
 void
 xnd_clear(xnd_t * const x, const uint32_t flags)
@@ -684,6 +700,10 @@ xnd_clear(xnd_t * const x, const uint32_t flags)
 
     case Bytes:
         xnd_clear_bytes(x, flags);
+        return;
+
+    case Array:
+        xnd_clear_array(x, flags);
         return;
 
     case Categorical:
@@ -1046,6 +1066,17 @@ _xnd_subtree_index(const xnd_t *x, const int64_t *indices, int len, ndt_context_
         return _xnd_subtree_index(&next, indices+1, len-1, ctx);
     }
 
+    case Array: {
+        const int64_t shape = XND_ARRAY_SHAPE(x->ptr);
+        const int64_t k = adjust_index(i, shape, ctx);
+        if (k < 0) {
+            return xnd_error;
+        }
+
+        const xnd_t next = xnd_array_next(x, k);
+        return _xnd_subtree_index(&next, indices+1, len-1, ctx);
+    }
+
     case Ref: {
         const xnd_t next = xnd_ref_next(x, ctx);
         if (next.ptr == NULL) {
@@ -1191,6 +1222,17 @@ _xnd_subtree(const xnd_t *x, const xnd_index_t indices[], int len, bool indexabl
             return xnd_error;
         }
 
+        return _xnd_subtree(&next, indices+1, len-1, true, ctx);
+    }
+
+    case Array: {
+        const int64_t shape = XND_ARRAY_SHAPE(x->ptr);
+        const int64_t i = get_index(key, shape, ctx);
+        if (i < 0) {
+            return xnd_error;
+        }
+
+        const xnd_t next = xnd_array_next(x, i);
         return _xnd_subtree(&next, indices+1, len-1, true, ctx);
     }
 

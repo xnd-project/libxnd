@@ -89,18 +89,21 @@ extern "C" {
 #define XND_OWN_DATA     0x00000002U /* data pointer */
 #define XND_OWN_STRINGS  0x00000004U /* embedded string pointers */
 #define XND_OWN_BYTES    0x00000008U /* embedded bytes pointers */
-#define XND_OWN_POINTERS 0x00000010U /* embedded pointers */
-#define XND_CUDA_MANAGED 0x00000020U /* cuda managed memory */
+#define XND_OWN_ARRAYS   0x00000010U /* embedded array pointers */
+#define XND_OWN_POINTERS 0x00000020U /* embedded pointers */
+#define XND_CUDA_MANAGED 0x00000040U /* cuda managed memory */
 
 #define XND_OWN_ALL (XND_OWN_TYPE |    \
                      XND_OWN_DATA |    \
                      XND_OWN_STRINGS | \
                      XND_OWN_BYTES |   \
+                     XND_OWN_ARRAYS |  \
                      XND_OWN_POINTERS)
 
 #define XND_OWN_EMBEDDED (XND_OWN_DATA |    \
                           XND_OWN_STRINGS | \
                           XND_OWN_BYTES |   \
+                          XND_OWN_ARRAYS |  \
                           XND_OWN_POINTERS)
 
 
@@ -109,6 +112,8 @@ extern "C" {
 #define XND_STRING_DATA(ptr) ((*((const char **)ptr)) == NULL ? "" : (*((const char **)ptr)))
 #define XND_BYTES_SIZE(ptr) (((ndt_bytes_t *)ptr)->size)
 #define XND_BYTES_DATA(ptr) (((ndt_bytes_t *)ptr)->data)
+#define XND_ARRAY_SHAPE(ptr) (((ndt_array_t *)ptr)->shape)
+#define XND_ARRAY_DATA(ptr) (((ndt_array_t *)ptr)->data)
 #define XND_UNION_TAG(ptr) (*((uint8_t *)ptr))
 
 
@@ -483,6 +488,23 @@ xnd_nominal_next(const xnd_t *x, ndt_context_t *ctx)
     next.index = 0;
     next.type = t->Nominal.type;
     next.ptr = x->ptr;
+
+    return next;
+}
+
+static inline xnd_t
+xnd_array_next(const xnd_t *x, const int64_t i)
+{
+    const ndt_t *t = x->type;
+    const ndt_t *u = t->Array.type;
+    xnd_t next;
+
+    assert(t->tag == Array);
+
+    next.bitmap = x->bitmap;
+    next.index = 0;
+    next.type = u;
+    next.ptr = XND_ARRAY_DATA(x->ptr) + i * next.type->datasize;
 
     return next;
 }

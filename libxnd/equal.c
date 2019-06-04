@@ -438,6 +438,26 @@ xnd_strict_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx)
         return memcmp(a, b, (size_t)asize) == 0;
     }
 
+    case Array: {
+        int64_t ashape, bshape;
+
+        ashape = XND_ARRAY_SHAPE(x->ptr);
+        bshape = XND_ARRAY_SHAPE(y->ptr);
+
+        if (ashape != bshape) {
+            return 0;
+        }
+
+        for (int64_t i = 0; i < ashape; i++) {
+            const xnd_t xnext = xnd_array_next(x, i);
+            const xnd_t ynext = xnd_array_next(y, i);
+            n = xnd_strict_equal(&xnext, &ynext, ctx);
+            if (n <= 0) return n;
+        }
+
+        return 1;
+    }
+
     /* NOT REACHED: xnd types must be concrete. */
     case Module: case Function:
     case AnyKind: case SymbolicDim: case EllipsisDim: case Typevar:
@@ -1336,6 +1356,30 @@ xnd_equal(const xnd_t *x, const xnd_t *y, ndt_context_t *ctx)
         }
 
         return memcmp(a, b, (size_t)asize) == 0;
+    }
+
+    case Array: {
+        int64_t ashape, bshape;
+
+        if (u->tag != Array) {
+            return 0;
+        }
+
+        ashape = XND_ARRAY_SHAPE(x->ptr);
+        bshape = XND_ARRAY_SHAPE(y->ptr);
+
+        if (ashape != bshape) {
+            return 0;
+        }
+
+        for (int64_t i = 0; i < ashape; i++) {
+            const xnd_t xnext = xnd_array_next(x, i);
+            const xnd_t ynext = xnd_array_next(y, i);
+            n = xnd_equal(&xnext, &ynext, ctx);
+            if (n <= 0) return n;
+        }
+
+        return 1;
     }
 
     /* NOT REACHED: intercepted by apply_stored_indices(). */
