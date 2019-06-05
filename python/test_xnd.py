@@ -1626,7 +1626,7 @@ class TestArray(XndTestCase):
             self.assertEqual(x.type, t)
             self.assertEqual(x.value, vv)
             self.assertEqual(len(x), len(vv))
-            self.assertTrue(x.type.is_c_contiguous())
+            self.assertFalse(x.type.is_c_contiguous())
 
     def test_array_subscript(self):
         test_cases = [
