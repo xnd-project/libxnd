@@ -341,6 +341,10 @@ xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx)
         return 0;
     }
 
+    /* Array is already initialized by calloc(). */
+    case Array:
+        return 0;
+
     /* Categorical is already initialized by calloc(). */
     case Categorical:
         return 0;
@@ -362,7 +366,6 @@ xnd_init(xnd_t * const x, const uint32_t flags, ndt_context_t *ctx)
     case BComplex32: case Complex32: case Complex64: case Complex128:
     case FixedString: case FixedBytes:
     case String: case Bytes:
-    case Array:
         return 0;
 
     /* NOT REACHED: intercepted by ndt_is_abstract(). */
@@ -643,6 +646,18 @@ xnd_clear(xnd_t * const x, const uint32_t flags)
         return;
     }
 
+    case Array: {
+        const int64_t shape = XND_ARRAY_SHAPE(x->ptr);
+
+        for (int64_t i = 0; i < shape; i++) {
+            xnd_t next = _array_next(x, i);
+            xnd_clear(&next, flags);
+        }
+
+        xnd_clear_array(x, flags);
+        return;
+    }
+
     case Tuple: {
         for (int64_t i = 0; i < t->Tuple.shape; i++) {
             xnd_t next = _tuple_next(x, i);
@@ -703,10 +718,6 @@ xnd_clear(xnd_t * const x, const uint32_t flags)
 
     case Bytes:
         xnd_clear_bytes(x, flags);
-        return;
-
-    case Array:
-        xnd_clear_array(x, flags);
         return;
 
     case Categorical:

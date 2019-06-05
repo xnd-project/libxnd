@@ -81,6 +81,23 @@ _var_dim_next(const xnd_t *x, const int64_t start, const int64_t step,
 }
 
 static inline xnd_t
+_array_next(const xnd_t *x, const int64_t i)
+{
+    const ndt_t *t = x->type;
+    const ndt_t *u = t->Array.type;
+    xnd_t next;
+
+    assert(t->tag == Array);
+
+    next.bitmap = xnd_bitmap_empty;
+    next.index = 0;
+    next.type = u;
+    next.ptr = XND_ARRAY_DATA(x->ptr) + i * next.type->datasize;
+
+    return next;
+}
+
+static inline xnd_t
 _tuple_next(const xnd_t *x, const int64_t i)
 {
     const ndt_t *t = x->type;
