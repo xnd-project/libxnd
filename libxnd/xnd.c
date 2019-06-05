@@ -586,7 +586,7 @@ xnd_clear_bytes(xnd_t *x, const uint32_t flags)
     }
 }
 
-/* Flexible 1D array data must always be allocated by aligned allocators. */
+/* Flexible array data must always be allocated by aligned allocators. */
 static void
 xnd_clear_array(xnd_t *x, const uint32_t flags)
 {
