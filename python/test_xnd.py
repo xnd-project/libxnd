@@ -1618,8 +1618,6 @@ class TestArray(XndTestCase):
 
             if "?" in ss or "ref" in ss or "&" in ss:
                 continue
-            if "array" in ss or "string" in ss or "bytes" in ss:
-                continue
 
             t = ndt(ss)
             x = xnd.empty(ss)
@@ -1687,7 +1685,7 @@ class TestArray(XndTestCase):
 
                 if "?" in tt or "ref" in tt or "&" in tt:
                     continue
-                if "array" in tt or "string" in tt or "bytes" in tt:
+                if "?" in uu or "ref" in uu or "&" in uu:
                     continue
 
                 ttt = ndt(tt)
@@ -1709,7 +1707,7 @@ class TestArray(XndTestCase):
 
                 if "?" in tt or "ref" in tt or "&" in tt:
                     continue
-                if "array" in tt or "string" in tt or "bytes" in tt:
+                if "?" in uu or "ref" in uu or "&" in uu:
                     continue
 
                 ttt = ndt(tt)
