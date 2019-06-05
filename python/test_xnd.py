@@ -1614,49 +1614,89 @@ class TestArray(XndTestCase):
 
     def test_array_empty(self):
         for v, s in DTYPE_EMPTY_TEST_CASES:
-            vv, ss = 0 * [v], "array of %s" % s
+            for _, ss in [
+               (0 * [v], "array of %s" % s),
+               (1 * [v], "array of %s" % s),
+               (2 * [v], "array of %s" % s),
+               (1000 * [v], "array of %s" % s),
 
-            if "?" in ss or "ref" in ss or "&" in ss:
-                continue
+               (0 * [0 * [v]], "array of array of %s" % s),
+               (0 * [1 * [v]], "array of array of %s" % s),
+               (1 * [0 * [v]], "array of array of %s" % s),
 
-            t = ndt(ss)
-            x = xnd.empty(ss)
-            self.assertEqual(x.type, t)
-            self.assertEqual(x.value, vv)
-            self.assertEqual(len(x), len(vv))
-            self.assertFalse(x.type.is_c_contiguous())
+               (1 * [1 * [v]], "array of array of %s" % s),
+               (1 * [2 * [v]], "array of array of %s" % s),
+               (2 * [1 * [v]], "array of array of %s" % s),
+               (2 * [2 * [v]], "array of array of %s" % s),
+               (2 * [3 * [v]], "array of array of %s" % s),
+               (3 * [2 * [v]], "array of array of %s" % s),
+               (3 * [40 * [v]], "array of array of %s" % s)]:
+
+                if "?" in ss or "ref" in ss or "&" in ss:
+                    continue
+
+                t = ndt(ss)
+                x = xnd.empty(ss)
+                self.assertEqual(x.type, t)
+                self.assertEqual(x.value, [])
+                self.assertEqual(len(x), len([]))
+                self.assertFalse(x.type.is_c_contiguous())
 
     def test_array_subscript(self):
         test_cases = [
-          [11.12-2.3j, -1222+20e8j],
-          [complex("inf"), -0.00002j],
-          [0.201+1j, -1+1e301j]]
+            ([[11.12-2.3j, -1222+20e8j],
+              [complex("inf"), -0.00002j],
+              [0.201+1j, -1+1e301j]], "array of array of complex128"),
+        ]
 
-        s = "array of complex128"
-
-        for v in test_cases:
+        for v, s in test_cases:
             nd = NDArray(v)
             t = ndt(s)
             x = xnd(v, type=t)
+            self.assertFalse(x.type.is_c_contiguous())
 
-            for i in range(2):
+            for i in range(3):
                 self.assertEqual(x[i].value, nd[i])
 
+            for i in range(3):
+                for k in range(2):
+                    self.assertEqual(x[i][k], nd[i][k])
+                    self.assertEqual(x[i, k], nd[i][k])
+
+            self.assertEqual(x[()].value, nd[:])
+
     def test_array_assign(self):
-        ### Regular data ###
-        x = xnd([1, 2, 3], type="array of float64")
-        v = [4.0, 5.0, 6.0]
+        x = xnd.empty("array of array of float64")
+        v = [[0.0, 1.0, 2.0, 3.0], [4.0, 5.0, 6.0, 7.0]]
 
         # Full slice
         x[()] = v
         self.assertEqual(x.value, v)
 
-        x[1] = v[1] = -11.25
+        # Subarray, variable shapes
+        x[0] = v[0] = [1.2, -3e45, float("inf")]
+        self.assertEqual(x.value, v)
+
+        x[1] = v[1] = [-11.25, 3.355e301, -0.000002, -5000.2, -322.25]
+        self.assertEqual(x.value, v)
+
+        # Subarray, fixed shapes
+        x[0] = v[0] = [1.2, -3e45, float("inf"), -322.25]
+        self.assertEqual(x.value, v)
+
+        x[1] = v[1] = [-11.25, 3.355e301, -0.000002, -5000.2]
         self.assertEqual(x.value, v)
 
         # Single values
-        for i in range(3):
-            x[i] = v[i] = 3.22 * i
+        for i in range(2):
+            for j in range(4):
+                x[i][j] = v[i][j] = 3.22 * i + j
+        self.assertEqual(x.value, v)
+
+        # Tuple indexing
+        for i in range(2):
+            for j in range(4):
+                x[i, j] = v[i][j] = -3.002e1 * i + j
         self.assertEqual(x.value, v)
 
     def test_array_richcompare(self):
