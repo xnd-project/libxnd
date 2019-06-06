@@ -1718,10 +1718,36 @@ class TestArray(XndTestCase):
 
         self.assertStrictEqual(x[()], x)
 
+        # Simple multidimensional arrays.
+        x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="array of array of int64")
+        y = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="array of array of int64")
+        self.assertStrictEqual(x, y)
+
+        for i in range(4):
+            for k in range(3):
+                v = y[i, k]
+                y[i, k] = 100
+                self.assertNotStrictEqual(x, y)
+                y[i, k] = v
+
+        # Flexible multidimensional arrays.
+        x = xnd([[1], [4,5], [7,8,9]], type="array of array of int64")
+        y = xnd([[1], [4,5], [7,8,9]], type="array of array of int64")
+        self.assertStrictEqual(x, y)
+
+        for i in range(3):
+            v = y[i, 0]
+            y[i, 0] = 100
+            self.assertNotStrictEqual(x, y)
+            y[i, 0] = v
+
         # Test corner cases and many dtypes.
         for v, t, u, _, _ in EQUAL_TEST_CASES:
             for vv, tt, uu in [
-               (0 * [v], "array of %s" % t, "array of %s" % u)]:
+               (0 * [v], "array of %s" % t, "array of %s" % u),
+               (0 * [0 * [v]], "array of array of %s" % t, "array of array of %s" % u),
+               (0 * [1 * [v]], "array of array of %s" % t, "array of array of %s" % u),
+               (1 * [0 * [v]], "array of array of %s" % t, "array of array of %s" % u)]:
 
                 if "?" in tt or "ref" in tt or "&" in tt:
                     continue

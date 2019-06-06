@@ -1205,6 +1205,8 @@ mblock_init(xnd_t * const x, PyObject *v)
             PyErr_NoMemory();
             return -1;
         }
+
+        xnd_clear(x, XND_OWN_EMBEDDED);
         XND_ARRAY_SHAPE(x->ptr) = shape;
         XND_ARRAY_DATA(x->ptr) = data;
 

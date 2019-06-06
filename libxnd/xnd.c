@@ -530,6 +530,10 @@ xnd_from_xnd(xnd_t *src, uint32_t flags, ndt_context_t *ctx)
 static bool
 requires_clear(const ndt_t * const t)
 {
+    if (t->tag == Array) {
+        return true;
+    }
+
     const ndt_t *dtype = ndt_dtype(t);
 
     switch (dtype->tag) {
