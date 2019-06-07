@@ -1810,7 +1810,7 @@ class TestArray(XndTestCase):
         self.assertEqual(x, y)
         self.assertNotStrictEqual(x, y)
 
-    def test_array_geojson(self):
+    def test_array_geojson_tuple(self):
         v = { "type": "FeatureCollection",
               "features": (
                  { "type": "Feature",
@@ -1854,6 +1854,41 @@ class TestArray(XndTestCase):
 
         self.assertEqual(x['features', 0, 'geometry', 'coordinates', 3], 200)
         self.assertEqual(x['features', 1, 'geometry', 'coordinates', 4, 1], 1.2)
+
+    def test_array_geojson_union(self):
+        typedef("id",
+          """[
+            String of string
+          | Int of int64
+          ]""")
+
+        typedef("position", "array of float64")
+
+        typedef("geometry",
+          """[
+            Point of position
+          | MultiPoint of array of position
+          | LineString of array of position
+          | MultiLineString of array of array of position
+          | Polygon of array of position
+          | MultiPolygon of array of array of position
+          ]""")
+
+        v = [ ("Point", [110.0, 0.7]),
+              ("LineString", [[102.1, 0.1], [103.2, 1.1], [104.3, 0.1], [105.5, 1.1]])]
+
+        x = xnd(v, type="array of geometry")
+
+        p = [110.0, 0.7]
+        ls = [[102.1, 0.1], [103.2, 1.1], [104.3, 0.1], [105.5, 1.1]]
+
+        self.assertEqual(x[0, 'Point'], p)
+        self.assertEqual(x[1, 'LineString'],  ls)
+
+        p = [110.0, 0.7, 1.1, 200]
+        ls = [[102.1, 0.1], [103.2, 1.1], [104.3, 0.1], [105.5, 1.1], [107, 1.2]]
+        x[0, 'Point'] = p
+        x[1, 'LineString'] = ls
 
 
 class TestRef(XndTestCase):
