@@ -1615,22 +1615,22 @@ class TestArray(XndTestCase):
     def test_array_empty(self):
         for v, s in DTYPE_EMPTY_TEST_CASES:
             for _, ss in [
-               (0 * [v], "array of %s" % s),
-               (1 * [v], "array of %s" % s),
-               (2 * [v], "array of %s" % s),
-               (1000 * [v], "array of %s" % s),
+               (0 * [v], "array * %s" % s),
+               (1 * [v], "array * %s" % s),
+               (2 * [v], "array * %s" % s),
+               (1000 * [v], "array * %s" % s),
 
-               (0 * [0 * [v]], "array of array of %s" % s),
-               (0 * [1 * [v]], "array of array of %s" % s),
-               (1 * [0 * [v]], "array of array of %s" % s),
+               (0 * [0 * [v]], "array * array * %s" % s),
+               (0 * [1 * [v]], "array * array * %s" % s),
+               (1 * [0 * [v]], "array * array * %s" % s),
 
-               (1 * [1 * [v]], "array of array of %s" % s),
-               (1 * [2 * [v]], "array of array of %s" % s),
-               (2 * [1 * [v]], "array of array of %s" % s),
-               (2 * [2 * [v]], "array of array of %s" % s),
-               (2 * [3 * [v]], "array of array of %s" % s),
-               (3 * [2 * [v]], "array of array of %s" % s),
-               (3 * [40 * [v]], "array of array of %s" % s)]:
+               (1 * [1 * [v]], "array * array * %s" % s),
+               (1 * [2 * [v]], "array * array * %s" % s),
+               (2 * [1 * [v]], "array * array * %s" % s),
+               (2 * [2 * [v]], "array * array * %s" % s),
+               (2 * [3 * [v]], "array * array * %s" % s),
+               (3 * [2 * [v]], "array * array * %s" % s),
+               (3 * [40 * [v]], "array * array * %s" % s)]:
 
                 if "?" in ss or "ref" in ss or "&" in ss:
                     continue
@@ -1646,7 +1646,7 @@ class TestArray(XndTestCase):
         test_cases = [
             ([[11.12-2.3j, -1222+20e8j],
               [complex("inf"), -0.00002j],
-              [0.201+1j, -1+1e301j]], "array of array of complex128"),
+              [0.201+1j, -1+1e301j]], "array * array * complex128"),
         ]
 
         for v, s in test_cases:
@@ -1666,7 +1666,7 @@ class TestArray(XndTestCase):
             self.assertEqual(x[()].value, nd[:])
 
     def test_array_assign(self):
-        x = xnd.empty("array of array of float64")
+        x = xnd.empty("array * array * float64")
         v = [[0.0, 1.0, 2.0, 3.0], [4.0, 5.0, 6.0, 7.0]]
 
         # Full slice
@@ -1701,26 +1701,26 @@ class TestArray(XndTestCase):
 
     def test_array_richcompare(self):
 
-        x = xnd([1,2,3,4], type="array of int64")
+        x = xnd([1,2,3,4], type="array * int64")
 
         self.assertIs(x.__lt__(x), NotImplemented)
         self.assertIs(x.__le__(x), NotImplemented)
         self.assertIs(x.__gt__(x), NotImplemented)
         self.assertIs(x.__ge__(x), NotImplemented)
 
-        self.assertStrictEqual(x, xnd([1,2,3,4], type="array of int64"))
+        self.assertStrictEqual(x, xnd([1,2,3,4], type="array * int64"))
 
         # Different type, shape and/or data.
         self.assertNotStrictEqual(x, xnd([1,2,3,100]))
-        self.assertNotStrictEqual(x, xnd([1,2,3,100], type="array of int64"))
-        self.assertNotStrictEqual(x, xnd([1,2,3], type="array of int64"))
-        self.assertNotStrictEqual(x, xnd([1,2,3,4,5], type="array of int64"))
+        self.assertNotStrictEqual(x, xnd([1,2,3,100], type="array * int64"))
+        self.assertNotStrictEqual(x, xnd([1,2,3], type="array * int64"))
+        self.assertNotStrictEqual(x, xnd([1,2,3,4,5], type="array * int64"))
 
         self.assertStrictEqual(x[()], x)
 
         # Simple multidimensional arrays.
-        x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="array of array of int64")
-        y = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="array of array of int64")
+        x = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="array * array * int64")
+        y = xnd([[1,2,3], [4,5,6], [7,8,9], [10,11,12]], type="array * array * int64")
         self.assertStrictEqual(x, y)
 
         for i in range(4):
@@ -1731,8 +1731,8 @@ class TestArray(XndTestCase):
                 y[i, k] = v
 
         # Flexible multidimensional arrays.
-        x = xnd([[1], [4,5], [7,8,9]], type="array of array of int64")
-        y = xnd([[1], [4,5], [7,8,9]], type="array of array of int64")
+        x = xnd([[1], [4,5], [7,8,9]], type="array * array * int64")
+        y = xnd([[1], [4,5], [7,8,9]], type="array * array * int64")
         self.assertStrictEqual(x, y)
 
         for i in range(3):
@@ -1744,10 +1744,10 @@ class TestArray(XndTestCase):
         # Test corner cases and many dtypes.
         for v, t, u, _, _ in EQUAL_TEST_CASES:
             for vv, tt, uu in [
-               (0 * [v], "array of %s" % t, "array of %s" % u),
-               (0 * [0 * [v]], "array of array of %s" % t, "array of array of %s" % u),
-               (0 * [1 * [v]], "array of array of %s" % t, "array of array of %s" % u),
-               (1 * [0 * [v]], "array of array of %s" % t, "array of array of %s" % u)]:
+               (0 * [v], "array * %s" % t, "array * %s" % u),
+               (0 * [0 * [v]], "array * array * %s" % t, "array * array * %s" % u),
+               (0 * [1 * [v]], "array * array * %s" % t, "array * array * %s" % u),
+               (1 * [0 * [v]], "array * array * %s" % t, "array * array * %s" % u)]:
 
                 if "?" in tt or "ref" in tt or "&" in tt:
                     continue
@@ -1767,9 +1767,9 @@ class TestArray(XndTestCase):
 
         for v, t, u, w, eq in EQUAL_TEST_CASES:
             for vv, tt, uu, indices in [
-               (1 * [v], "array of %s" % t, "array of %s" % u, (0,)),
-               (2 * [v], "array of %s" % t, "array of %s" % u, (1,)),
-               (1000 * [v], "array of %s" % t, "array of %s" % u, (961,))]:
+               (1 * [v], "array * %s" % t, "array * %s" % u, (0,)),
+               (2 * [v], "array * %s" % t, "array * %s" % u, (1,)),
+               (1000 * [v], "array * %s" % t, "array * %s" % u, (961,))]:
 
                 if "?" in tt or "ref" in tt or "&" in tt:
                     continue
@@ -1804,8 +1804,8 @@ class TestArray(XndTestCase):
                     self.assertNotStrictEqual(x, y)
 
     def test_array_equal(self):
-        x = xnd([1,2,3], type='array of int64')
-        y = xnd([1,2,3], type='array of float32')
+        x = xnd([1,2,3], type='array * int64')
+        y = xnd([1,2,3], type='array * float32')
 
         self.assertEqual(x, y)
         self.assertNotStrictEqual(x, y)
@@ -1829,11 +1829,11 @@ class TestArray(XndTestCase):
                 features: (
                   { type: string,
                     geometry: { type: string,
-                                coordinates: array of float64 },
+                                coordinates: array * float64 },
                     properties: { prop0: string } },
                   { type: string,
                     geometry: { type: string,
-                                coordinates: array of array of float64 },
+                                coordinates: array * array * float64 },
                     properties: { prop0: string, prop1: int64 } }
                 )
               }
@@ -1862,22 +1862,22 @@ class TestArray(XndTestCase):
           | Int of int64
           ]""")
 
-        typedef("position", "array of float64")
+        typedef("position", "array * float64")
 
         typedef("geometry",
           """[
             Point of position
-          | MultiPoint of array of position
-          | LineString of array of position
-          | MultiLineString of array of array of position
-          | Polygon of array of position
-          | MultiPolygon of array of array of position
+          | MultiPoint of array * position
+          | LineString of array * position
+          | MultiLineString of array * array * position
+          | Polygon of array * position
+          | MultiPolygon of array * array * position
           ]""")
 
         v = [ ("Point", [110.0, 0.7]),
               ("LineString", [[102.1, 0.1], [103.2, 1.1], [104.3, 0.1], [105.5, 1.1]])]
 
-        x = xnd(v, type="array of geometry")
+        x = xnd(v, type="array * geometry")
 
         p = [110.0, 0.7]
         ls = [[102.1, 0.1], [103.2, 1.1], [104.3, 0.1], [105.5, 1.1]]
