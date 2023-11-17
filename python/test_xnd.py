@@ -2972,7 +2972,7 @@ class TestFloat(XndTestCase):
 class TestComplexKind(XndTestCase):
 
     def test_complex_kind(self):
-        self.assertRaises(ValueError, xnd.empty, "Complex")
+n        self.assertRaises(ValueError, xnd.empty, "Complex")
 
 
 class TestComplex(XndTestCase):

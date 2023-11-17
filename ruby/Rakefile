@@ -1,0 +1,105 @@
+require 'rake'
+require 'rake/extensiontask'
+require 'bundler/gem_tasks'
+require 'rake/testtask'
+require 'fileutils'
+require 'xnd/version.rb'
+
+gemspec = eval(IO.read("xnd.gemspec"))
+
+ext_name = "ruby_xnd"
+Rake::ExtensionTask.new(ext_name, gemspec) do |ext|
+  ext.ext_dir = "ext/#{ext_name}"
+  ext.source_pattern = "**/*.{c,h}"
+end
+
+Rake::TestTask.new(:test) do |t|
+  t.libs << "test"
+  t.libs << "lib"
+  t.test_files = FileList['test/**/test_*.rb']
+end
+
+def run *cmd
+  sh(cmd.join(" "))
+end
+
+task :console do
+  cmd = ['irb', "-r './lib/xnd.rb'"]
+  run(*cmd)
+end
+
+task :pry do
+  cmd = ['pry', "-r './lib/xnd.rb'"]
+  run(*cmd)
+end
+
+BASEDIR = Pathname( __FILE__ ).dirname.relative_path_from( Pathname.pwd )
+SPECDIR = BASEDIR + 'spec'
+
+VALGRIND_OPTIONS = [
+    "--tool=memcheck",
+    #"--leak-check=yes",
+    "--num-callers=15",
+    #"--error-limit=no",
+    "--partial-loads-ok=yes",
+    "--undef-value-errors=no" #,
+    #"--dsymutil=yes"
+]
+
+CALLGRIND_OPTIONS = [
+    "--tool=callgrind",
+    "--dump-instr=yes",
+    "--simulate-cache=yes",
+    "--collect-jumps=yes"
+]
+
+VALGRIND_MEMORYFILL_OPTIONS = [
+    "--freelist-vol=100000000",
+    "--malloc-fill=6D",
+    "--free-fill=66 ",
+]
+
+# partial-loads-ok and undef-value-errors necessary to ignore
+# spurious (and eminently ignorable) warnings from the ruby
+# interpreter
+
+desc "Run specs under Valgrind."
+task :valgrind => [ :compile ] do |task|
+  cmd = [ 'valgrind' ] + VALGRIND_OPTIONS
+  cmd += [" rake test "]
+  run( *cmd )
+end
+
+LEAKCHECK_CMD = [ 'ruby', '-Ilib:ext', "#{SPECDIR}/leakcheck.rb" ]
+
+task :clobber do |task|
+  [
+    "ext/#{ext_name}/include",
+    "ext/#{ext_name}/share",
+    "ext/#{ext_name}/lib",
+  ].each do |f|
+    puts "deleting folder #{f}..."
+    FileUtils.rm_rf(f)
+  end
+
+  Dir.chdir("ext/#{ext_name}/xnd/libxnd/") do
+    system("make clean")
+  end
+end
+
+task :develop do
+  ext_xnd = "ext/ruby_xnd/xnd"
+  puts "deleting previously created #{ext_xnd} directory..."
+  FileUtils.rm_rf(ext_xnd)
+  Dir.mkdir(ext_xnd)
+
+  puts "cloning xnd repo into ext/ folder..."
+  system("git clone https://github.com/plures/xnd #{ext_xnd}")
+
+  Dir.chdir(ext_xnd) do
+    system("git checkout #{RubyXND::COMMIT}")
+  end
+
+  puts "building gem with rake build..."
+  system("rake build")
+end
