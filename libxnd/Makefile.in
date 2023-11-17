@@ -35,9 +35,9 @@ GM_CUDA_CXXFLAGS = $(strip $(CONFIGURE_CUDA_CXXFLAGS) $(CUDA_CXXFLAGS))
 default: $(LIBSTATIC) $(LIBSHARED)
 
 
-OBJS = bitmaps.o bounds.o copy.o equal.o shape.o split.o xnd.o
+OBJS = bitmaps.o bounds.o copy.o equal.o identical.o shape.o split.o xnd.o
 
-SHARED_OBJS = .objs/bitmaps.o .objs/bounds.o .objs/copy.o .objs/equal.o .objs/shape.o .objs/split.o .objs/xnd.o
+SHARED_OBJS = .objs/bitmaps.o .objs/bounds.o .objs/copy.o .objs/equal.o .objs/identical.o .objs/shape.o .objs/split.o .objs/xnd.o
 
 ifdef CUDA_CXX
 OBJS += cuda_memory.o
@@ -86,6 +86,14 @@ Makefile equal.c xnd.h
 .objs/equal.o:\
 Makefile equal.c xnd.h
 	$(CC) $(XND_CFLAGS_SHARED) -c equal.c -o .objs/equal.o
+
+identical.o:\
+Makefile identical.c xnd.h
+	$(CC) $(XND_CFLAGS) -c identical.c
+
+.objs/identical.o:\
+Makefile identical.c xnd.h
+	$(CC) $(XND_CFLAGS_SHARED) -c identical.c -o .objs/identical.o
 
 shape.o:\
 Makefile shape.c overflow.h xnd.h

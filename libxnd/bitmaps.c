@@ -261,6 +261,115 @@ bitmap_init(xnd_bitmap_t *b, const ndt_t *t, int64_t nitems, ndt_context_t *ctx)
     }
 }
 
+/*****************************************************************************/
+/*                      Structural identity                                  */
+/*****************************************************************************/
+
+static int
+bitmap_identical(const xnd_bitmap_t *xb, const xnd_bitmap_t *yb,
+                 const ndt_t *t, int64_t nitems,
+                 ndt_context_t *ctx) {
+
+  int64_t shape, i, k;
+  int64_t n;
+
+  assert(ndt_is_concrete(t));
+
+  if (ndt_is_optional(t) && memcmp(xb->data, yb->data, (nitems + 7) / 8)) {
+    return 0;
+  }
+
+  if (!ndt_subtree_is_optional(t)) {
+    return 1;
+  }
+
+  switch (t->tag) {
+  case FixedDim: {
+    shape = t->FixedDim.shape;
+    return bitmap_identical(xb, yb, t->FixedDim.type, nitems * shape, ctx);
+  }
+
+  case VarDim: {
+    assert(nitems == 1);
+    n = nitems;
+    if (t->ndim == 1) {
+      int32_t noffsets = t->Concrete.VarDim.offsets->n;
+      n = t->Concrete.VarDim.offsets->v[noffsets - 1];
+    }
+    return bitmap_identical(xb, yb, t->VarDim.type, n, ctx);
+  }
+
+  case Tuple: {
+    shape = t->Tuple.shape;
+
+    for (i = 0; i < nitems; i++) {
+      for (k = 0; k < shape; k++) {
+        if (!bitmap_identical(xb->next + i * shape + k,
+                              yb->next + i * shape + k, t->Tuple.types[k], 1,
+                              ctx))
+          return 0;
+      }
+    }
+
+    return 1;
+  }
+
+  case Record: {
+    shape = t->Record.shape;
+
+    for (i = 0; i < nitems; i++) {
+      for (k = 0; k < shape; k++) {
+        if (!bitmap_identical(xb->next + i * shape + k,
+                              yb->next + i * shape + k, t->Record.types[k], 1,
+                              ctx)) {
+          return 0;
+        }
+      }
+    }
+
+    return 1;
+  }
+
+  case Ref: {
+
+    for (i = 0; i < nitems; i++) {
+      if (!bitmap_identical(xb->next + i, yb->next + i, t->Ref.type, 1, ctx)) {
+        return 0;
+      }
+    }
+
+    return 1;
+  }
+
+  case Constr: {
+
+    for (i = 0; i < nitems; i++) {
+      if (!bitmap_identical(xb->next + i, yb->next + i, t->Constr.type, 1,
+                            ctx)) {
+        return 0;
+      }
+    }
+
+    return 1;
+  }
+
+  case Nominal: {
+
+    for (i = 0; i < nitems; i++) {
+      if (!bitmap_identical(xb->next + i, yb->next + i, t->Nominal.type, 1,
+                            ctx)) {
+        return 0;
+      }
+    }
+
+    return 1;
+  }
+
+  default:
+    return 1;
+  }
+}
+
 int
 xnd_bitmap_init(xnd_bitmap_t *b, const ndt_t *t, ndt_context_t *ctx)
 {
@@ -381,4 +490,10 @@ xnd_is_na(const xnd_t *x)
     }
 
     return !_xnd_is_valid(x);
+}
+
+int
+xnd_bitmap_identical(const xnd_bitmap_t *xb, const xnd_bitmap_t *yb,
+                     const ndt_t *t, ndt_context_t *ctx) {
+  return bitmap_identical(xb, yb, t, 1, ctx);
 }
