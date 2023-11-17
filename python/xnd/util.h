@@ -36,7 +36,13 @@
 
 
 #include <Python.h>
+#if PY_VERSION_HEX < 0x030B0000
+/*
+ * Python 3.11 moved longintrepr.h and it is already included in Python.h
+ * https://github.com/python/cpython/pull/28968
+ */
 #include <longintrepr.h>
+#endif
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
