@@ -60,6 +60,19 @@
   #endif
 #endif
 
+#if PY_VERSION_HEX >= 0x030B0000
+/*
+ * name changed in python3.11
+ * https://github.com/python/cpython/pull/31657
+ */
+#define _PyFloat_Pack2   PyFloat_Pack2
+#define _PyFloat_Pack4   PyFloat_Pack4
+#define _PyFloat_Pack8   PyFloat_Pack8
+#define _PyFloat_Unpack2 PyFloat_Unpack2
+#define _PyFloat_Unpack4 PyFloat_Unpack4
+#define _PyFloat_Unpack8 PyFloat_Unpack8
+#endif
+
 
 /****************************************************************************/
 /*                               Error handling                             */
